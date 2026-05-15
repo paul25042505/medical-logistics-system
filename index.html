@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>衛生營後勤資訊管理系統</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 登入頁 -->
+  <div id="auth-page" class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">🏥</div>
+      <h2 class="auth-title">衛生營後勤資訊管理系統</h2>
+
+      <!-- 畫面1：登入 -->
+      <div id="auth-screen-login">
+        <p class="auth-desc">請使用 Google 帳號登入系統</p>
+        <div class="auth-error" id="login-error"></div>
+        <button class="btn btn-google btn-full" id="google-login-btn">
+          <span class="google-icon">G</span> 使用 Google 登入
+        </button>
+        <p class="auth-hint">尚未申請帳號？登入後填寫申請資料，等待管理員審核。</p>
+        <!-- DEV ONLY: 移除前記得刪除或隱藏 -->
+        <button id="dev-login-btn" style="margin-top:20px;width:100%;padding:8px;background:transparent;border:1px dashed #999;color:#999;border-radius:8px;cursor:pointer;font-size:12px">⚡ 開發模式快速登入</button>
+      </div>
+
+      <!-- 畫面2：新用戶填寫姓名 -->
+      <div id="auth-screen-register" style="display:none">
+        <p class="auth-desc">歡迎！請填寫申請資料</p>
+        <div class="auth-email-tag" id="reg-email-display"></div>
+        <div class="form-group" style="margin-top:14px">
+          <label>您的姓名</label>
+          <input type="text" id="reg-name" placeholder="請輸入真實姓名">
+        </div>
+        <div class="auth-error" id="reg-error"></div>
+        <button class="btn btn-primary btn-full" id="submit-register-btn">提交申請</button>
+        <button class="btn btn-secondary btn-full" id="reg-cancel-btn" style="margin-top:6px">取消</button>
+      </div>
+
+      <!-- 畫面3：等待審核 -->
+      <div id="auth-screen-pending" style="display:none">
+        <div class="auth-pending-icon">⏳</div>
+        <p class="auth-desc">您的帳號正在審核中</p>
+        <div class="auth-email-tag" id="pending-email-display"></div>
+        <p class="auth-hint">請等待管理員核准後，重新整理頁面即可登入。</p>
+        <button class="btn btn-secondary btn-full" id="pending-logout-btn" style="margin-top:16px">登出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 載入中 -->
+  <div id="loading-screen" style="display:none">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">連線中…</div>
+  </div>
+
+  <header style="display:none">
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <h1>衛生營後勤資訊管理系統</h1>
+    <div class="header-user">
+      <span class="header-email" id="header-email"></span>
+      <button class="btn-logout" id="logout-btn">登出</button>
+    </div>
+  </header>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="layout" style="display:none">
+    <nav class="sidebar collapsed" id="sidebar">
+      <ul>
+        <li><a href="#" class="nav-link active" data-page="home">🏠 首頁</a></li>
+        <div class="nav-section-label">招募管理</div>
+        <li><a href="#" class="nav-link" data-page="trainee-list">👥 訓員列表</a></li>
+        <li><a href="#" class="nav-link" data-page="batch-sched">📅 梯次期程</a></li>
+        <li><a href="#" class="nav-link" data-page="interview-query">📋 約談紀錄查詢</a></li>
+        <li><a href="#" class="nav-link" data-page="recruiters">🪖 招募員管理</a></li>
+        <li><a href="#" class="nav-link" data-page="activity">📸 招募活動</a></li>
+        <li><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
+        <div class="nav-section-label" style="margin-top:12px">後勤管理</div>
+        <li><a href="#" class="nav-link nav-coming">🚗 車輛資訊管理</a></li>
+        <li><a href="#" class="nav-link nav-coming">👤 人員資訊管理</a></li>
+        <div class="nav-section-label" style="margin-top:12px">系統</div>
+        <li id="admin-nav-item" style="display:none"><a href="#" class="nav-link" data-page="admin">⚙️ 後台管理</a></li>
+      </ul>
+    </nav>
+
+    <main id="main">
+
+      <section id="page-home" class="page active"></section>
+
+      <!-- 訓員列表 -->
+      <section id="page-trainee-list" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">👥 訓員列表</h2>
+          <button class="btn btn-primary" id="addBtn">＋ 新增</button>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="civilian">社會青年</button>
+          <button class="tab-btn" data-tab="military">新訓轉服</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="搜尋姓名、電話…">
+          </div>
+          <div class="filter-bar">
+            <select id="filterIntention">
+              <option value="">全部意願</option>
+              <option value="高">高意願</option>
+              <option value="中">中意願</option>
+              <option value="低">低意願</option>
+            </select>
+          </div>
+        </div>
+        <div id="recruit-list" class="recruit-list"></div>
+      </section>
+
+      <!-- 梯次期程 -->
+      <section id="page-batch-sched" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">📅 梯次期程</h2>
+          <button class="btn btn-primary" id="addBatchBtn">＋ 新增梯次</button>
+        </div>
+        <div id="batch-sched-content"></div>
+      </section>
+
+      <!-- 約談紀錄查詢 -->
+      <section id="page-interview-query" class="page">
+        <h2 class="page-title">📋 約談紀錄查詢</h2>
+        <div class="toolbar">
+          <div class="search-bar">
+            <input type="text" id="ivqSearch" placeholder="搜尋姓名、內容…">
+          </div>
+          <div class="filter-bar">
+            <select id="ivqIntention">
+              <option value="">全部意願</option>
+              <option value="高">高意願</option>
+              <option value="中">中意願</option>
+              <option value="低">低意願</option>
+            </select>
+            <input type="date" id="ivqDateFrom" title="起始日">
+            <input type="date" id="ivqDateTo" title="結束日">
+          </div>
+        </div>
+        <div id="interview-query-list" class="recruit-list"></div>
+      </section>
+
+      <!-- 招募員管理 -->
+      <section id="page-recruiters" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">🪖 招募員管理</h2>
+          <button class="btn btn-primary" id="addRecruiterBtn">＋ 新增招募員</button>
+        </div>
+        <div id="recruiter-list" class="recruiter-list"></div>
+      </section>
+
+      <!-- 招募活動 -->
+      <section id="page-activity" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">📸 招募活動</h2>
+          <button class="btn btn-primary" id="addActivityBtn">＋ 新增活動</button>
+        </div>
+        <div class="storage-bar-container">
+          <div class="storage-bar-label">
+            <span id="storage-used-text">計算中…</span>
+            <button class="btn btn-secondary btn-sm" id="downloadAllPhotosBtn">⬇ 下載照片</button>
+          </div>
+          <div class="storage-bar-track">
+            <div class="storage-bar-fill bar-ok" id="storage-bar-fill" style="width:0%"></div>
+          </div>
+          <!-- 日期選擇下載面板 -->
+          <div id="download-panel" style="display:none">
+            <div class="download-panel-header">
+              <span>選擇要下載的活動日期</span>
+              <label class="download-check-all"><input type="checkbox" id="download-check-all"> 全選</label>
+            </div>
+            <div id="download-date-list" class="download-date-list"></div>
+            <div class="download-panel-footer">
+              <button class="btn btn-secondary btn-sm" id="downloadCancelBtn">取消</button>
+              <button class="btn btn-primary btn-sm" id="downloadConfirmBtn">⬇ 開始下載</button>
+            </div>
+          </div>
+        </div>
+        <div id="activity-list" class="activity-grid"></div>
+      </section>
+
+      <!-- 後台管理 -->
+      <section id="page-admin" class="page">
+        <h2 class="page-title">⚙️ 後台管理</h2>
+        <div class="admin-grid">
+
+          <div class="admin-card">
+            <div class="admin-card-title">🏢 單位管理</div>
+            <div class="admin-input-row">
+              <input type="text" id="admin-unit-input" placeholder="新增單位名稱">
+              <button class="btn btn-primary btn-sm" id="admin-unit-add">新增</button>
+            </div>
+            <ul class="admin-list" id="admin-unit-list"></ul>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-title">🪖 營級管理</div>
+            <div class="admin-input-row">
+              <input type="text" id="admin-battalion-input" placeholder="新增營級名稱">
+              <button class="btn btn-primary btn-sm" id="admin-battalion-add">新增</button>
+            </div>
+            <ul class="admin-list" id="admin-battalion-list"></ul>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-title">🏴 連級管理</div>
+            <div class="admin-input-row">
+              <input type="text" id="admin-company-input" placeholder="新增連級名稱">
+              <button class="btn btn-primary btn-sm" id="admin-company-add">新增</button>
+            </div>
+            <ul class="admin-list" id="admin-company-list"></ul>
+          </div>
+
+          <div class="admin-card admin-card-full">
+            <div class="admin-card-title">👤 已註冊帳號</div>
+            <ul class="admin-list" id="admin-users-list"></ul>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 問卷填答 -->
+      <section id="page-leads" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">📝 問卷填答</h2>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="leads-search" placeholder="搜尋姓名、聯絡方式、學校／工作…">
+        </div>
+        <div id="leads-list"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ══ 新增/編輯訓員 ══ -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">新增訓員</h3>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <div class="form-section">
+          <div class="form-group">
+            <label>招募類型</label>
+            <div class="radio-group">
+              <label><input type="radio" name="type" value="civilian" checked> 社會青年</label>
+              <label><input type="radio" name="type" value="military"> 新訓轉服</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 梯次（兩種類型都有） -->
+        <div class="form-section">
+          <div class="form-group">
+            <label>所屬梯次</label>
+            <select id="f-batch">
+              <option value="">請選擇梯次（可選）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4 class="section-title">基本資料</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>姓名 <span class="required">*</span></label>
+              <input type="text" id="f-name" placeholder="真實姓名">
+            </div>
+            <div class="form-group">
+              <label>性別</label>
+              <select id="f-gender">
+                <option value="">請選擇</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>出生日期</label>
+              <input type="date" id="f-birthDate">
+            </div>
+            <div class="form-group">
+              <label>電話</label>
+              <input type="tel" id="f-phone" placeholder="09xxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label>LINE</label>
+              <input type="text" id="f-line" placeholder="LINE ID">
+            </div>
+            <div class="form-group">
+              <label>縣市</label>
+              <select id="f-city">
+                <option value="">請選擇縣市</option>
+                <option>台北市</option><option>新北市</option><option>基隆市</option>
+                <option>桃園市</option><option>新竹市</option><option>新竹縣</option>
+                <option>苗栗縣</option><option>台中市</option><option>彰化縣</option>
+                <option>南投縣</option><option>雲林縣</option><option>嘉義市</option>
+                <option>嘉義縣</option><option>台南市</option><option>高雄市</option>
+                <option>屏東縣</option><option>宜蘭縣</option><option>花蓮縣</option>
+                <option>台東縣</option><option>澎湖縣</option><option>金門縣</option>
+                <option>連江縣</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>鄉鎮市區</label>
+              <select id="f-district" disabled>
+                <option value="">請先選縣市</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>學歷</label>
+              <select id="f-education">
+                <option value="">請選擇</option>
+                <option>國中</option><option>高中/職</option><option>專科</option>
+                <option>大學</option><option>研究所</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>科系</label>
+              <input type="text" id="f-department" placeholder="護理、急救醫學…">
+            </div>
+            <div class="form-group">
+              <label>專長</label>
+              <input type="text" id="f-specialty" placeholder="駕駛、EMT、護理…">
+            </div>
+            <div class="form-group full">
+              <label>駕照</label>
+              <div class="checkbox-group">
+                <label><input type="checkbox" name="license" value="汽車自排"> 汽車自排</label>
+                <label><input type="checkbox" name="license" value="汽車手排"> 汽車手排</label>
+                <label><input type="checkbox" name="license" value="機車"> 機車</label>
+              </div>
+            </div>
+            <div class="form-group full">
+              <label>備註</label>
+              <textarea id="f-notes" rows="2" placeholder="其他補充說明…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 新訓轉服專屬 -->
+        <div class="form-section" id="military-section" style="display:none">
+          <h4 class="section-title">軍中資訊</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>單位</label>
+              <select id="f-unit"><option value="">請選擇</option></select>
+            </div>
+            <div class="form-group">
+              <label>營級</label>
+              <select id="f-battalion"><option value="">請選擇</option></select>
+            </div>
+            <div class="form-group">
+              <label>連級</label>
+              <select id="f-company"><option value="">請選擇</option></select>
+            </div>
+            <div class="form-group">
+              <label>座號</label>
+              <input type="text" id="f-seatNumber" placeholder="59號">
+            </div>
+            <div class="form-group">
+              <label>接訓日期（入營）</label>
+              <input type="date" id="f-enrollDate">
+            </div>
+            <div class="form-group">
+              <label>八週起役日期</label>
+              <input type="date" id="f-serviceDate">
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelBtn">取消</button>
+        <button class="btn btn-primary" id="saveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 訓員詳情 ══ -->
+  <div class="modal-overlay" id="detailOverlay">
+    <div class="modal modal-large" id="detailModal">
+      <div class="modal-header">
+        <h3 id="detail-title">訓員詳情</h3>
+        <button class="modal-close" id="detailClose">✕</button>
+      </div>
+      <div class="modal-body" id="detail-body"></div>
+    </div>
+  </div>
+
+  <!-- ══ 新增約談 ══ -->
+  <div class="modal-overlay" id="interviewOverlay">
+    <div class="modal" id="interviewModal">
+      <div class="modal-header">
+        <h3>新增約談紀錄</h3>
+        <button class="modal-close" id="interviewClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>約談日期 <span class="required">*</span></label>
+              <input type="date" id="iv-date">
+            </div>
+            <div class="form-group">
+              <label>意願度</label>
+              <select id="iv-intention">
+                <option value="">請選擇</option>
+                <option value="高">高</option>
+                <option value="中">中</option>
+                <option value="低">低</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>約談內容</label>
+              <textarea id="iv-content" rows="3" placeholder="談了什麼…"></textarea>
+            </div>
+            <div class="form-group full">
+              <label>猶豫原因 / 問題</label>
+              <textarea id="iv-issues" rows="2" placeholder="薪資疑慮、家人反對…"></textarea>
+            </div>
+            <div class="form-group full">
+              <label>家長反應</label>
+              <textarea id="iv-parentReaction" rows="2" placeholder="家長態度…"></textarea>
+            </div>
+            <div class="form-group">
+              <label>負責招募員</label>
+              <select id="iv-handler">
+                <option value="">請選擇</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="interviewCancel">取消</button>
+        <button class="btn btn-primary" id="interviewSave">儲存約談</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 新增梯次 ══ -->
+  <div class="modal-overlay" id="batchModalOverlay">
+    <div class="modal" id="batchModal">
+      <div class="modal-header">
+        <h3 id="batch-modal-title">新增梯次</h3>
+        <button class="modal-close" id="batchModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <h4 class="section-title">基本資訊</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>梯次名稱 <span class="required">*</span></label>
+              <input type="text" id="b-name" placeholder="0125T / 114年第1梯…">
+            </div>
+            <div class="form-group">
+              <label>類型</label>
+              <select id="b-type">
+                <option value="military">新訓轉服</option>
+                <option value="civilian">社會青年</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>單位</label>
+              <select id="b-unit"><option value="">請選擇</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h4 class="section-title">招募期限</h4>
+          <div class="date-timeline">
+            <div class="date-row-item">
+              <span class="date-row-label">接訓日（入營）</span>
+              <input type="date" id="b-enrollDate">
+            </div>
+            <div class="date-row-item">
+              <span class="date-row-label">意願截止日</span>
+              <input type="date" id="b-willDeadline">
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h4 class="section-title">八週梯次</h4>
+          <div class="date-timeline">
+            <div class="date-row-item">
+              <span class="date-row-label">補件截止</span>
+              <input type="date" id="b-w8Supplement">
+            </div>
+            <div class="date-row-item">
+              <span class="date-row-label">起役日</span>
+              <input type="date" id="b-w8Enlist">
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h4 class="section-title">十二週梯次</h4>
+          <div class="date-timeline">
+            <div class="date-row-item">
+              <span class="date-row-label">補件截止</span>
+              <input type="date" id="b-w12Supplement">
+            </div>
+            <div class="date-row-item">
+              <span class="date-row-label">起役日</span>
+              <input type="date" id="b-w12Enlist">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="batchCancelBtn">取消</button>
+        <button class="btn btn-primary" id="batchSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 新增/編輯招募員 ══ -->
+  <div class="modal-overlay" id="recruiterModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="recruiter-modal-title">新增招募員</h3>
+        <button class="modal-close" id="recruiterModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>級職 <span class="required">*</span></label>
+              <input type="text" id="r-rank" placeholder="上士、中尉…">
+            </div>
+            <div class="form-group">
+              <label>姓名 <span class="required">*</span></label>
+              <input type="text" id="r-name" placeholder="姓名">
+            </div>
+            <div class="form-group">
+              <label>聯絡電話</label>
+              <input type="tel" id="r-phone" placeholder="09xxxxxxxx">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="recruiterCancelBtn">取消</button>
+        <button class="btn btn-primary" id="recruiterSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 新增/編輯招募活動 ══ -->
+  <div class="modal-overlay" id="activityModalOverlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="activity-modal-title">新增招募活動</h3>
+        <button class="modal-close" id="activityModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>活動日期 <span class="required">*</span></label>
+              <input type="date" id="act-date">
+            </div>
+            <div class="form-group">
+              <label>活動類型</label>
+              <select id="act-type">
+                <option value="school">學校宣傳</option>
+                <option value="booth">擺攤活動</option>
+                <option value="visit">家訪</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>地點</label>
+              <input type="text" id="act-location" placeholder="學校名稱或地址…">
+            </div>
+            <div class="form-group full">
+              <label>說明</label>
+              <textarea id="act-note" rows="2" placeholder="活動備註…"></textarea>
+            </div>
+            <div class="form-group full" id="photo-upload-section">
+              <label>上傳照片</label>
+              <div class="upload-area" id="uploadArea">
+                <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
+                <div class="upload-prompt" id="uploadPrompt">
+                  <div style="font-size:32px">📷</div>
+                  <div>點擊或拖曳照片到此處</div>
+                  <div style="font-size:12px;color:var(--text-muted);margin-top:4px">支援 JPG、PNG、HEIC</div>
+                </div>
+                <div id="upload-preview" class="upload-preview"></div>
+              </div>
+              <div id="upload-progress" style="display:none">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="progress-text" id="progressText">上傳中…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="activityCancelBtn">取消</button>
+        <button class="btn btn-primary" id="activitySaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 活動詳情/照片 ══ -->
+  <div class="modal-overlay" id="activityDetailOverlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="activityDetailTitle">活動詳情</h3>
+        <button class="modal-close" id="activityDetailClose">✕</button>
+      </div>
+      <div class="modal-body" id="activityDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- ══ 照片放大 ══ -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
