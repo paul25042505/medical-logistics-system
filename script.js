@@ -4,9 +4,6 @@ import {
   collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc,
   getDoc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import {
-  getStorage, ref, uploadBytesResumable, getDownloadURL, listAll, getMetadata
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js';
 import {
   getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut
@@ -32,7 +29,6 @@ try {
 } catch {
   db = getFirestore(app);
 }
-const storage = getStorage(app);
 const auth    = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
@@ -40,7 +36,6 @@ const googleProvider = new GoogleAuthProvider();
 const COL_RECRUITS   = collection(db, 'recruits');
 const COL_BATCHES    = collection(db, 'batches');
 const COL_RECRUITERS = collection(db, 'recruiters');
-const COL_ACTIVITIES = collection(db, 'activities');
 const COL_LEADS      = collection(db, 'leads');
 const COL_PERSONNEL     = collection(db, 'personnel');
 const COL_USERS         = collection(db, 'users');
@@ -52,7 +47,6 @@ const DOC_ADMIN      = doc(db, 'settings', 'admin');
 let records       = [];
 let batches       = [];
 let recruiters    = [];
-let activities    = [];
 let leads         = [];
 let adminSettings = { units: [], battalions: [], companies: [] };
 
@@ -61,7 +55,6 @@ let editingId      = null;
 let detailId       = null;
 let editingBatchId = null;
 let editingRcrId   = null;
-let pendingFiles   = [];
 
 let personnel          = [];
 let personnelUnitFilter = [];
@@ -76,9 +69,9 @@ let editingVehicleId = null;
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel','applications','vehicles','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel','applications','vehicles']) },
-  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles']) },
+  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads']) },
   personnel: { label: '人事管理承辦', pages: new Set(['home','profile','personnel','applications']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','vehicles']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile']) },
@@ -263,7 +256,7 @@ window.approveUser = async function(uid) {
 const loaded = new Set();
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 9) {
+  if (loaded.size >= 8) {
     const ls = document.getElementById('loading-screen');
     if (ls) ls.style.display = 'none';
   }
@@ -320,7 +313,6 @@ function getEffectiveIntention(r) {
   }
   return '';
 }
-const ACT_TYPE_LABELS = { school: '學校宣傳', booth: '擺攤活動', visit: '家訪', other: '其他' };
 const BATCH_TYPE_LABELS = { military: '新訓轉服', civilian: '社會青年', both: '兩者皆有' };
 
 // ── District cascade ──────────────────────────────────
@@ -481,7 +473,6 @@ const PAGE_INIT = {
   'batch-sched':     () => renderBatchSched(),
   'interview-query': () => renderInterviewQuery(),
   'recruiters':      () => renderRecruiters(),
-  'activity':        () => { renderActivities(); updateStorageBar(); },
   'leads':           () => fetchLeadsFromSheets(),
   'profile':         () => { renderProfilePage(); renderMyVehicles(); },
   'admin':           () => { renderAdminPage(); },
@@ -1082,299 +1073,8 @@ window.unsetRecruiter = async function (id) {
 };
 
 // ── Storage 使用量 ────────────────────────────────────
-async function updateStorageBar() {
-  const textEl = document.getElementById('storage-used-text');
-  const barEl  = document.getElementById('storage-bar-fill');
-  if (!textEl || !barEl) return;
-  try {
-    const root   = ref(storage, 'activities');
-    const top    = await listAll(root);
-    const items  = [...top.items];
-    for (const prefix of top.prefixes) {
-      const sub = await listAll(prefix);
-      items.push(...sub.items);
-    }
-    const sizes = await Promise.all(items.map(i => getMetadata(i).then(m => m.size || 0).catch(() => 0)));
-    const totalBytes = sizes.reduce((a, b) => a + b, 0);
-    const usedMB  = totalBytes / 1024 / 1024;
-    const limitGB = 5;
-    const pct     = Math.min((usedMB / (limitGB * 1024)) * 100, 100);
-    const label   = usedMB < 1024
-      ? `已使用 ${usedMB.toFixed(1)} MB / ${limitGB} GB`
-      : `已使用 ${(usedMB / 1024).toFixed(2)} GB / ${limitGB} GB`;
-    textEl.textContent = label;
-    barEl.style.width  = pct + '%';
-    barEl.className    = 'storage-bar-fill ' + (pct > 80 ? 'bar-danger' : pct > 50 ? 'bar-warning' : 'bar-ok');
-  } catch (e) {
-    if (textEl) textEl.textContent = '無法取得空間資訊';
-  }
-}
 
-// ── 下載面板 ──────────────────────────────────────────
-const downloadPanel   = document.getElementById('download-panel');
-const downloadDateList = document.getElementById('download-date-list');
-const checkAllBox     = document.getElementById('download-check-all');
 
-document.getElementById('downloadAllPhotosBtn').addEventListener('click', () => {
-  const withPhotos = activities.filter(a => (a.photos || []).length > 0)
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  if (!withPhotos.length) { alert('目前沒有任何照片'); return; }
-
-  downloadDateList.innerHTML = withPhotos.map(act => `
-    <label class="download-date-item">
-      <input type="checkbox" class="dl-check" data-id="${act.id}" checked>
-      <div class="download-date-item-info">
-        <div class="download-date-item-name">${formatDate(act.date)}${act.location ? '　📍' + act.location : ''}</div>
-        <div class="download-date-item-count">${act.photos.length} 張照片</div>
-      </div>
-    </label>`).join('');
-
-  checkAllBox.checked = true;
-  downloadPanel.style.display = '';
-});
-
-checkAllBox.addEventListener('change', () => {
-  document.querySelectorAll('.dl-check').forEach(c => { c.checked = checkAllBox.checked; });
-});
-
-document.getElementById('downloadCancelBtn').addEventListener('click', () => {
-  downloadPanel.style.display = 'none';
-});
-
-document.getElementById('downloadConfirmBtn').addEventListener('click', async () => {
-  const selected = [...document.querySelectorAll('.dl-check:checked')].map(c => c.dataset.id);
-  if (!selected.length) { alert('請至少選擇一個活動'); return; }
-
-  const chosenActs = activities.filter(a => selected.includes(a.id));
-  const allPhotos  = chosenActs.flatMap(act =>
-    (act.photos || []).map((url, i) => ({ url, folder: `${act.date || '未知日期'}_${act.location || act.id}`, idx: i + 1 }))
-  );
-
-  const confirmBtn = document.getElementById('downloadConfirmBtn');
-  confirmBtn.disabled = true;
-  confirmBtn.textContent = '準備中…';
-
-  try {
-    const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
-    const zip = new JSZip();
-    for (let i = 0; i < allPhotos.length; i++) {
-      const { url, folder, idx } = allPhotos[i];
-      confirmBtn.textContent = `下載中 ${i + 1}/${allPhotos.length}…`;
-      const res  = await fetch(url);
-      const blob = await res.blob();
-      const ext  = blob.type.split('/')[1] || 'jpg';
-      zip.file(`${folder}/${idx}.${ext}`, blob);
-    }
-    confirmBtn.textContent = '產生壓縮檔…';
-    const content = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a');
-    a.href     = URL.createObjectURL(content);
-    a.download = '招募活動照片.zip';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    downloadPanel.style.display = 'none';
-  } catch (e) {
-    alert('下載失敗：' + e.message);
-  } finally {
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = '⬇ 開始下載';
-  }
-});
-
-// ── 招募活動 Render ───────────────────────────────────
-function renderActivities() {
-  const c = document.getElementById('activity-list');
-  if (!activities.length) {
-    c.innerHTML = `<div class="empty-state"><div class="icon">📸</div><p>尚無招募活動，點擊「＋ 新增活動」開始記錄</p></div>`;
-    return;
-  }
-  const sorted = [...activities].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  c.innerHTML = sorted.map(act => {
-    const thumb = act.photos?.[0]
-      ? `<div class="activity-thumb" style="background-image:url('${act.photos[0]}')"></div>`
-      : `<div class="activity-thumb-empty">📷</div>`;
-    const typeLabel = ACT_TYPE_LABELS[act.type] || act.type || '';
-    return `<div class="activity-card" onclick="openActivityDetail('${act.id}')">
-      ${thumb}
-      <div class="activity-card-body">
-        <div class="activity-date">${formatDate(act.date)}</div>
-        ${typeLabel ? `<span class="tag tag-default" style="font-size:11px">${typeLabel}</span>` : ''}
-        ${act.location ? `<div class="activity-location">📍 ${act.location}</div>` : ''}
-        ${act.note ? `<div class="activity-note">${act.note}</div>` : ''}
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${(act.photos||[]).length} 張照片</div>
-      </div>
-      <button class="btn-icon danger" style="position:absolute;top:8px;right:8px"
-        onclick="event.stopPropagation();deleteActivity('${act.id}')">🗑️</button>
-    </div>`;
-  }).join('');
-}
-
-// ── 活動 Modal ────────────────────────────────────────
-document.getElementById('addActivityBtn').addEventListener('click', openActivityModal);
-document.getElementById('activityModalClose').addEventListener('click', closeActivityModal);
-document.getElementById('activityCancelBtn').addEventListener('click', closeActivityModal);
-document.getElementById('activityModalOverlay').addEventListener('click', e => {
-  if (e.target.id === 'activityModalOverlay') closeActivityModal();
-});
-
-function openActivityModal() {
-  pendingFiles = [];
-  ['act-location','act-note'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('act-date').value  = '';
-  document.getElementById('act-type').value  = 'school';
-  document.getElementById('upload-preview').innerHTML = '';
-  document.getElementById('uploadPrompt').style.display = '';
-  document.getElementById('upload-progress').style.display = 'none';
-  document.getElementById('photo-input').value = '';
-  document.getElementById('activityModalOverlay').classList.add('open');
-}
-
-function closeActivityModal() {
-  document.getElementById('activityModalOverlay').classList.remove('open');
-  pendingFiles = [];
-}
-
-// Upload area
-const uploadArea = document.getElementById('uploadArea');
-const photoInput = document.getElementById('photo-input');
-
-uploadArea.addEventListener('click', () => photoInput.click());
-uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
-uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
-uploadArea.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadArea.classList.remove('drag-over');
-  addFiles([...e.dataTransfer.files].filter(f => f.type.startsWith('image/')));
-});
-photoInput.addEventListener('change', function () {
-  addFiles([...this.files]);
-  this.value = '';
-});
-
-function addFiles(files) {
-  pendingFiles = [...pendingFiles, ...files];
-  renderUploadPreview();
-}
-
-function renderUploadPreview() {
-  const container = document.getElementById('upload-preview');
-  document.getElementById('uploadPrompt').style.display = pendingFiles.length ? 'none' : '';
-  container.innerHTML = pendingFiles.map((file, i) => {
-    const url = URL.createObjectURL(file);
-    return `<div class="preview-thumb">
-      <img src="${url}" alt="">
-      <button class="preview-remove" onclick="removePendingFile(${i})">✕</button>
-    </div>`;
-  }).join('');
-}
-
-window.removePendingFile = function (idx) {
-  pendingFiles.splice(idx, 1);
-  renderUploadPreview();
-};
-
-document.getElementById('activitySaveBtn').addEventListener('click', async () => {
-  const date = document.getElementById('act-date').value;
-  if (!date) { alert('請填寫活動日期'); return; }
-  const btn = document.getElementById('activitySaveBtn');
-  btn.disabled = true;
-
-  const data = {
-    date,
-    type:     document.getElementById('act-type').value,
-    location: document.getElementById('act-location').value.trim(),
-    note:     document.getElementById('act-note').value.trim(),
-    photos:   [],
-    createdAt: serverTimestamp(),
-  };
-
-  try {
-    const docRef = await addDoc(COL_ACTIVITIES, data);
-
-    if (pendingFiles.length > 0) {
-      document.getElementById('upload-progress').style.display = '';
-      const urls = [];
-
-      for (let i = 0; i < pendingFiles.length; i++) {
-        const file = pendingFiles[i];
-        const ext  = file.name.split('.').pop() || 'jpg';
-        const storageRef = ref(storage, `activities/${docRef.id}/${Date.now()}_${i}.${ext}`);
-
-        await new Promise((resolve, reject) => {
-          const task = uploadBytesResumable(storageRef, file);
-          task.on('state_changed',
-            snap => {
-              const pct = Math.round(((i + snap.bytesTransferred / snap.totalBytes) / pendingFiles.length) * 100);
-              document.getElementById('progressFill').style.width = pct + '%';
-              document.getElementById('progressText').textContent =
-                `上傳中 ${i + 1}/${pendingFiles.length}… ${pct}%`;
-            },
-            reject,
-            async () => { urls.push(await getDownloadURL(task.snapshot.ref)); resolve(); }
-          );
-        });
-      }
-      await updateDoc(docRef, { photos: urls });
-    }
-    closeActivityModal();
-  } catch (e) {
-    console.error(e);
-    alert('儲存失敗，請稍後再試');
-  } finally {
-    btn.disabled = false;
-    document.getElementById('upload-progress').style.display = 'none';
-  }
-});
-
-// ── 活動詳情 Modal ────────────────────────────────────
-window.openActivityDetail = function (id) {
-  const act = activities.find(x => x.id === id);
-  if (!act) return;
-  const typeLabel = ACT_TYPE_LABELS[act.type] || act.type || '';
-  document.getElementById('activityDetailTitle').textContent =
-    `${formatDate(act.date)}${typeLabel ? ' · ' + typeLabel : ''}`;
-
-  const photos = act.photos || [];
-  const photoHTML = photos.length
-    ? `<div class="photo-gallery">${photos.map(url =>
-        `<img class="gallery-img" src="${url}" onclick="openLightbox('${url}')" alt="">`).join('')}</div>`
-    : '<div style="color:var(--text-muted);padding:12px 0">尚無照片</div>';
-
-  document.getElementById('activityDetailBody').innerHTML = `
-    <div class="form-section">
-      <div class="detail-grid">
-        ${act.location ? `<div class="detail-item"><div class="detail-label">地點</div><div class="detail-value">📍 ${act.location}</div></div>` : ''}
-        ${act.note ? `<div class="detail-item"><div class="detail-label">說明</div><div class="detail-value">${act.note}</div></div>` : ''}
-      </div>
-    </div>
-    <div class="form-section">
-      <h4 style="margin-bottom:12px">照片（${photos.length} 張）</h4>
-      ${photoHTML}
-    </div>`;
-
-  document.getElementById('activityDetailOverlay').classList.add('open');
-};
-
-document.getElementById('activityDetailClose').addEventListener('click',
-  () => document.getElementById('activityDetailOverlay').classList.remove('open'));
-document.getElementById('activityDetailOverlay').addEventListener('click', e => {
-  if (e.target.id === 'activityDetailOverlay') document.getElementById('activityDetailOverlay').classList.remove('open');
-});
-
-window.deleteActivity = async function (id) {
-  if (!confirm('確定要刪除此活動及所有照片嗎？')) return;
-  try { await deleteDoc(doc(db, 'activities', id)); } catch (e) { console.error(e); }
-};
-
-// ── Lightbox ──────────────────────────────────────────
-window.openLightbox = function (url) {
-  document.getElementById('lightbox-img').src = url;
-  document.getElementById('lightbox').classList.add('open');
-};
-window.closeLightbox = function () {
-  document.getElementById('lightbox').classList.remove('open');
-  document.getElementById('lightbox-img').src = '';
-};
 
 // ── Google Sheets fetch ───────────────────────────────
 async function fetchLeadsFromSheets() {
@@ -1719,11 +1419,6 @@ function startApp() {
     markLoaded('recruiters');
   }, () => markLoaded('recruiters'));
 
-  onSnapshot(COL_ACTIVITIES, snap => {
-    activities = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (document.getElementById('page-activity').classList.contains('active')) renderActivities();
-    markLoaded('activities');
-  }, () => markLoaded('activities'));
 
   // leads 不再用 Firestore listener，改由 fetchLeadsFromSheets() 讀取
   markLoaded('leads');

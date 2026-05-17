@@ -104,7 +104,6 @@
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="batch-sched">📅 梯次期程</a></li>
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="interview-query">📋 約談紀錄查詢</a></li>
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="recruiters">🪖 招募員管理</a></li>
-        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="activity">📸 招募活動</a></li>
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
         <div class="nav-section-label" id="nav-section-personnel" style="margin-top:12px">人事管理</div>
         <li data-roles="admin,manager,personnel"><a href="#" class="nav-link" data-page="personnel">📋 人員資訊管理</a></li>
@@ -185,35 +184,6 @@
         <div id="recruiter-list" class="recruiter-list"></div>
       </section>
 
-      <!-- 招募活動 -->
-      <section id="page-activity" class="page">
-        <div class="recruit-header">
-          <h2 class="page-title">📸 招募活動</h2>
-          <button class="btn btn-primary" id="addActivityBtn">＋ 新增活動</button>
-        </div>
-        <div class="storage-bar-container">
-          <div class="storage-bar-label">
-            <span id="storage-used-text">計算中…</span>
-            <button class="btn btn-secondary btn-sm" id="downloadAllPhotosBtn">⬇ 下載照片</button>
-          </div>
-          <div class="storage-bar-track">
-            <div class="storage-bar-fill bar-ok" id="storage-bar-fill" style="width:0%"></div>
-          </div>
-          <!-- 日期選擇下載面板 -->
-          <div id="download-panel" style="display:none">
-            <div class="download-panel-header">
-              <span>選擇要下載的活動日期</span>
-              <label class="download-check-all"><input type="checkbox" id="download-check-all"> 全選</label>
-            </div>
-            <div id="download-date-list" class="download-date-list"></div>
-            <div class="download-panel-footer">
-              <button class="btn btn-secondary btn-sm" id="downloadCancelBtn">取消</button>
-              <button class="btn btn-primary btn-sm" id="downloadConfirmBtn">⬇ 開始下載</button>
-            </div>
-          </div>
-        </div>
-        <div id="activity-list" class="activity-grid"></div>
-      </section>
 
       <!-- 個人資料 -->
       <section id="page-profile" class="page">
@@ -935,79 +905,6 @@
     </div>
   </div>
 
-  <!-- ══ 新增/編輯招募活動 ══ -->
-  <div class="modal-overlay" id="activityModalOverlay">
-    <div class="modal modal-large">
-      <div class="modal-header">
-        <h3 id="activity-modal-title">新增招募活動</h3>
-        <button class="modal-close" id="activityModalClose">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-section">
-          <div class="form-grid">
-            <div class="form-group">
-              <label>活動日期 <span class="required">*</span></label>
-              <input type="date" id="act-date">
-            </div>
-            <div class="form-group">
-              <label>活動類型</label>
-              <select id="act-type">
-                <option value="school">學校宣傳</option>
-                <option value="booth">擺攤活動</option>
-                <option value="visit">家訪</option>
-                <option value="other">其他</option>
-              </select>
-            </div>
-            <div class="form-group full">
-              <label>地點</label>
-              <input type="text" id="act-location" placeholder="學校名稱或地址…">
-            </div>
-            <div class="form-group full">
-              <label>說明</label>
-              <textarea id="act-note" rows="2" placeholder="活動備註…"></textarea>
-            </div>
-            <div class="form-group full" id="photo-upload-section">
-              <label>上傳照片</label>
-              <div class="upload-area" id="uploadArea">
-                <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
-                <div class="upload-prompt" id="uploadPrompt">
-                  <div style="font-size:32px">📷</div>
-                  <div>點擊或拖曳照片到此處</div>
-                  <div style="font-size:12px;color:var(--text-muted);margin-top:4px">支援 JPG、PNG、HEIC</div>
-                </div>
-                <div id="upload-preview" class="upload-preview"></div>
-              </div>
-              <div id="upload-progress" style="display:none">
-                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-                <div class="progress-text" id="progressText">上傳中…</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="activityCancelBtn">取消</button>
-        <button class="btn btn-primary" id="activitySaveBtn">儲存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ 活動詳情/照片 ══ -->
-  <div class="modal-overlay" id="activityDetailOverlay">
-    <div class="modal modal-large">
-      <div class="modal-header">
-        <h3 id="activityDetailTitle">活動詳情</h3>
-        <button class="modal-close" id="activityDetailClose">✕</button>
-      </div>
-      <div class="modal-body" id="activityDetailBody"></div>
-    </div>
-  </div>
-
-  <!-- ══ 照片放大 ══ -->
-  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
-    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-    <img id="lightbox-img" src="" alt="">
-  </div>
 
   <!-- ══ 新增/編輯人員 ══ -->
   <div class="modal-overlay" id="personnelModalOverlay">
