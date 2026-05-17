@@ -357,7 +357,7 @@
             <div class="profile-card-header">
               <span class="profile-card-icon">🚗</span>
               <span class="profile-card-title">車輛資訊</span>
-              <button class="btn btn-primary btn-sm" id="addVehicleBtn" onclick="openVehicleModal()" style="margin-left:auto">＋ 新增車輛</button>
+              <span style="font-size:12px;color:var(--text-muted);margin-left:auto">由承辦人管理</span>
             </div>
             <div id="my-vehicle-list" style="margin-top:14px">
               <div class="prof-empty-hint">尚無車輛資訊</div>
@@ -1151,17 +1151,20 @@
 
   <!-- ══ 新增/編輯車輛 ══ -->
   <div class="modal-overlay" id="vehicleModalOverlay">
-    <div class="modal modal-large">
+    <div class="modal">
       <div class="modal-header">
         <h3 id="vehicle-modal-title">新增車輛</h3>
         <button class="modal-close" id="vehicleModalClose">✕</button>
       </div>
       <div class="modal-body">
-
-        <!-- 基本資料 -->
         <div class="form-section">
-          <div class="form-section-title">🚗 基本資料</div>
           <div class="form-grid">
+            <div class="form-group full">
+              <label>人員 <span class="required">*</span></label>
+              <select id="v-personnel">
+                <option value="">請選擇人員</option>
+              </select>
+            </div>
             <div class="form-group">
               <label>車種 <span class="required">*</span></label>
               <select id="v-type">
@@ -1184,71 +1187,6 @@
             </div>
           </div>
         </div>
-
-        <!-- 車主資訊 -->
-        <div class="form-section">
-          <div class="form-section-title">👤 車主資訊</div>
-          <div class="form-group">
-            <label>車主是否為本人？</label>
-            <div style="display:flex;gap:24px;margin-top:6px">
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal">
-                <input type="radio" name="v-owner-self" id="v-owner-self-yes" value="yes" checked> 本人
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal">
-                <input type="radio" name="v-owner-self" id="v-owner-self-no" value="no"> 非本人
-              </label>
-            </div>
-          </div>
-          <div id="v-owner-other-fields" style="display:none">
-            <div class="form-grid" style="margin-top:10px">
-              <div class="form-group">
-                <label>車主姓名 <span class="required">*</span></label>
-                <input type="text" id="v-owner-name" placeholder="車主真實姓名">
-              </div>
-              <div class="form-group">
-                <label>與車主關係 <span class="required">*</span></label>
-                <input type="text" id="v-owner-rel" placeholder="例：父親、配偶、兄弟姐妹…">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 附件上傳 -->
-        <div class="form-section">
-          <div class="form-section-title">📎 附件上傳</div>
-          <div class="vdoc-grid">
-            <div class="vdoc-card" id="vdoc-front">
-              <input type="file" accept="image/*" class="vdoc-input" data-key="front">
-              <div class="vdoc-preview" id="vdoc-preview-front"></div>
-              <div class="vdoc-label">📷 車頭照</div>
-            </div>
-            <div class="vdoc-card" id="vdoc-rear">
-              <input type="file" accept="image/*" class="vdoc-input" data-key="rear">
-              <div class="vdoc-preview" id="vdoc-preview-rear"></div>
-              <div class="vdoc-label">📷 車尾照</div>
-            </div>
-            <div class="vdoc-card" id="vdoc-reg">
-              <input type="file" accept="image/*" class="vdoc-input" data-key="reg">
-              <div class="vdoc-preview" id="vdoc-preview-reg"></div>
-              <div class="vdoc-label">📋 行照</div>
-            </div>
-            <div class="vdoc-card" id="vdoc-license">
-              <input type="file" accept="image/*" class="vdoc-input" data-key="license">
-              <div class="vdoc-preview" id="vdoc-preview-license"></div>
-              <div class="vdoc-label">🪪 駕照</div>
-            </div>
-            <div class="vdoc-card" id="vdoc-insurance">
-              <input type="file" accept="image/*" class="vdoc-input" data-key="insurance">
-              <div class="vdoc-preview" id="vdoc-preview-insurance"></div>
-              <div class="vdoc-label">📄 保險卡</div>
-            </div>
-          </div>
-          <div id="v-upload-progress" style="display:none;margin-top:12px">
-            <div class="progress-bar"><div class="progress-fill" id="v-progress-fill"></div></div>
-            <div class="progress-text" id="v-progress-text">上傳中…</div>
-          </div>
-        </div>
-
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="vehicleCancelBtn">取消</button>
