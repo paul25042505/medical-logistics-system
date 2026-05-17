@@ -41,7 +41,8 @@ const COL_PERSONNEL     = collection(db, 'personnel');
 const COL_USERS         = collection(db, 'users');
 const COL_APPLICATIONS  = collection(db, 'applications');
 const COL_VEHICLES      = collection(db, 'vehicles');
-const COL_UNIFORM_POINTS = collection(db, 'uniformPoints');
+const COL_UNIFORM_POINTS  = collection(db, 'uniformPoints');
+const COL_ACCOUNT_REQS    = collection(db, 'accountRequests');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -71,6 +72,8 @@ let editingVehicleId = null;
 let uniformPoints   = [];
 let editingUpId     = null;
 let upUnitFilter    = '';
+
+let accountRequests = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
@@ -261,7 +264,7 @@ window.approveUser = async function(uid) {
 const loaded = new Set();
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 9) {
+  if (loaded.size >= 10) {
     const ls = document.getElementById('loading-screen');
     if (ls) ls.style.display = 'none';
   }
@@ -405,7 +408,46 @@ function renderAdminPage() {
   makeList('admin-unit-list',      adminSettings.units,      'units');
   makeList('admin-battalion-list', adminSettings.battalions, 'battalions');
   makeList('admin-company-list',   adminSettings.companies,  'companies');
+
+  // ── 帳號申請清單 ──
+  const reqList  = document.getElementById('admin-acct-req-list');
+  const reqEmpty = document.getElementById('acct-req-empty');
+  const reqBadge = document.getElementById('acct-req-badge');
+  if (reqList) {
+    const pending = accountRequests.filter(r => r.status === 'pending');
+    if (reqBadge) {
+      reqBadge.textContent = pending.length ? pending.length : '';
+      reqBadge.style.display = pending.length ? '' : 'none';
+    }
+    if (!accountRequests.length) {
+      reqEmpty.style.display = '';
+      reqList.innerHTML = '';
+    } else {
+      reqEmpty.style.display = 'none';
+      reqList.innerHTML = accountRequests.map(r => {
+        const ts = fmtUpTs(r.requestedAt);
+        const statusBadge = r.status === 'pending'
+          ? `<span style="font-size:11px;background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:99px;font-weight:700">待處理</span>`
+          : `<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:99px;font-weight:700">已處理</span>`;
+        return `<li class="admin-list-item" style="flex-wrap:wrap;gap:6px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600">${r.name || '—'}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${r.unit || '—'} ／ ${r.email || '—'} ／ ${ts}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            ${statusBadge}
+            ${r.status === 'pending' ? `<button class="btn btn-sm btn-secondary" onclick="markAcctReqDone('${r.id}')">✔ 標記已處理</button>` : ''}
+          </div>
+        </li>`;
+      }).join('');
+    }
+  }
 }
+
+window.markAcctReqDone = async function(id) {
+  try { await updateDoc(doc(db, 'accountRequests', id), { status: 'done' }); }
+  catch(e) { console.error(e); alert('更新失敗'); }
+};
 
 window.moveAdminItem = async function (key, idx, dir) {
   const arr = [...(adminSettings[key] || [])];
@@ -1507,6 +1549,13 @@ function startApp() {
     if (document.getElementById('page-uniform-points').classList.contains('active')) renderUniformPointsPage();
     markLoaded('uniformPoints');
   }, () => markLoaded('uniformPoints'));
+
+  onSnapshot(COL_ACCOUNT_REQS, snap => {
+    accountRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    accountRequests.sort((a, b) => (b.requestedAt?.seconds || 0) - (a.requestedAt?.seconds || 0));
+    if (document.getElementById('page-admin').classList.contains('active')) renderAdminPage();
+    markLoaded('accountRequests');
+  }, () => markLoaded('accountRequests'));
 }
 
 window.changeUserRole = async function(uid, role) {

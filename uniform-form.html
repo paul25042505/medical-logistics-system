@@ -10,89 +10,122 @@
       --navy: #0b1f3a; --accent: #2563eb; --accent-hover: #1d4ed8;
       --bg: #f0f4f8; --white: #fff; --border: #dde3ea;
       --text: #1e293b; --muted: #64748b; --green: #16a34a;
-      --red: #dc2626; --green-bg: #dcfce7;
+      --red: #dc2626; --yellow: #d97706;
+      --green-bg: #dcfce7; --blue-bg: #eff6ff; --yellow-bg: #fef3c7;
     }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
 
-    /* Header */
-    .fh { background: var(--navy); color: #fff; text-align: center; padding: 28px 20px 24px; }
-    .fh-logo { font-size: 40px; margin-bottom: 8px; }
-    .fh h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-    .fh p { font-size: 13px; color: rgba(255,255,255,0.65); }
+    /* ── Header ── */
+    .fh { background: var(--navy); color: #fff; text-align: center; padding: 28px 20px 26px; }
+    .fh-logo { font-size: 42px; margin-bottom: 8px; }
+    .fh h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .fh p { font-size: 13px; color: rgba(255,255,255,0.6); }
 
-    /* Main */
+    /* ── Main ── */
     .fmain { max-width: 560px; margin: 0 auto; padding: 28px 16px 60px; }
 
-    /* Card */
-    .fcard { background: var(--white); border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 28px; margin-bottom: 16px; }
+    /* ── Card ── */
+    .fcard { background: var(--white); border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); padding: 26px 28px; margin-bottom: 16px; }
     @media (max-width: 480px) { .fcard { padding: 18px 16px; } }
+    .card-title { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 20px; padding-bottom: 11px; border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 7px; }
 
-    .card-title { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
-
-    /* Form grid */
-    .fg { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    /* ── Form ── */
+    .fg { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     @media (max-width: 480px) { .fg { grid-template-columns: 1fr; } }
     .fg-full { grid-column: 1 / -1; }
 
     .fgroup { display: flex; flex-direction: column; gap: 5px; }
-    .fgroup label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .fgroup label { font-size: 13px; font-weight: 600; }
     .req { color: var(--red); }
+
     .fgroup input, .fgroup select {
       padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px;
-      font-size: 14px; font-family: inherit; outline: none; background: #fff;
-      transition: border-color 0.2s;
+      font-size: 14px; font-family: inherit; background: #fff; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .fgroup input:focus, .fgroup select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .fgroup input:focus, .fgroup select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
     .fgroup input[readonly] { background: var(--bg); color: var(--muted); cursor: not-allowed; }
-    .ferr { color: var(--red); font-size: 12px; display: none; margin-top: 3px; }
+    .fgroup input:disabled, .fgroup select:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
+    .ferr { color: var(--red); font-size: 12px; display: none; margin-top: 2px; }
     .fgroup.has-error input, .fgroup.has-error select { border-color: var(--red); }
     .fgroup.has-error .ferr { display: block; }
 
-    /* Hint */
-    .calc-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .calc-hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
 
-    /* Divider */
-    .fdivider { height: 1px; background: var(--border); margin: 8px 0 20px; }
+    /* ── Registration panel ── */
+    #reg-panel {
+      display: none; margin-top: 14px; padding: 16px;
+      background: var(--yellow-bg); border: 1.5px solid #fcd34d;
+      border-radius: 10px;
+    }
+    #reg-panel.show { display: block; }
+    .reg-panel-title { font-size: 13px; font-weight: 700; color: var(--yellow); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    .reg-hint { font-size: 12px; color: #92400e; line-height: 1.6; margin-bottom: 14px; }
+    #reg-panel .fg { grid-template-columns: 1fr; }
 
-    /* Submit */
-    .fnav { display: flex; justify-content: flex-end; }
-    .btn { padding: 11px 28px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.15s; }
+    /* ── Toggle link ── */
+    .toggle-link { font-size: 13px; color: var(--accent); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-top: 8px; display: inline-block; }
+    .toggle-link:hover { color: var(--accent-hover); }
+
+    /* ── Divider ── */
+    .fdivider { height: 1px; background: var(--border); margin: 16px 0; }
+
+    /* ── Submit ── */
+    .btn { padding: 11px 28px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
     .btn:active { transform: scale(0.97); }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover { background: var(--accent-hover); }
-    .btn-big { padding: 13px 40px; font-size: 15px; width: 100%; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-full { width: 100%; justify-content: center; padding: 14px; font-size: 15px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--blue-bg); }
 
-    /* Success screen */
-    #success-screen { display: none; text-align: center; padding: 40px 20px; }
-    .success-icon { font-size: 64px; margin-bottom: 16px; }
-    .success-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
-    .success-msg { font-size: 14px; color: var(--muted); line-height: 1.8; }
-    .success-detail {
-      display: inline-block; background: var(--bg); border-radius: 10px;
-      padding: 14px 24px; margin: 18px 0; text-align: left;
-      border: 1px solid var(--border);
+    /* ── Success screen ── */
+    #success-screen { display: none; }
+
+    .success-hero { text-align: center; padding: 32px 20px 24px; }
+    .success-icon { font-size: 64px; line-height: 1; margin-bottom: 12px; }
+    .success-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .success-sub { font-size: 14px; color: var(--muted); }
+
+    .summary-box {
+      background: var(--bg); border-radius: 10px; padding: 16px 20px;
+      margin: 0 0 16px; border: 1px solid var(--border);
     }
-    .success-detail p { font-size: 13px; color: var(--text); line-height: 2; }
-    .success-detail strong { color: var(--accent); }
+    .summary-box .srow { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .summary-box .srow:last-child { border-bottom: none; }
+    .summary-box .srow .slabel { color: var(--muted); }
+    .summary-box .srow .sval { font-weight: 600; color: var(--text); }
+    .summary-box .srow .sval.green { color: var(--green); }
+    .summary-box .srow .sval.accent { color: var(--accent); }
 
-    /* Toast */
-    .toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px;
-      font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    .reg-notice {
+      background: var(--yellow-bg); border: 1.5px solid #fcd34d; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: #92400e; line-height: 1.7;
     }
-    .toast.show { opacity: 1; }
+    .reg-notice strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--yellow); }
 
-    /* Loading overlay */
+    .refill-btn { margin-top: 4px; }
+
+    /* ── Loading overlay ── */
     #submitting-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.4); z-index: 100;
-      align-items: center; justify-content: center; flex-direction: column; gap: 16px; color: #fff;
+      background: rgba(11,31,58,0.55); z-index: 100;
+      align-items: center; justify-content: center; flex-direction: column; gap: 14px; color: #fff;
     }
     #submitting-overlay.show { display: flex; }
-    .spin { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .spin { width: 38px; height: 38px; border: 4px solid rgba(255,255,255,0.25); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+
+    /* ── Loading state for personnel select ── */
+    .sel-loading { font-size: 12px; color: var(--muted); margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -105,46 +138,98 @@
 
 <div class="fmain">
 
-  <!-- ══ 成功畫面 ══ -->
-  <div class="fcard" id="success-screen">
-    <div class="success-icon">✅</div>
-    <div class="success-title">申報完成！</div>
-    <div class="success-detail">
-      <p>姓名：<strong id="s-name"></strong></p>
-      <p>單位：<strong id="s-unit"></strong></p>
-      <p>配額點數：<strong id="s-quota"></strong> 點</p>
-      <p>剩餘點數：<strong id="s-remaining"></strong> 點</p>
-      <p>使用點數：<strong id="s-used"></strong> 點</p>
-      <p>填寫時間：<strong id="s-time"></strong></p>
+  <!-- ══ 成功結尾畫面 ══ -->
+  <div id="success-screen">
+    <div class="fcard">
+      <div class="success-hero">
+        <div class="success-icon">✅</div>
+        <div class="success-title">申報完成！</div>
+        <div class="success-sub">您的點數資料已成功送出</div>
+      </div>
+
+      <div class="summary-box">
+        <div class="srow"><span class="slabel">姓名</span>      <span class="sval"         id="s-name"></span></div>
+        <div class="srow"><span class="slabel">單位</span>      <span class="sval"         id="s-unit"></span></div>
+        <div class="srow"><span class="slabel">配額點數</span>  <span class="sval accent"  id="s-quota"></span></div>
+        <div class="srow"><span class="slabel">剩餘點數</span>  <span class="sval green"   id="s-remaining"></span></div>
+        <div class="srow"><span class="slabel">使用點數</span>  <span class="sval"         id="s-used"></span></div>
+        <div class="srow"><span class="slabel">填寫時間</span>  <span class="sval"         id="s-time"></span></div>
+      </div>
+
+      <!-- 僅新增帳號申請時顯示 -->
+      <div class="reg-notice" id="s-reg-notice" style="display:none">
+        <strong>📬 帳號申請已一併送出</strong>
+        您的帳號申請將由承辦人審核，開通後即可使用 Google 帳號（<span id="s-email"></span>）登入系統。<br>
+        點數資料已先行儲存，請耐心等候通知。
+      </div>
+
+      <button class="btn btn-ghost btn-full refill-btn" onclick="location.reload()">↩ 重新填寫</button>
     </div>
-    <div class="success-msg">資料已送出，承辦人將進行確認。</div>
-    <br>
-    <button class="btn btn-primary" style="margin-top:8px" onclick="location.reload()">重新填寫</button>
   </div>
 
   <!-- ══ 表單 ══ -->
   <div id="form-wrap">
+
+    <!-- 人員資訊 -->
     <div class="fcard">
       <div class="card-title">👤 人員資訊</div>
       <div class="fg">
+
+        <!-- 單位 -->
         <div class="fgroup">
           <label>單位 <span class="req">*</span></label>
           <select id="f-unit">
-            <option value="">請選擇</option>
+            <option value="">請選擇單位</option>
             <option>衛生營營部</option>
             <option>衛生營第一連</option>
             <option>衛生營第二連</option>
           </select>
           <span class="ferr">請選擇單位</span>
         </div>
-        <div class="fgroup">
-          <label>姓名 <span class="req">*</span></label>
-          <input type="text" id="f-name" placeholder="請輸入您的姓名" autocomplete="name">
-          <span class="ferr">請輸入姓名</span>
+
+        <!-- 人員 -->
+        <div class="fgroup" id="fg-personnel">
+          <label>人員 <span class="req">*</span></label>
+          <select id="f-personnel" disabled>
+            <option value="">請先選擇單位</option>
+          </select>
+          <div class="sel-loading" id="personnel-loading" style="display:none">⏳ 載入人員中…</div>
+          <span class="ferr">請選擇人員</span>
         </div>
+
       </div>
+
+      <!-- 找不到名字 toggle -->
+      <div id="find-toggle-wrap" style="margin-top:10px; display:none">
+        <button type="button" class="toggle-link" id="reg-toggle">＋ 找不到我的名字？點此新增並申請帳號</button>
+      </div>
+
+      <!-- 手動新增 + 帳號申請 panel -->
+      <div id="reg-panel">
+        <div class="reg-panel-title">🆕 新增未建檔人員 ＋ 申請帳號</div>
+        <div class="reg-hint">
+          填寫姓名與 Email 後，系統將自動送出帳號申請。<br>
+          承辦人審核開通後，即可使用 Google 帳號登入系統。<br>
+          <strong>點數資料可先行送出，不需等待帳號開通。</strong>
+        </div>
+        <div class="fg fg-full">
+          <div class="fgroup fg-full">
+            <label>姓名 <span class="req">*</span></label>
+            <input type="text" id="f-manual-name" placeholder="請輸入您的真實姓名" autocomplete="name">
+            <span class="ferr">請輸入姓名</span>
+          </div>
+          <div class="fgroup fg-full">
+            <label>Google 帳號 Email <span class="req">*</span></label>
+            <input type="email" id="f-manual-email" placeholder="example@gmail.com" autocomplete="email">
+            <span class="ferr">請輸入 Email</span>
+          </div>
+        </div>
+        <button type="button" class="toggle-link" id="reg-cancel" style="margin-top:4px;color:var(--muted)">← 返回選擇已建檔人員</button>
+      </div>
+
     </div>
 
+    <!-- 點數資訊 -->
     <div class="fcard">
       <div class="card-title">📊 點數資訊</div>
       <div class="fg">
@@ -160,140 +245,293 @@
         </div>
         <div class="fgroup fg-full">
           <label>使用點數（自動計算）</label>
-          <input type="number" id="f-used" readonly placeholder="—">
+          <input type="number" id="f-used" readonly tabindex="-1">
           <div class="calc-hint">使用點數 ＝ 配額點數 − 剩餘點數</div>
         </div>
       </div>
     </div>
 
-    <div class="fcard" style="padding: 20px 28px;">
-      <button class="btn btn-primary btn-big" id="submitBtn">✔ 送出申報</button>
+    <!-- 送出 -->
+    <div class="fcard" style="padding:20px 28px">
+      <button class="btn btn-primary btn-full" id="submitBtn">✔ 送出申報</button>
     </div>
-  </div>
 
+  </div><!-- /form-wrap -->
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="submitting-overlay"><div class="spin"></div><div>送出中，請稍候…</div></div>
+<div id="submitting-overlay">
+  <div class="spin"></div>
+  <div style="font-size:14px">送出中，請稍候…</div>
+</div>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import {
-    getFirestore, initializeFirestore, persistentLocalCache,
-    collection, addDoc, serverTimestamp
-  } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getFirestore, initializeFirestore, persistentLocalCache,
+  collection, query, where, getDocs, addDoc, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-  // ── Firebase ──
-  const app = initializeApp({
-    apiKey: 'AIzaSyAtPU5Dsf5opwqlOUVn6QzKVJ1JTNhYfzM',
-    authDomain: 'medical-logistics-system-dc1cd.firebaseapp.com',
-    projectId: 'medical-logistics-system-dc1cd',
-    storageBucket: 'medical-logistics-system-dc1cd.firebasestorage.app',
-    messagingSenderId: '642469138148',
-    appId: '1:642469138148:web:4aac96ce35d32d8132a6f1',
-  });
+// ── Firebase ──────────────────────────────────────────
+const app = initializeApp({
+  apiKey: 'AIzaSyAtPU5Dsf5opwqlOUVn6QzKVJ1JTNhYfzM',
+  authDomain: 'medical-logistics-system-dc1cd.firebaseapp.com',
+  projectId: 'medical-logistics-system-dc1cd',
+  storageBucket: 'medical-logistics-system-dc1cd.firebasestorage.app',
+  messagingSenderId: '642469138148',
+  appId: '1:642469138148:web:4aac96ce35d32d8132a6f1',
+});
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache() }); }
+catch { db = getFirestore(app); }
 
-  let db;
-  try { db = initializeFirestore(app, { localCache: persistentLocalCache() }); }
-  catch { db = getFirestore(app); }
+const COL_UP   = collection(db, 'uniformPoints');
+const COL_PERS = collection(db, 'personnel');
+const COL_REQS = collection(db, 'accountRequests');
 
-  const COL = collection(db, 'uniformPoints');
+// ── State ─────────────────────────────────────────────
+let isManualMode = false;
+let selectedPersonnelId = null;
 
-  // ── Toast ──
-  function toast(msg) {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 2800);
+// ── Toast ─────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Auto-calc 使用點數 ────────────────────────────────
+function calcUsed() {
+  const q = Number(document.getElementById('f-quota').value)     || 0;
+  const r = Number(document.getElementById('f-remaining').value) || 0;
+  document.getElementById('f-used').value = (q || r) ? q - r : '';
+}
+document.getElementById('f-quota').addEventListener('input',     calcUsed);
+document.getElementById('f-remaining').addEventListener('input', calcUsed);
+
+// ── Load personnel by unit ────────────────────────────
+document.getElementById('f-unit').addEventListener('change', async () => {
+  const unit = document.getElementById('f-unit').value;
+  const pSel = document.getElementById('f-personnel');
+  const loading = document.getElementById('personnel-loading');
+  const toggleWrap = document.getElementById('find-toggle-wrap');
+
+  // Reset
+  selectedPersonnelId = null;
+  pSel.innerHTML = '<option value="">載入中…</option>';
+  pSel.disabled = true;
+  loading.style.display = '';
+  toggleWrap.style.display = 'none';
+  closeRegPanel();
+
+  if (!unit) {
+    pSel.innerHTML = '<option value="">請先選擇單位</option>';
+    loading.style.display = 'none';
+    return;
   }
 
-  // ── Auto-calc 使用點數 ──
-  function calcUsed() {
-    const q = Number(document.getElementById('f-quota').value)     || 0;
-    const r = Number(document.getElementById('f-remaining').value) || 0;
-    document.getElementById('f-used').value = q - r;
-  }
-  document.getElementById('f-quota').addEventListener('input', calcUsed);
-  document.getElementById('f-remaining').addEventListener('input', calcUsed);
+  try {
+    const snap = await getDocs(query(COL_PERS, where('unit', '==', unit)));
+    loading.style.display = 'none';
+    const list = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
 
-  // ── Validate ──
-  function validate() {
-    let ok = true;
-    const fields = [
-      { id: 'f-unit',      msg: '請選擇單位' },
-      { id: 'f-name',      msg: '請輸入姓名' },
-      { id: 'f-quota',     msg: '請輸入配額點數' },
-      { id: 'f-remaining', msg: '請輸入剩餘點數' },
-    ];
-    fields.forEach(({ id, msg }) => {
-      const g = document.getElementById(id).closest('.fgroup');
-      if (!document.getElementById(id).value.toString().trim()) {
-        g.classList.add('has-error');
-        g.querySelector('.ferr').textContent = msg;
-        ok = false;
-      } else {
-        g.classList.remove('has-error');
-      }
-    });
-    return ok;
-  }
-
-  // ── Submit ──
-  document.getElementById('submitBtn').addEventListener('click', async () => {
-    if (!validate()) { toast('請填寫所有必填欄位'); return; }
-
-    const unit      = document.getElementById('f-unit').value;
-    const ownerName = document.getElementById('f-name').value.trim();
-    const quota     = Number(document.getElementById('f-quota').value);
-    const remaining = Number(document.getElementById('f-remaining').value);
-    const used      = quota - remaining;
-
-    const overlay = document.getElementById('submitting-overlay');
-    overlay.classList.add('show');
-    document.getElementById('submitBtn').disabled = true;
-
-    try {
-      const now = serverTimestamp();
-      await addDoc(COL, {
-        personnelId: null,
-        ownerName,
-        unit,
-        quota,
-        remaining,
-        used,
-        submittedAt: now,
-        source: 'public-form',
-      });
-
-      // Show success screen
-      const timeStr = new Date().toLocaleString('zh-TW', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit'
-      });
-      document.getElementById('s-name').textContent      = ownerName;
-      document.getElementById('s-unit').textContent      = unit;
-      document.getElementById('s-quota').textContent     = quota;
-      document.getElementById('s-remaining').textContent = remaining;
-      document.getElementById('s-used').textContent      = used;
-      document.getElementById('s-time').textContent      = timeStr;
-
-      document.getElementById('form-wrap').style.display    = 'none';
-      document.getElementById('success-screen').style.display = '';
-    } catch (e) {
-      console.error(e);
-      toast('❌ 送出失敗，請稍後再試');
-      document.getElementById('submitBtn').disabled = false;
-    } finally {
-      overlay.classList.remove('show');
+    if (!list.length) {
+      pSel.innerHTML = '<option value="">此單位尚無建檔人員</option>';
+    } else {
+      pSel.innerHTML = '<option value="">請選擇人員</option>' +
+        list.map(p => `<option value="${p.id}" data-name="${p.name}">${p.name}</option>`).join('');
     }
-  });
+    pSel.disabled = false;
+    toggleWrap.style.display = '';
+  } catch (e) {
+    console.warn('personnel fetch failed, manual mode only', e);
+    loading.style.display = 'none';
+    pSel.innerHTML = '<option value="">（無法載入，請手動填寫）</option>';
+    pSel.disabled = true;
+    toggleWrap.style.display = '';
+    // Auto-open manual panel if fetch fails
+    openRegPanel();
+  }
+});
 
-  // Clear error on input
-  ['f-unit','f-name','f-quota','f-remaining'].forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      document.getElementById(id).closest('.fgroup').classList.remove('has-error');
+document.getElementById('f-personnel').addEventListener('change', function() {
+  selectedPersonnelId = this.value || null;
+  document.getElementById('fg-personnel').classList.remove('has-error');
+});
+
+// ── Manual / Registration panel ───────────────────────
+function openRegPanel() {
+  isManualMode = true;
+  document.getElementById('reg-panel').classList.add('show');
+  document.getElementById('f-personnel').disabled = true;
+  document.getElementById('f-personnel').value = '';
+  selectedPersonnelId = null;
+  document.getElementById('reg-toggle').textContent = '（已切換為手動新增模式）';
+  document.getElementById('reg-toggle').style.textDecoration = 'none';
+  document.getElementById('reg-toggle').style.cursor = 'default';
+  document.getElementById('f-manual-name').focus();
+}
+
+function closeRegPanel() {
+  isManualMode = false;
+  document.getElementById('reg-panel').classList.remove('show');
+  const pSel = document.getElementById('f-personnel');
+  if (document.getElementById('f-unit').value && !pSel.disabled) {
+    // Re-enable if unit is selected and was not in error state
+  }
+  document.getElementById('reg-toggle').textContent = '＋ 找不到我的名字？點此新增並申請帳號';
+  document.getElementById('reg-toggle').style.textDecoration = 'underline';
+  document.getElementById('reg-toggle').style.cursor = 'pointer';
+  // Re-enable personnel select
+  const unit = document.getElementById('f-unit').value;
+  if (unit) {
+    pSel.disabled = false;
+  }
+}
+
+document.getElementById('reg-toggle').addEventListener('click', () => {
+  if (!isManualMode) openRegPanel();
+});
+document.getElementById('reg-cancel').addEventListener('click', () => {
+  closeRegPanel();
+  // Clear manual fields
+  document.getElementById('f-manual-name').value  = '';
+  document.getElementById('f-manual-email').value = '';
+  document.getElementById('f-manual-name').closest('.fgroup').classList.remove('has-error');
+  document.getElementById('f-manual-email').closest('.fgroup').classList.remove('has-error');
+});
+
+// ── Validate ──────────────────────────────────────────
+function setErr(id, msg) {
+  const el = document.getElementById(id);
+  const g  = el.closest('.fgroup');
+  g.classList.add('has-error');
+  const ferr = g.querySelector('.ferr');
+  if (ferr) ferr.textContent = msg;
+}
+function clearErr(id) {
+  document.getElementById(id)?.closest('.fgroup')?.classList.remove('has-error');
+}
+
+['f-unit','f-personnel','f-quota','f-remaining','f-manual-name','f-manual-email'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => clearErr(id));
+  document.getElementById(id)?.addEventListener('change', () => clearErr(id));
+});
+
+function validate() {
+  let ok = true;
+
+  const unit = document.getElementById('f-unit').value;
+  if (!unit) { setErr('f-unit', '請選擇單位'); ok = false; }
+
+  if (isManualMode) {
+    const name  = document.getElementById('f-manual-name').value.trim();
+    const email = document.getElementById('f-manual-email').value.trim();
+    if (!name)  { setErr('f-manual-name',  '請輸入姓名'); ok = false; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErr('f-manual-email', '請輸入有效的 Email'); ok = false;
+    }
+  } else {
+    if (!selectedPersonnelId) { setErr('f-personnel', '請選擇人員'); ok = false; }
+  }
+
+  if (document.getElementById('f-quota').value === '')     { setErr('f-quota',     '請輸入配額點數'); ok = false; }
+  if (document.getElementById('f-remaining').value === '') { setErr('f-remaining', '請輸入剩餘點數'); ok = false; }
+
+  return ok;
+}
+
+// ── Submit ────────────────────────────────────────────
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  if (!validate()) { toast('⚠️ 請填寫所有必填欄位'); return; }
+
+  const unit      = document.getElementById('f-unit').value;
+  const quota     = Number(document.getElementById('f-quota').value);
+  const remaining = Number(document.getElementById('f-remaining').value);
+  const used      = quota - remaining;
+
+  let ownerName = '';
+  let personnelId = null;
+  let email = '';
+  let isNewReg = false;
+
+  if (isManualMode) {
+    ownerName = document.getElementById('f-manual-name').value.trim();
+    email     = document.getElementById('f-manual-email').value.trim();
+    isNewReg  = true;
+  } else {
+    personnelId = selectedPersonnelId;
+    const opt = document.getElementById('f-personnel').options[document.getElementById('f-personnel').selectedIndex];
+    ownerName = opt.dataset.name || opt.text;
+  }
+
+  const overlay = document.getElementById('submitting-overlay');
+  overlay.classList.add('show');
+  document.getElementById('submitBtn').disabled = true;
+
+  try {
+    const now = serverTimestamp();
+
+    // 儲存點數資料
+    await addDoc(COL_UP, {
+      personnelId: personnelId || null,
+      ownerName,
+      unit,
+      quota,
+      remaining,
+      used,
+      email: email || null,
+      accountRequested: isNewReg,
+      submittedAt: now,
+      source: 'public-form',
     });
-  });
+
+    // 若為新帳號申請，另存至 accountRequests
+    if (isNewReg) {
+      await addDoc(COL_REQS, {
+        name: ownerName,
+        email,
+        unit,
+        requestedAt: now,
+        status: 'pending',
+        source: 'uniform-form',
+      });
+    }
+
+    // 顯示成功畫面
+    const timeStr = new Date().toLocaleString('zh-TW', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+    document.getElementById('s-name').textContent      = ownerName;
+    document.getElementById('s-unit').textContent      = unit;
+    document.getElementById('s-quota').textContent     = quota + ' 點';
+    document.getElementById('s-remaining').textContent = remaining + ' 點';
+    document.getElementById('s-used').textContent      = used + ' 點';
+    document.getElementById('s-time').textContent      = timeStr;
+
+    if (isNewReg) {
+      document.getElementById('s-email').textContent = email;
+      document.getElementById('s-reg-notice').style.display = '';
+    } else {
+      document.getElementById('s-reg-notice').style.display = 'none';
+    }
+
+    document.getElementById('form-wrap').style.display    = 'none';
+    document.getElementById('success-screen').style.display = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  } catch (e) {
+    console.error(e);
+    toast('❌ 送出失敗，請稍後再試（' + (e.code || e.message) + '）');
+    document.getElementById('submitBtn').disabled = false;
+  } finally {
+    overlay.classList.remove('show');
+  }
+});
 </script>
 </body>
 </html>
