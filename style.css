@@ -589,12 +589,59 @@ main {
     width: 220px;
     transform: translateX(-100%);
   }
-  main { padding: 16px; }
+  main { padding: 14px; }
   .form-grid { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: 1fr; }
   .stats-grid { flex-direction: column; }
   .modal { max-height: 95vh; }
-  .recruit-header { flex-wrap: wrap; gap: 10px; }
+  .modal-header { padding: 14px 16px 12px; }
+  .modal-body { padding: 14px 16px; }
+  .modal-footer { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+  .modal-footer .btn { flex: 1; min-width: 80px; text-align: center; justify-content: center; }
+
+  /* 標題列：頁標題 + 按鈕組換行 */
+  .recruit-header { flex-wrap: wrap; gap: 8px; align-items: center; }
+  .recruit-header > div,
+  .recruit-header > [style*="display:flex"] { flex-wrap: wrap; gap: 6px; width: 100%; justify-content: flex-end; }
+  .recruit-header .page-title { flex: 1; min-width: 0; }
+
+  /* Toolbar：搜尋列全寬，篩選換行 */
+  .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .toolbar .search-bar { min-width: unset; }
+  .filter-bar { flex-wrap: wrap; gap: 6px; }
+  .filter-bar select,
+  .filter-bar input[type="date"] { flex: 1; min-width: 110px; }
+
+  /* Tabs：可橫向滑動 */
+  .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+  .tab-btn { flex-shrink: 0; padding: 10px 18px; }
+
+  /* 人員表格：橫向滑動 */
+  .personnel-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 招募員卡片：按鈕移至下方 */
+  .recruiter-card { flex-wrap: wrap; }
+  .recruiter-card > .recruit-actions { width: 100%; justify-content: flex-end; margin-top: 6px; }
+
+  /* 梯次卡片 header：直排 */
+  .batch-card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .batch-card-header > div:last-child { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sched-label { width: 100px; }
+
+  /* 單位篩選列：直排 */
+  .unit-filter-bar { flex-direction: column; gap: 6px; }
+  .unit-filter-chips { gap: 5px; }
+
+  /* 統計卡片：橫排不強制縮成直排 */
+  .stats-grid { flex-direction: row; flex-wrap: wrap; }
+  .stat-card { flex: 1; min-width: 130px; }
+
+  /* 個人資料卡 footer */
+  .profile-card-footer { flex-wrap: wrap; gap: 6px; }
+  .profile-card-footer .btn { flex: 1; text-align: center; }
+
+  /* 頁面標題字縮小 */
+  .page-title { font-size: 19px; }
 }
 
 /* ── Sidebar overlay backdrop ── */
@@ -1445,6 +1492,41 @@ main {
   .col-id, .col-age, .col-gender { display: none; }
   .col-phone { width: auto; }
   .pd-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 超小螢幕（≤480px）補強 ── */
+@media (max-width: 480px) {
+  main { padding: 10px; }
+  .page-title { font-size: 17px; }
+
+  /* Header 省略 email 節省空間 */
+  .header-email { display: none; }
+
+  /* 卡片 padding 縮小 */
+  .recruit-card { padding: 12px 12px; gap: 10px; }
+  .batch-card { padding: 14px 12px; }
+  .recruiter-card { padding: 12px 14px; }
+
+  /* 梯次日期行：直排 */
+  .date-row-item { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .date-row-item input[type="date"] { width: 100%; }
+
+  /* 訓員卡片操作按鈕：換行到下方 */
+  .recruit-card { flex-wrap: wrap; }
+  .recruit-actions { width: 100%; justify-content: flex-end; margin-top: 4px; }
+
+  /* 管理員頁：表格 list item 換行 */
+  .admin-list-item { flex-wrap: wrap; gap: 6px; }
+  .admin-item-actions { width: 100%; justify-content: flex-end; }
+
+  /* tabs 縮小間距 */
+  .tab-btn { padding: 9px 14px; font-size: 13px; }
+
+  /* 搜尋欄 */
+  .search-bar input { font-size: 13px; }
+
+  /* Modal footer：每個按鈕佔半行 */
+  .modal-footer { gap: 6px; }
 }
 
 /* ── 批次匯入 Modal ── */

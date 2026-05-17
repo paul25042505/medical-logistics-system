@@ -31,6 +31,7 @@
             <select id="dev-role"
               style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box;margin-bottom:10px;background:white;cursor:pointer">
               <option value="admin">系統管理員</option>
+              <option value="manager">業務主管</option>
               <option value="recruit">招募管理承辦</option>
               <option value="personnel">人事管理承辦</option>
               <option value="logistics">後勤管理承辦</option>
@@ -88,14 +89,14 @@
         <li><a href="#" class="nav-link active" data-page="home">🏠 首頁</a></li>
         <li><a href="#" class="nav-link" data-page="profile">👤 個人資料</a></li>
         <div class="nav-section-label" id="nav-section-recruit" style="margin-top:12px">招募管理</div>
-        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="trainee-list">👥 訓員列表</a></li>
-        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="batch-sched">📅 梯次期程</a></li>
-        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="interview-query">📋 約談紀錄查詢</a></li>
-        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="recruiters">🪖 招募員管理</a></li>
-        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="activity">📸 招募活動</a></li>
-        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
+        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="trainee-list">👥 訓員列表</a></li>
+        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="batch-sched">📅 梯次期程</a></li>
+        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="interview-query">📋 約談紀錄查詢</a></li>
+        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="recruiters">🪖 招募員管理</a></li>
+        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="activity">📸 招募活動</a></li>
+        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
         <div class="nav-section-label" id="nav-section-personnel" style="margin-top:12px">人事管理</div>
-        <li data-roles="admin,personnel"><a href="#" class="nav-link" data-page="personnel">📋 人員資訊管理</a></li>
+        <li data-roles="admin,manager,personnel"><a href="#" class="nav-link" data-page="personnel">📋 人員資訊管理</a></li>
         <div class="nav-section-label" id="nav-section-logistics" style="margin-top:12px">後勤管理</div>
         <li><a href="#" class="nav-link nav-coming">🚗 車輛資訊管理</a></li>
         <div class="nav-section-label" id="nav-section-system" style="margin-top:12px">系統</div>

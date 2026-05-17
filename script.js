@@ -69,6 +69,7 @@ let viewingPersonnelId = null;
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
   admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads']) },
   personnel: { label: '人事管理承辦', pages: new Set(['home','profile','personnel']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile']) },
@@ -85,6 +86,7 @@ function applyRolePermissions(role) {
   // Section labels
   const show = {
     admin:     ['recruit','personnel','logistics','system'],
+    manager:   ['recruit','personnel','logistics'],
     recruit:   ['recruit','logistics'],
     personnel: ['personnel','logistics'],
     logistics: ['logistics'],
