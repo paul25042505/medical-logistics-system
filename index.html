@@ -79,7 +79,7 @@
         <li><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
         <div class="nav-section-label" style="margin-top:12px">後勤管理</div>
         <li><a href="#" class="nav-link nav-coming">🚗 車輛資訊管理</a></li>
-        <li><a href="#" class="nav-link nav-coming">👤 人員資訊管理</a></li>
+        <li><a href="#" class="nav-link" data-page="personnel">👤 人員資訊管理</a></li>
         <div class="nav-section-label" style="margin-top:12px">系統</div>
         <li id="admin-nav-item" style="display:none"><a href="#" class="nav-link" data-page="admin">⚙️ 後台管理</a></li>
       </ul>
@@ -221,6 +221,60 @@
             <ul class="admin-list" id="admin-users-list"></ul>
           </div>
 
+        </div>
+      </section>
+
+      <!-- 人員資訊管理 -->
+      <section id="page-personnel" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">👤 人員資訊管理</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" id="personnelExportBtn">⬇ 匯出 CSV</button>
+            <button class="btn btn-primary" id="personnelAddBtn">＋ 新增人員</button>
+          </div>
+        </div>
+
+        <div class="unit-filter-bar">
+          <span class="unit-filter-label">單位篩選：</span>
+          <div class="unit-filter-chips" id="personnelUnitChips"></div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-bar">
+            <input type="text" id="personnelSearch" placeholder="搜尋姓名、電話、身分證…">
+          </div>
+          <div class="filter-bar">
+            <select id="personnelSortBy">
+              <option value="unit">排序：單位</option>
+              <option value="rank">排序：級職</option>
+              <option value="name">排序：姓名</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="personnel-stats" id="personnelStats"></div>
+
+        <div class="personnel-table-wrap">
+          <table class="personnel-table">
+            <thead>
+              <tr>
+                <th class="col-seq">序</th>
+                <th class="col-unit">單位</th>
+                <th class="col-rank">級職</th>
+                <th class="col-name">姓名</th>
+                <th class="col-gender">性別</th>
+                <th class="col-age">年齡</th>
+                <th class="col-phone">電話</th>
+                <th class="col-id">身分證</th>
+                <th class="col-actions">操作</th>
+              </tr>
+            </thead>
+            <tbody id="personnelTableBody"></tbody>
+          </table>
+          <div id="personnelEmpty" class="empty-state" style="display:none">
+            <div class="icon">👤</div>
+            <p>尚無人員資料，點擊「＋ 新增人員」開始建立</p>
+          </div>
         </div>
       </section>
 
@@ -625,6 +679,119 @@
   <div class="lightbox" id="lightbox" onclick="closeLightbox()">
     <button class="lightbox-close" onclick="closeLightbox()">✕</button>
     <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <!-- ══ 新增/編輯人員 ══ -->
+  <div class="modal-overlay" id="personnelModalOverlay">
+    <div class="modal modal-large" id="personnelModal">
+      <div class="modal-header">
+        <h3 id="personnel-modal-title">新增人員</h3>
+        <button class="modal-close" id="personnelModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <div class="form-section">
+          <h4 class="section-title">基本資料</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>單位 <span class="required">*</span></label>
+              <select id="pf-unit"><option value="">請選擇</option></select>
+            </div>
+            <div class="form-group">
+              <label>級職 <span class="required">*</span></label>
+              <input type="text" id="pf-rank" placeholder="上士、中尉、士官長…">
+            </div>
+            <div class="form-group">
+              <label>姓名 <span class="required">*</span></label>
+              <input type="text" id="pf-name" placeholder="真實姓名">
+            </div>
+            <div class="form-group">
+              <label>性別</label>
+              <select id="pf-gender">
+                <option value="">請選擇</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>出生年月日</label>
+              <input type="date" id="pf-birthDate">
+            </div>
+            <div class="form-group">
+              <label>身分證字號</label>
+              <input type="text" id="pf-idNumber" placeholder="A123456789" maxlength="10">
+            </div>
+            <div class="form-group">
+              <label>電話</label>
+              <input type="tel" id="pf-phone" placeholder="09xxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label>血型</label>
+              <select id="pf-bloodType">
+                <option value="">請選擇</option>
+                <option>A</option><option>B</option><option>O</option><option>AB</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>到職日</label>
+              <input type="date" id="pf-joinDate">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4 class="section-title">緊急聯絡資料</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>緊急聯絡人</label>
+              <input type="text" id="pf-emergencyName" placeholder="姓名">
+            </div>
+            <div class="form-group">
+              <label>與本人關係</label>
+              <input type="text" id="pf-emergencyRel" placeholder="父母、配偶…">
+            </div>
+            <div class="form-group">
+              <label>緊急聯絡電話</label>
+              <input type="tel" id="pf-emergencyPhone" placeholder="09xxxxxxxx">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4 class="section-title">其他資訊</h4>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>戶籍地址</label>
+              <input type="text" id="pf-address" placeholder="縣市鄉鎮市區街道門號…">
+            </div>
+            <div class="form-group full">
+              <label>備註</label>
+              <textarea id="pf-notes" rows="2" placeholder="其他補充說明…"></textarea>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="personnelCancelBtn">取消</button>
+        <button class="btn btn-primary" id="personnelSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 人員詳情 ══ -->
+  <div class="modal-overlay" id="personnelDetailOverlay">
+    <div class="modal modal-large" id="personnelDetailModal">
+      <div class="modal-header">
+        <h3 id="personnel-detail-title">人員詳情</h3>
+        <button class="modal-close" id="personnelDetailClose">✕</button>
+      </div>
+      <div class="modal-body" id="personnelDetailBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="personnelDetailClose2">關閉</button>
+        <button class="btn btn-primary" id="personnelDetailEditBtn">✏️ 編輯</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="script.js"></script>

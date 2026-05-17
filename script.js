@@ -42,6 +42,7 @@ const COL_BATCHES    = collection(db, 'batches');
 const COL_RECRUITERS = collection(db, 'recruiters');
 const COL_ACTIVITIES = collection(db, 'activities');
 const COL_LEADS      = collection(db, 'leads');
+const COL_PERSONNEL  = collection(db, 'personnel');
 const COL_USERS      = collection(db, 'users');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
@@ -59,6 +60,11 @@ let detailId       = null;
 let editingBatchId = null;
 let editingRcrId   = null;
 let pendingFiles   = [];
+
+let personnel          = [];
+let personnelUnitFilter = [];
+let editingPersonnelId = null;
+let viewingPersonnelId = null;
 
 // ── Auth ──────────────────────────────────────────────
 const ADMIN_EMAIL = 'paul25042505@gmail.com';
@@ -179,7 +185,7 @@ window.approveUser = async function(uid) {
 const loaded = new Set();
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 6) {
+  if (loaded.size >= 7) {
     const ls = document.getElementById('loading-screen');
     if (ls) ls.style.display = 'none';
   }
@@ -363,6 +369,7 @@ const PAGE_INIT = {
   'activity':        () => { renderActivities(); updateStorageBar(); },
   'leads':           () => renderLeads(),
   'admin':           () => { renderAdminPage(); },
+  'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -1316,6 +1323,8 @@ function startApp() {
     adminSettings = snap.exists() ? snap.data() : { units: [], battalions: [], companies: [] };
     renderAdminPage();
     populateAdminDropdowns();
+    if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnelUnitFilters();
+    populatePersonnelUnit();
     markLoaded('admin');
   }, () => markLoaded('admin'));
 
@@ -1358,6 +1367,12 @@ function startApp() {
     markLoaded('leads');
   }, () => markLoaded('leads'));
 
+  onSnapshot(COL_PERSONNEL, snap => {
+    personnel = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnel();
+    markLoaded('personnel');
+  }, () => markLoaded('personnel'));
+
   onSnapshot(COL_USERS, snap => {
     const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const el = document.getElementById('admin-users-list');
@@ -1383,3 +1398,304 @@ function startApp() {
       </li>`).join('');
   }, () => {});
 }
+
+// ══════════════════════════════════════════════════════
+// ── 人員資訊管理 ─────────────────────────────────────
+// ══════════════════════════════════════════════════════
+
+function populatePersonnelUnit() {
+  const sel = document.getElementById('pf-unit');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">請選擇</option>' +
+    (adminSettings.units || []).map(u => `<option${u === cur ? ' selected' : ''}>${u}</option>`).join('');
+}
+
+function renderPersonnelUnitFilters() {
+  const units  = adminSettings.units || [];
+  const chips  = document.getElementById('personnelUnitChips');
+  if (!chips) return;
+  const allActive = personnelUnitFilter.length === 0;
+  chips.innerHTML =
+    `<button class="unit-chip${allActive ? ' active' : ''}" data-unit="">全部</button>` +
+    units.map(u =>
+      `<button class="unit-chip${personnelUnitFilter.includes(u) ? ' active' : ''}" data-unit="${u}">${u}</button>`
+    ).join('');
+  chips.querySelectorAll('.unit-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const unit = chip.dataset.unit;
+      if (unit === '') {
+        personnelUnitFilter = [];
+      } else {
+        const idx = personnelUnitFilter.indexOf(unit);
+        if (idx >= 0) personnelUnitFilter.splice(idx, 1);
+        else          personnelUnitFilter.push(unit);
+      }
+      renderPersonnelUnitFilters();
+      renderPersonnel();
+    });
+  });
+}
+
+function renderPersonnel() {
+  const q      = document.getElementById('personnelSearch')?.value.trim().toLowerCase() || '';
+  const sortBy = document.getElementById('personnelSortBy')?.value || 'unit';
+
+  let filtered = personnel.filter(p => {
+    if (personnelUnitFilter.length > 0 && !personnelUnitFilter.includes(p.unit)) return false;
+    if (q && !(p.name + p.phone + p.idNumber + p.rank + p.unit).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    if (sortBy === 'unit') {
+      const uc = (adminSettings.units || []).indexOf(a.unit) - (adminSettings.units || []).indexOf(b.unit);
+      if (uc !== 0) return uc;
+      return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+    }
+    if (sortBy === 'rank') return (a.rank || '').localeCompare(b.rank || '', 'zh-TW');
+    return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+  });
+
+  const tbody   = document.getElementById('personnelTableBody');
+  const emptyEl = document.getElementById('personnelEmpty');
+  const statsEl = document.getElementById('personnelStats');
+  if (!tbody) return;
+
+  // 統計列
+  const unitCounts = {};
+  filtered.forEach(p => { const u = p.unit || '（未分配）'; unitCounts[u] = (unitCounts[u] || 0) + 1; });
+  const unitSummary = Object.entries(unitCounts).map(([u, c]) => `${u} ${c} 人`).join('　');
+  statsEl.textContent = `顯示 ${filtered.length} / ${personnel.length} 人${unitSummary ? '　' + unitSummary : ''}`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    emptyEl.style.display = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  tbody.innerHTML = filtered.map((p, i) => {
+    const age      = calcAge(p.birthDate);
+    const idMasked = p.idNumber
+      ? p.idNumber.slice(0, 1) + '●●●●●●●' + p.idNumber.slice(-2)
+      : '—';
+    return `<tr class="personnel-row" data-id="${p.id}">
+      <td class="col-seq">${i + 1}</td>
+      <td class="col-unit"><span class="unit-tag">${p.unit || '—'}</span></td>
+      <td class="col-rank">${p.rank || '—'}</td>
+      <td class="col-name"><strong>${p.name || '—'}</strong></td>
+      <td class="col-gender">${p.gender || '—'}</td>
+      <td class="col-age">${age || '—'}</td>
+      <td class="col-phone">${p.phone || '—'}</td>
+      <td class="col-id pii-mask">${idMasked}</td>
+      <td class="col-actions" onclick="event.stopPropagation()">
+        <button class="btn-icon" onclick="openPersonnelEdit('${p.id}')">✏️</button>
+        <button class="btn-icon danger" onclick="deletePersonnel('${p.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('.personnel-row').forEach(row => {
+    row.addEventListener('click', () => openPersonnelDetail(row.dataset.id));
+  });
+}
+
+// ── 人員 Form ─────────────────────────────────────────
+function openPersonnelForm(id) {
+  editingPersonnelId = id;
+  clearPersonnelForm();
+  populatePersonnelUnit();
+  if (id) {
+    document.getElementById('personnel-modal-title').textContent = '編輯人員';
+    const p = personnel.find(x => x.id === id);
+    if (p) fillPersonnelForm(p);
+  } else {
+    document.getElementById('personnel-modal-title').textContent = '新增人員';
+  }
+  document.getElementById('personnelModalOverlay').classList.add('open');
+}
+
+function clearPersonnelForm() {
+  ['pf-name','pf-rank','pf-phone','pf-idNumber',
+   'pf-emergencyName','pf-emergencyRel','pf-emergencyPhone','pf-address','pf-notes']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['pf-unit','pf-gender','pf-bloodType']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('pf-birthDate').value = '';
+  document.getElementById('pf-joinDate').value  = '';
+}
+
+function fillPersonnelForm(p) {
+  const sv = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+  sv('pf-unit', p.unit);   sv('pf-rank', p.rank);     sv('pf-name', p.name);
+  sv('pf-gender', p.gender);                           sv('pf-birthDate', p.birthDate);
+  sv('pf-idNumber', p.idNumber);                       sv('pf-phone', p.phone);
+  sv('pf-bloodType', p.bloodType);                     sv('pf-joinDate', p.joinDate);
+  sv('pf-emergencyName', p.emergencyName);             sv('pf-emergencyRel', p.emergencyRel);
+  sv('pf-emergencyPhone', p.emergencyPhone);           sv('pf-address', p.address);
+  sv('pf-notes', p.notes);
+}
+
+function readPersonnelForm() {
+  const gv = id => document.getElementById(id)?.value?.trim() || '';
+  return {
+    unit:           document.getElementById('pf-unit').value,
+    rank:           gv('pf-rank'),
+    name:           gv('pf-name'),
+    gender:         document.getElementById('pf-gender').value,
+    birthDate:      document.getElementById('pf-birthDate').value,
+    idNumber:       gv('pf-idNumber').toUpperCase(),
+    phone:          gv('pf-phone'),
+    bloodType:      document.getElementById('pf-bloodType').value,
+    joinDate:       document.getElementById('pf-joinDate').value,
+    emergencyName:  gv('pf-emergencyName'),
+    emergencyRel:   gv('pf-emergencyRel'),
+    emergencyPhone: gv('pf-emergencyPhone'),
+    address:        gv('pf-address'),
+    notes:          gv('pf-notes'),
+  };
+}
+
+function closePersonnelForm() {
+  document.getElementById('personnelModalOverlay').classList.remove('open');
+  editingPersonnelId = null;
+}
+
+document.getElementById('personnelAddBtn').addEventListener('click', () => openPersonnelForm(null));
+document.getElementById('personnelCancelBtn').addEventListener('click', closePersonnelForm);
+document.getElementById('personnelModalClose').addEventListener('click', closePersonnelForm);
+document.getElementById('personnelModalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'personnelModalOverlay') closePersonnelForm();
+});
+
+document.getElementById('personnelSaveBtn').addEventListener('click', async () => {
+  const data = readPersonnelForm();
+  if (!data.name) { alert('請填寫姓名'); return; }
+  if (!data.unit) { alert('請選擇單位'); return; }
+  const btn = document.getElementById('personnelSaveBtn');
+  btn.disabled = true;
+  try {
+    if (editingPersonnelId) {
+      await updateDoc(doc(db, 'personnel', editingPersonnelId), data);
+    } else {
+      await addDoc(COL_PERSONNEL, { ...data, createdAt: serverTimestamp() });
+    }
+    closePersonnelForm();
+  } catch (e) { console.error(e); alert('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+window.openPersonnelEdit = function (id) {
+  closePersonnelDetail();
+  openPersonnelForm(id);
+};
+
+window.deletePersonnel = async function (id) {
+  const p = personnel.find(x => x.id === id);
+  if (!p || !confirm(`確定要刪除「${p.name}」的資料嗎？此操作無法復原。`)) return;
+  try { await deleteDoc(doc(db, 'personnel', id)); }
+  catch (e) { console.error(e); alert('刪除失敗'); }
+};
+
+// ── 搜尋 / 排序 事件 ──────────────────────────────────
+document.getElementById('personnelSearch').addEventListener('input', renderPersonnel);
+document.getElementById('personnelSortBy').addEventListener('change', renderPersonnel);
+
+// ── 匯出 CSV ──────────────────────────────────────────
+document.getElementById('personnelExportBtn').addEventListener('click', () => {
+  const q = document.getElementById('personnelSearch')?.value.trim().toLowerCase() || '';
+  const filtered = personnel.filter(p => {
+    if (personnelUnitFilter.length > 0 && !personnelUnitFilter.includes(p.unit)) return false;
+    if (q && !(p.name + p.phone + p.idNumber + p.rank + p.unit).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const headers = ['序號','單位','級職','姓名','性別','出生年月日','年齡','身分證字號',
+                   '電話','血型','到職日','緊急聯絡人','關係','緊急聯絡電話','戶籍地址','備註'];
+  const rows = filtered.map((p, i) => [
+    i + 1, p.unit || '', p.rank || '', p.name || '', p.gender || '',
+    p.birthDate || '', calcAge(p.birthDate) || '', p.idNumber || '', p.phone || '',
+    p.bloodType || '', p.joinDate || '', p.emergencyName || '', p.emergencyRel || '',
+    p.emergencyPhone || '', p.address || '', p.notes || '',
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `人員名冊_${new Date().toLocaleDateString('zh-TW').replace(/\//g, '')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ── 人員詳情 Modal ────────────────────────────────────
+function openPersonnelDetail(id) {
+  viewingPersonnelId = id;
+  const p = personnel.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('personnel-detail-title').textContent =
+    [p.rank, p.name].filter(Boolean).join(' ');
+  renderPersonnelDetailBody(p);
+  document.getElementById('personnelDetailOverlay').classList.add('open');
+}
+window.openPersonnelDetail = openPersonnelDetail;
+
+function closePersonnelDetail() {
+  document.getElementById('personnelDetailOverlay').classList.remove('open');
+  viewingPersonnelId = null;
+}
+
+function renderPersonnelDetailBody(p) {
+  const age = calcAge(p.birthDate);
+  const row = (label, val) =>
+    val ? `<div class="pd-row"><span class="pd-label">${label}</span><span class="pd-val">${val}</span></div>` : '';
+
+  document.getElementById('personnelDetailBody').innerHTML = `
+    <div class="pd-section">
+      <div class="pd-section-title">基本資料</div>
+      <div class="pd-grid">
+        ${row('單位',     p.unit)}
+        ${row('級職',     p.rank)}
+        ${row('姓名',     p.name)}
+        ${row('性別',     p.gender)}
+        ${row('出生日期', p.birthDate ? formatDate(p.birthDate) + `（${age} 歲）` : '')}
+        ${row('身分證',   p.idNumber)}
+        ${row('電話',     p.phone)}
+        ${row('血型',     p.bloodType)}
+        ${row('到職日',   formatDate(p.joinDate))}
+      </div>
+    </div>
+    ${(p.emergencyName || p.emergencyPhone) ? `
+    <div class="pd-section">
+      <div class="pd-section-title">緊急聯絡資料</div>
+      <div class="pd-grid">
+        ${row('緊急聯絡人', p.emergencyName)}
+        ${row('與本人關係', p.emergencyRel)}
+        ${row('緊急聯絡電話', p.emergencyPhone)}
+      </div>
+    </div>` : ''}
+    ${(p.address || p.notes) ? `
+    <div class="pd-section">
+      <div class="pd-section-title">其他資訊</div>
+      <div class="pd-grid">
+        ${row('戶籍地址', p.address)}
+        ${row('備註',     p.notes)}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+document.getElementById('personnelDetailClose').addEventListener('click', closePersonnelDetail);
+document.getElementById('personnelDetailClose2').addEventListener('click', closePersonnelDetail);
+document.getElementById('personnelDetailOverlay').addEventListener('click', e => {
+  if (e.target.id === 'personnelDetailOverlay') closePersonnelDetail();
+});
+document.getElementById('personnelDetailEditBtn').addEventListener('click', () => {
+  const id = viewingPersonnelId;
+  closePersonnelDetail();
+  openPersonnelForm(id);
+});

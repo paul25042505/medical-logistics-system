@@ -1131,3 +1131,163 @@ main {
   text-align: center;
   margin-bottom: 8px;
 }
+
+/* ══════════════════════════════════════════════════════
+   ── 人員資訊管理 ─────────────────────────────────────
+   ══════════════════════════════════════════════════════ */
+
+/* 單位篩選列 */
+.unit-filter-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.unit-filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding-top: 6px;
+}
+.unit-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.unit-chip {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: white;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.unit-chip:hover { border-color: var(--accent); color: var(--accent); }
+.unit-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+/* 統計列 */
+.personnel-stats {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  min-height: 18px;
+}
+
+/* 人員表格 */
+.personnel-table-wrap {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+.personnel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.personnel-table thead th {
+  background: var(--navy);
+  color: rgba(255,255,255,0.85);
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.personnel-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.personnel-table tbody tr:last-child { border-bottom: none; }
+.personnel-table tbody tr:hover { background: #f0f6ff; }
+.personnel-table td {
+  padding: 10px 14px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* 欄位寬度 */
+.col-seq     { width: 40px; text-align: center; color: var(--text-muted) !important; font-size: 12px !important; }
+.col-unit    { width: 120px; }
+.col-rank    { width: 100px; }
+.col-name    { min-width: 80px; }
+.col-gender  { width: 50px; text-align: center; }
+.col-age     { width: 50px; text-align: center; }
+.col-phone   { width: 130px; }
+.col-id      { width: 140px; font-family: monospace; font-size: 13px; }
+.col-actions { width: 80px; text-align: center; white-space: nowrap; }
+
+/* 單位標籤 */
+.unit-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--navy-light);
+  color: #c8d6e8;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 遮罩身分證 */
+.pii-mask { color: var(--text-muted); letter-spacing: 0.5px; }
+
+/* ── 人員詳情 Modal ── */
+.pd-section {
+  margin-bottom: 20px;
+}
+.pd-section:last-child { margin-bottom: 0; }
+.pd-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.pd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+}
+.pd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pd-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.pd-val {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* 手機版表格：隱藏次要欄位 */
+@media (max-width: 700px) {
+  .col-id, .col-age, .col-gender { display: none; }
+  .col-phone { width: auto; }
+  .pd-grid { grid-template-columns: 1fr; }
+}
