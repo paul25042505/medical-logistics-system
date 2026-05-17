@@ -9,7 +9,8 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js';
 import {
-  getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut
+  getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect,
+  getRedirectResult, GoogleAuthProvider, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // ── Firebase ──────────────────────────────────────────
@@ -112,19 +113,16 @@ function applyRolePermissions(role) {
   if (active && !allowed.has(active)) navigateTo('home');
 }
 
-// ── LINE browser detection ────────────────────────────
-(function() {
+// ── In-app browser detection ──────────────────────────
+function isInAppBrowser() {
   const ua = navigator.userAgent || '';
-  if (/Line\//i.test(ua)) {
+  return /Line\//i.test(ua) || /FBAN|FBAV/i.test(ua) || /Instagram/i.test(ua) || /MicroMessenger/i.test(ua);
+}
+
+(function() {
+  if (isInAppBrowser()) {
     const warning = document.getElementById('line-browser-warning');
-    const loginBtn = document.getElementById('google-login-btn');
     if (warning) warning.style.display = '';
-    if (loginBtn) {
-      loginBtn.disabled = true;
-      loginBtn.style.opacity = '0.4';
-      loginBtn.style.cursor  = 'not-allowed';
-      loginBtn.title = '請先跳出 LINE 瀏覽器';
-    }
   }
 })();
 
@@ -207,12 +205,34 @@ devBtn.addEventListener('click', () => {
   if (!appStarted) { appStarted = true; startApp(); }
 });
 
+// Handle redirect result from in-app browser login flow
+getRedirectResult(auth).catch(e => {
+  if (e.code && e.code !== 'auth/no-current-user') {
+    console.error('[Redirect Result]', e.code, e.message);
+    const errEl = document.getElementById('login-error');
+    if (errEl) {
+      const m = {
+        'auth/network-request-failed': '網路連線失敗，請確認網路後再試',
+        'auth/unauthorized-domain':    '此網域未在 Firebase 授權清單，請聯絡管理員',
+        'auth/user-disabled':          '此帳號已被停用',
+      };
+      errEl.innerHTML = (m[e.code] || '登入失敗，請再試一次') +
+        `<br><span style="font-size:11px;opacity:0.6">(${e.code})</span>`;
+    }
+  }
+});
+
 // Google 登入
 document.getElementById('google-login-btn').addEventListener('click', async () => {
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
-  try { await signInWithPopup(auth, googleProvider); }
-  catch (e) {
+  try {
+    if (isInAppBrowser()) {
+      await signInWithRedirect(auth, googleProvider);
+    } else {
+      await signInWithPopup(auth, googleProvider);
+    }
+  } catch (e) {
     console.error('[Google Login]', e.code, e.message);
     const m = {
       'auth/popup-closed-by-user':      '登入視窗已關閉，請再試一次',
