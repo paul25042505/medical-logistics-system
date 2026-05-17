@@ -22,8 +22,24 @@
           <span class="google-icon">G</span> 使用 Google 登入
         </button>
         <p class="auth-hint">尚未申請帳號？登入後填寫申請資料，等待管理員審核。</p>
-        <!-- DEV ONLY: 移除前記得刪除或隱藏 -->
-        <button id="dev-login-btn" style="margin-top:20px;width:100%;padding:8px;background:transparent;border:1px dashed #999;color:#999;border-radius:8px;cursor:pointer;font-size:12px">⚡ 開發模式快速登入</button>
+        <!-- DEV ONLY -->
+        <div id="dev-section" style="display:none;margin-top:16px;text-align:left">
+          <div style="border:1px dashed #ccc;border-radius:8px;padding:12px;background:#f9f9f9">
+            <div style="font-size:11px;color:#aaa;margin-bottom:10px">⚡ 開發模式</div>
+            <input type="text" id="dev-name" placeholder="顯示名稱（選填）"
+              style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box;margin-bottom:8px">
+            <select id="dev-role"
+              style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box;margin-bottom:10px;background:white;cursor:pointer">
+              <option value="admin">系統管理員</option>
+              <option value="recruit">招募管理承辦</option>
+              <option value="personnel">人事管理承辦</option>
+              <option value="logistics">後勤管理承辦</option>
+              <option value="member">一般成員</option>
+            </select>
+            <button id="dev-login-btn"
+              style="width:100%;padding:8px;background:transparent;border:1px solid #ccc;color:#555;border-radius:6px;cursor:pointer;font-size:13px">快速登入</button>
+          </div>
+        </div>
       </div>
 
       <!-- 畫面2：新用戶填寫姓名 -->
@@ -71,18 +87,18 @@
       <ul>
         <li><a href="#" class="nav-link active" data-page="home">🏠 首頁</a></li>
         <li><a href="#" class="nav-link" data-page="profile">👤 個人資料</a></li>
-        <div class="nav-section-label" style="margin-top:12px">招募管理</div>
-        <li><a href="#" class="nav-link" data-page="trainee-list">👥 訓員列表</a></li>
-        <li><a href="#" class="nav-link" data-page="batch-sched">📅 梯次期程</a></li>
-        <li><a href="#" class="nav-link" data-page="interview-query">📋 約談紀錄查詢</a></li>
-        <li><a href="#" class="nav-link" data-page="recruiters">🪖 招募員管理</a></li>
-        <li><a href="#" class="nav-link" data-page="activity">📸 招募活動</a></li>
-        <li><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
-        <div class="nav-section-label" style="margin-top:12px">人事管理</div>
-        <li><a href="#" class="nav-link" data-page="personnel">📋 人員資訊管理</a></li>
-        <div class="nav-section-label" style="margin-top:12px">後勤管理</div>
+        <div class="nav-section-label" id="nav-section-recruit" style="margin-top:12px">招募管理</div>
+        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="trainee-list">👥 訓員列表</a></li>
+        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="batch-sched">📅 梯次期程</a></li>
+        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="interview-query">📋 約談紀錄查詢</a></li>
+        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="recruiters">🪖 招募員管理</a></li>
+        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="activity">📸 招募活動</a></li>
+        <li data-roles="admin,recruit"><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
+        <div class="nav-section-label" id="nav-section-personnel" style="margin-top:12px">人事管理</div>
+        <li data-roles="admin,personnel"><a href="#" class="nav-link" data-page="personnel">📋 人員資訊管理</a></li>
+        <div class="nav-section-label" id="nav-section-logistics" style="margin-top:12px">後勤管理</div>
         <li><a href="#" class="nav-link nav-coming">🚗 車輛資訊管理</a></li>
-        <div class="nav-section-label" style="margin-top:12px">系統</div>
+        <div class="nav-section-label" id="nav-section-system" style="margin-top:12px">系統</div>
         <li id="admin-nav-item" style="display:none"><a href="#" class="nav-link" data-page="admin">⚙️ 後台管理</a></li>
       </ul>
     </nav>
@@ -188,48 +204,115 @@
 
       <!-- 個人資料 -->
       <section id="page-profile" class="page">
-        <h2 class="page-title">👤 個人資料</h2>
+        <div class="recruit-header">
+          <h2 class="page-title">👤 個人資料</h2>
+        </div>
         <div class="profile-grid">
 
           <!-- 人員資訊 -->
-          <div class="profile-card">
+          <div class="profile-card" id="profile-info-card">
             <div class="profile-card-header">
               <span class="profile-card-icon">📋</span>
               <span class="profile-card-title">人員資訊</span>
+              <button class="btn btn-secondary btn-sm" id="prof-edit-btn" style="margin-left:auto">✏️ 編輯</button>
             </div>
-            <div class="form-grid" style="margin-top:16px">
-              <div class="form-group">
-                <label>姓名</label>
-                <input type="text" id="prof-name" placeholder="您的姓名">
-              </div>
-              <div class="form-group">
-                <label>階級</label>
-                <input type="text" id="prof-rank" placeholder="上士、中尉…">
-              </div>
-              <div class="form-group">
-                <label>職務</label>
-                <input type="text" id="prof-duty" placeholder="補給士、衛生官…">
-              </div>
-              <div class="form-group">
-                <label>所屬單位</label>
-                <select id="prof-unit">
-                  <option value="">請選擇</option>
-                  <option>衛生營營部</option>
-                  <option>衛生營第一連</option>
-                  <option>衛生營第二連</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>聯絡電話</label>
-                <input type="tel" id="prof-phone" placeholder="09xxxxxxxx">
-              </div>
-              <div class="form-group full">
-                <label>備註</label>
-                <textarea id="prof-notes" rows="2" placeholder="其他補充說明…"></textarea>
-              </div>
+
+            <!-- 檢視模式 -->
+            <div id="prof-view-mode" style="margin-top:16px">
+              <div class="prof-empty-hint">尚未填寫個人資料，請點擊「編輯」開始建立。</div>
             </div>
-            <div class="profile-card-footer">
-              <button class="btn btn-primary" id="prof-save-btn" onclick="saveProfile()">儲存</button>
+
+            <!-- 編輯模式 -->
+            <div id="prof-edit-mode" style="display:none;margin-top:16px">
+              <div class="prof-section-title">基本資料</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>姓名 <span class="required">*</span></label>
+                  <input type="text" id="prof-name" placeholder="請輸入姓名">
+                </div>
+                <div class="form-group">
+                  <label>級職</label>
+                  <input type="text" id="prof-rank" placeholder="上兵、上士、中尉…">
+                </div>
+                <div class="form-group">
+                  <label>所屬單位</label>
+                  <select id="prof-unit">
+                    <option value="">請選擇</option>
+                    <option>衛生營營部</option>
+                    <option>衛生營第一連</option>
+                    <option>衛生營第二連</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>性別</label>
+                  <select id="prof-gender">
+                    <option value="">請選擇</option>
+                    <option>男</option>
+                    <option>女</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>出生年月日</label>
+                  <input type="date" id="prof-birthDate">
+                </div>
+                <div class="form-group">
+                  <label>身分證字號</label>
+                  <input type="text" id="prof-idNumber" placeholder="A123456789">
+                </div>
+                <div class="form-group">
+                  <label>聯絡電話</label>
+                  <input type="tel" id="prof-phone" placeholder="09xxxxxxxx">
+                </div>
+                <div class="form-group">
+                  <label>到職日</label>
+                  <input type="date" id="prof-joinDate">
+                </div>
+              </div>
+
+              <div class="prof-section-title" style="margin-top:20px">緊急聯絡資料</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>緊急聯絡人</label>
+                  <input type="text" id="prof-emergencyName" placeholder="姓名">
+                </div>
+                <div class="form-group">
+                  <label>與本人關係</label>
+                  <input type="text" id="prof-emergencyRel" placeholder="父、母、配偶…">
+                </div>
+                <div class="form-group">
+                  <label>緊急聯絡電話</label>
+                  <input type="tel" id="prof-emergencyPhone" placeholder="09xxxxxxxx">
+                </div>
+              </div>
+
+              <div class="prof-section-title" style="margin-top:20px">其他資訊</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>戶籍縣市</label>
+                  <select id="prof-addr-city">
+                    <option value="">請選擇縣市</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>鄉鎮市區</label>
+                  <select id="prof-addr-district" disabled>
+                    <option value="">請先選縣市</option>
+                  </select>
+                </div>
+                <div class="form-group full">
+                  <label>詳細地址</label>
+                  <input type="text" id="prof-addr-detail" placeholder="路段、門號…">
+                </div>
+                <div class="form-group full">
+                  <label>備註</label>
+                  <textarea id="prof-notes" rows="2" placeholder="其他補充說明…"></textarea>
+                </div>
+              </div>
+
+              <div class="profile-card-footer" style="margin-top:20px">
+                <button class="btn btn-secondary" id="prof-cancel-btn">取消</button>
+                <button class="btn btn-primary" id="prof-save-btn">儲存</button>
+              </div>
             </div>
           </div>
 
@@ -293,6 +376,11 @@
             <ul class="admin-list" id="admin-users-list"></ul>
           </div>
 
+          <div class="admin-card admin-card-full">
+            <div class="admin-card-title">🔐 角色權限管理</div>
+            <ul class="admin-list" id="admin-role-list"></ul>
+          </div>
+
         </div>
       </section>
 
@@ -302,6 +390,7 @@
           <h2 class="page-title">👤 人員資訊管理</h2>
           <div style="display:flex;gap:8px">
             <button class="btn btn-secondary" id="personnelExportBtn">⬇ 匯出 CSV</button>
+            <button class="btn btn-secondary" id="personnelImportBtn">⬆ 批次匯入</button>
             <button class="btn btn-primary" id="personnelAddBtn">＋ 新增人員</button>
           </div>
         </div>
@@ -798,15 +887,15 @@
               <input type="tel" id="pf-phone" placeholder="09xxxxxxxx">
             </div>
             <div class="form-group">
-              <label>血型</label>
-              <select id="pf-bloodType">
-                <option value="">請選擇</option>
-                <option>A</option><option>B</option><option>O</option><option>AB</option>
-              </select>
-            </div>
-            <div class="form-group">
               <label>到職日</label>
               <input type="date" id="pf-joinDate">
+            </div>
+            <div class="form-group">
+              <label>招募員</label>
+              <label class="toggle-label">
+                <input type="checkbox" id="pf-isRecruiter">
+                <span class="toggle-text">此成員擔任招募員</span>
+              </label>
             </div>
           </div>
         </div>
@@ -832,9 +921,21 @@
         <div class="form-section">
           <h4 class="section-title">其他資訊</h4>
           <div class="form-grid">
+            <div class="form-group">
+              <label>戶籍縣市</label>
+              <select id="pf-addr-city">
+                <option value="">請選擇縣市</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>鄉鎮市區</label>
+              <select id="pf-addr-district" disabled>
+                <option value="">請先選縣市</option>
+              </select>
+            </div>
             <div class="form-group full">
-              <label>戶籍地址</label>
-              <input type="text" id="pf-address" placeholder="縣市鄉鎮市區街道門號…">
+              <label>詳細地址</label>
+              <input type="text" id="pf-addr-detail" placeholder="路段、門號…">
             </div>
             <div class="form-group full">
               <label>備註</label>
@@ -862,6 +963,71 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="personnelDetailClose2">關閉</button>
         <button class="btn btn-primary" id="personnelDetailEditBtn">✏️ 編輯</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 批次匯入人員 ══ -->
+  <div class="modal-overlay" id="personnelImportOverlay">
+    <div class="modal modal-large" id="personnelImportModal">
+      <div class="modal-header">
+        <h3>⬆ 批次匯入人員</h3>
+        <button class="modal-close" id="personnelImportClose">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- 步驟 1：上傳檔案 -->
+        <div id="importStep1">
+          <div class="import-tip">
+            <p>請上傳符合格式的 CSV 檔案。必填欄位：<strong>單位、級職、姓名</strong>。</p>
+            <p>單位請填寫：衛生營營部 / 衛生營第一連 / 衛生營第二連</p>
+          </div>
+          <div class="import-actions-top">
+            <button class="btn btn-secondary" id="importTplBtn">⬇ 下載範本 CSV</button>
+          </div>
+          <label class="import-dropzone" id="importDropzone">
+            <div class="import-drop-icon">📂</div>
+            <div class="import-drop-text">點擊選擇 CSV 檔案，或拖曳至此</div>
+            <input type="file" id="importFileInput" accept=".csv" style="display:none">
+          </label>
+          <div class="import-file-info" id="importFileInfo" style="display:none">
+            <span id="importFileName"></span>
+            <button class="import-clear-btn" id="importClearBtn">✕ 重新選擇</button>
+          </div>
+        </div>
+
+        <!-- 步驟 2：預覽 -->
+        <div id="importStep2" style="display:none">
+          <div class="import-preview-header">
+            <div id="importPreviewSummary" class="import-summary"></div>
+          </div>
+          <div class="import-table-wrap">
+            <table class="import-preview-table" id="importPreviewTable">
+              <thead>
+                <tr>
+                  <th>狀態</th>
+                  <th>單位</th>
+                  <th>級職</th>
+                  <th>姓名</th>
+                  <th>性別</th>
+                  <th>出生年月日</th>
+                  <th>身分證字號</th>
+                  <th>電話</th>
+                  <th>到職日</th>
+                  <th>備註</th>
+                </tr>
+              </thead>
+              <tbody id="importPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="importBackBtn" style="display:none">← 重新選擇</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-secondary" id="importCancelBtn">取消</button>
+        <button class="btn btn-primary" id="importConfirmBtn" style="display:none">✔ 確認匯入</button>
       </div>
     </div>
   </div>

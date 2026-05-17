@@ -473,6 +473,44 @@ main {
 .recruiter-name { font-size: 15px; font-weight: 600; color: var(--navy); }
 .recruiter-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
+/* 招募員徽章 */
+.recruiter-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary, #3f6fd1);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 5px;
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+}
+
+/* 人員詳情招募員橫幅 */
+.pd-recruiter-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef3ff;
+  color: var(--primary, #3f6fd1);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+/* 表單招募員 toggle */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: normal;
+}
+.toggle-text { font-size: 14px; color: var(--text-main); }
+
 /* ── 梯次期程 ── */
 .batch-card {
   background: white;
@@ -801,6 +839,15 @@ main {
   gap: 4px;
   flex-shrink: 0;
 }
+.role-select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 12px;
+  background: white;
+  cursor: pointer;
+  color: var(--navy);
+}
 .admin-order-btn {
   background: none;
   border: 1px solid var(--border);
@@ -897,6 +944,66 @@ main {
   margin-top: 18px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── 個人資料：檢視模式 ── */
+.prof-empty-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 20px 0 8px;
+  text-align: center;
+}
+.prof-view-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+.prof-info-section {
+  margin-bottom: 18px;
+}
+.prof-info-section:last-child { margin-bottom: 0; }
+.prof-info-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.prof-info-row {
+  display: flex;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.prof-info-row:last-child { border-bottom: none; }
+.prof-info-label {
+  width: 110px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.prof-info-val {
+  color: var(--text);
+  font-weight: 500;
+  flex: 1;
+}
+
+/* ── 個人資料：編輯模式分段標題 ── */
+.prof-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 
 /* ── Storage Bar ── */
@@ -1339,3 +1446,110 @@ main {
   .col-phone { width: auto; }
   .pd-grid { grid-template-columns: 1fr; }
 }
+
+/* ── 批次匯入 Modal ── */
+.import-tip {
+  background: #f0f6ff;
+  border-left: 4px solid var(--primary);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+}
+.import-tip strong { color: var(--primary); }
+
+.import-actions-top {
+  margin-bottom: 12px;
+}
+
+.import-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed #c8d8f0;
+  border-radius: 12px;
+  padding: 36px 20px;
+  cursor: pointer;
+  background: #fafcff;
+  transition: border-color 0.2s, background 0.2s;
+}
+.import-dropzone:hover,
+.import-dropzone.drag-over {
+  border-color: var(--primary);
+  background: #eef4ff;
+}
+.import-drop-icon { font-size: 36px; }
+.import-drop-text { font-size: 14px; color: #6b7280; }
+
+.import-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: #f3f7ff;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+.import-clear-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.import-clear-btn:hover { background: #e5e7eb; color: var(--text); }
+
+.import-preview-header {
+  margin-bottom: 10px;
+}
+.import-summary {
+  font-size: 13px;
+  color: var(--text-light);
+}
+.import-summary .ok-count  { color: #16a34a; font-weight: 600; }
+.import-summary .err-count { color: #dc2626; font-weight: 600; }
+
+.import-table-wrap {
+  overflow-x: auto;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.import-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.import-preview-table th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-light);
+}
+.import-preview-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+.import-preview-table tr:last-child td { border-bottom: none; }
+.import-preview-table tr.row-ok  { background: #f0fdf4; }
+.import-preview-table tr.row-err { background: #fff1f2; }
+
+.import-status-ok  { color: #16a34a; font-weight: 600; }
+.import-status-err { color: #dc2626; font-size: 11px; }
+
