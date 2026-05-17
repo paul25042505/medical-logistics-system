@@ -79,7 +79,8 @@
         <li><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
         <div class="nav-section-label" style="margin-top:12px">後勤管理</div>
         <li><a href="#" class="nav-link nav-coming">🚗 車輛資訊管理</a></li>
-        <li><a href="#" class="nav-link" data-page="personnel">👤 人員資訊管理</a></li>
+        <li><a href="#" class="nav-link" data-page="personnel">👥 人員資訊管理</a></li>
+        <li><a href="#" class="nav-link" data-page="profile">👤 個人資料</a></li>
         <div class="nav-section-label" style="margin-top:12px">系統</div>
         <li id="admin-nav-item" style="display:none"><a href="#" class="nav-link" data-page="admin">⚙️ 後台管理</a></li>
       </ul>
@@ -182,6 +183,76 @@
           </div>
         </div>
         <div id="activity-list" class="activity-grid"></div>
+      </section>
+
+      <!-- 個人資料 -->
+      <section id="page-profile" class="page">
+        <h2 class="page-title">👤 個人資料</h2>
+        <div class="profile-grid">
+
+          <!-- 人員資訊 -->
+          <div class="profile-card">
+            <div class="profile-card-header">
+              <span class="profile-card-icon">📋</span>
+              <span class="profile-card-title">人員資訊</span>
+            </div>
+            <div class="form-grid" style="margin-top:16px">
+              <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="prof-name" placeholder="您的姓名">
+              </div>
+              <div class="form-group">
+                <label>階級</label>
+                <input type="text" id="prof-rank" placeholder="上士、中尉…">
+              </div>
+              <div class="form-group">
+                <label>職務</label>
+                <input type="text" id="prof-duty" placeholder="補給士、衛生官…">
+              </div>
+              <div class="form-group">
+                <label>所屬單位</label>
+                <select id="prof-unit">
+                  <option value="">請選擇</option>
+                  <option>衛生營營部</option>
+                  <option>衛生營第一連</option>
+                  <option>衛生營第二連</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>聯絡電話</label>
+                <input type="tel" id="prof-phone" placeholder="09xxxxxxxx">
+              </div>
+              <div class="form-group full">
+                <label>備註</label>
+                <textarea id="prof-notes" rows="2" placeholder="其他補充說明…"></textarea>
+              </div>
+            </div>
+            <div class="profile-card-footer">
+              <button class="btn btn-primary" id="prof-save-btn" onclick="saveProfile()">儲存</button>
+            </div>
+          </div>
+
+          <!-- 車輛資訊（即將推出） -->
+          <div class="profile-card profile-card-coming">
+            <div class="profile-card-header">
+              <span class="profile-card-icon">🚗</span>
+              <span class="profile-card-title">車輛資訊</span>
+              <span class="coming-badge">即將推出</span>
+            </div>
+            <div class="coming-body">功能開發中，敬請期待</div>
+          </div>
+
+          <!-- 服裝供售點數（即將推出） -->
+          <div class="profile-card profile-card-coming">
+            <div class="profile-card-header">
+              <span class="profile-card-icon">👕</span>
+              <span class="profile-card-title">服裝供售點數</span>
+              <span class="coming-badge">即將推出</span>
+            </div>
+            <div class="coming-body">功能開發中，敬請期待</div>
+          </div>
+
+        </div>
       </section>
 
       <!-- 後台管理 -->

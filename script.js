@@ -368,6 +368,7 @@ const PAGE_INIT = {
   'recruiters':      () => renderRecruiters(),
   'activity':        () => { renderActivities(); updateStorageBar(); },
   'leads':           () => renderLeads(),
+  'profile':         () => renderProfilePage(),
   'admin':           () => { renderAdminPage(); },
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
 };
@@ -1314,6 +1315,49 @@ function renderLeads() {
 }
 
 document.getElementById('leads-search').addEventListener('input', renderLeads);
+
+// ── 個人資料 ──────────────────────────────────────────
+async function renderProfilePage() {
+  if (!currentUser) return;
+  const snap = await getDoc(doc(db, 'users', currentUser.uid));
+  const userData = snap.exists() ? snap.data() : {};
+  const profile  = userData.profile || {};
+  const sv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  sv('prof-name',  profile.name  || userData.name  || userData.displayName || '');
+  sv('prof-rank',  profile.rank);
+  sv('prof-duty',  profile.duty);
+  sv('prof-unit',  profile.unit);
+  sv('prof-phone', profile.phone);
+  sv('prof-notes', profile.notes);
+}
+
+window.saveProfile = async function () {
+  if (!currentUser) return;
+  const gv  = id => document.getElementById(id)?.value?.trim() || '';
+  const profile = {
+    name:      gv('prof-name'),
+    rank:      gv('prof-rank'),
+    duty:      gv('prof-duty'),
+    unit:      document.getElementById('prof-unit').value,
+    phone:     gv('prof-phone'),
+    notes:     gv('prof-notes'),
+    updatedAt: new Date().toISOString(),
+  };
+  const btn = document.getElementById('prof-save-btn');
+  btn.disabled = true;
+  btn.textContent = '儲存中…';
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid), { profile });
+    if (profile.name) document.getElementById('header-email').textContent = profile.name;
+    btn.textContent = '✓ 已儲存';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '儲存'; }, 2000);
+  } catch (e) {
+    console.error(e);
+    alert('儲存失敗');
+    btn.disabled = false;
+    btn.textContent = '儲存';
+  }
+};
 
 // ── Start App (called after login) ────────────────────
 function startApp() {
