@@ -67,6 +67,7 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.5px; }
   flex-shrink: 0;
   /* 桌機：固定高度讓 overflow 生效 */
   height: calc(100vh - 56px);
+  height: calc(100dvh - 56px); /* dvh 動態排除瀏覽器工具列 */
   position: sticky;
   top: 56px;
   align-self: flex-start;
@@ -592,6 +593,7 @@ main {
     top: 56px;
     left: 0;
     height: calc(100vh - 56px);
+    height: calc(100dvh - 56px); /* dvh 動態排除瀏覽器工具列 */
     max-height: none;
     z-index: 90;
     transform: translateX(0);
@@ -600,6 +602,8 @@ main {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    /* 底部加 padding 避免最後一項被 Home Indicator 遮到 */
+    padding-bottom: env(safe-area-inset-bottom, 16px);
   }
   .sidebar.collapsed {
     width: 220px;
