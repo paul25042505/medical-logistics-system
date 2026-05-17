@@ -2236,6 +2236,14 @@ document.getElementById('vehicleExportBtn')?.addEventListener('click', () => {
 
 const UP_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
 
+function fmtUpTs(ts) {
+  if (!ts) return '—';
+  try {
+    const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
+    return d.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  } catch { return '—'; }
+}
+
 function renderUniformPointsPage() {
   // ── Unit filter chips ──
   const chips = document.getElementById('upUnitChips');
@@ -2263,10 +2271,10 @@ function renderUniformPointsPage() {
   // ── Stats ──
   const statsEl = document.getElementById('upStats');
   if (statsEl) {
-    const totalQuota     = uniformPoints.reduce((s, r) => s + (Number(r.quota) || 0), 0);
-    const totalUsed      = uniformPoints.reduce((s, r) => s + (Number(r.used)  || 0), 0);
-    const totalRemaining = totalQuota - totalUsed;
-    statsEl.textContent = `共 ${uniformPoints.length} 人 ／ 配額總計 ${totalQuota} 點 ／ 已使用 ${totalUsed} 點 ／ 剩餘 ${totalRemaining} 點`;
+    const totalQuota     = uniformPoints.reduce((s, r) => s + (Number(r.quota)     || 0), 0);
+    const totalRemaining = uniformPoints.reduce((s, r) => s + (Number(r.remaining) || 0), 0);
+    const totalUsed      = totalQuota - totalRemaining;
+    statsEl.textContent = `共 ${uniformPoints.length} 筆 ／ 配額總計 ${totalQuota} 點 ／ 已使用 ${totalUsed} 點 ／ 剩餘 ${totalRemaining} 點`;
   }
 
   // ── Table ──
@@ -2276,20 +2284,22 @@ function renderUniformPointsPage() {
   emptyEl.style.display = 'none';
 
   tbody.innerHTML = list.map((r, i) => {
-    const quota     = Number(r.quota) || 0;
-    const used      = Number(r.used)  || 0;
-    const remaining = quota - used;
+    const quota     = Number(r.quota)     || 0;
+    const remaining = Number(r.remaining) || 0;
+    const used      = quota - remaining;
     const remColor  = remaining < 0 ? 'color:#dc2626;font-weight:700'
                     : remaining === 0 ? 'color:#64748b'
                     : 'color:#16a34a;font-weight:600';
+    const ts = fmtUpTs(r.submittedAt || r.createdAt);
     return `
     <tr>
       <td class="col-seq">${i + 1}</td>
       <td class="col-name">${r.ownerName || '—'}</td>
       <td class="col-unit"><span class="unit-tag">${r.unit || '—'}</span></td>
       <td style="text-align:right">${quota}</td>
-      <td style="text-align:right">${used}</td>
       <td style="text-align:right;${remColor}">${remaining}</td>
+      <td style="text-align:right">${used}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${ts}</td>
       <td class="col-actions">
         <button class="btn-icon" onclick="openUniformPointsModal('${r.id}')">✏️</button>
         <button class="btn-icon danger" onclick="deleteUniformPoints('${r.id}','${r.ownerName}')">🗑</button>
@@ -2311,8 +2321,8 @@ window.openUniformPointsModal = function(id = null) {
   document.getElementById('up-modal-title').textContent = id ? '編輯點數記錄' : '新增點數記錄';
 
   // Reset manual/select mode
-  document.getElementById('up-select-section').style.display  = '';
-  document.getElementById('up-manual-section').style.display  = 'none';
+  document.getElementById('up-select-section').style.display      = '';
+  document.getElementById('up-manual-section').style.display      = 'none';
   document.getElementById('up-manual-unit-section').style.display = 'none';
   document.getElementById('up-manual-name').value = '';
   document.getElementById('up-manual-unit').value = '';
@@ -2323,54 +2333,63 @@ window.openUniformPointsModal = function(id = null) {
   pSel.innerHTML = '<option value="">請選擇人員</option>' +
     sorted.map(p => `<option value="${p.id}" data-name="${p.name}" data-unit="${p.unit || ''}">${p.name}${p.unit ? '（' + p.unit + '）' : ''}</option>`).join('');
 
+  // Submitted-at display row (only when editing)
+  const subRow = document.getElementById('up-submitted-row');
+  if (r) {
+    const ts = fmtUpTs(r.submittedAt || r.createdAt);
+    document.getElementById('up-submitted-display').value = ts;
+    subRow.style.display = ts !== '—' ? '' : 'none';
+  } else {
+    subRow.style.display = 'none';
+  }
+
   // Fill existing values
   if (r) {
     if (r.personnelId) {
       pSel.value = r.personnelId;
     } else {
-      // was manual entry — show manual fields pre-filled
       upManualMode = true;
-      document.getElementById('up-select-section').style.display  = 'none';
-      document.getElementById('up-manual-section').style.display  = '';
+      document.getElementById('up-select-section').style.display      = 'none';
+      document.getElementById('up-manual-section').style.display      = '';
       document.getElementById('up-manual-unit-section').style.display = '';
       document.getElementById('up-manual-name').value = r.ownerName || '';
       document.getElementById('up-manual-unit').value = r.unit      || '';
     }
-    document.getElementById('up-quota').value = r.quota ?? '';
-    document.getElementById('up-used').value  = r.used  ?? '';
-    calcUpRemaining();
+    document.getElementById('up-quota').value     = r.quota     ?? '';
+    document.getElementById('up-remaining').value = r.remaining ?? '';
+    calcUpUsed();
   } else {
     pSel.value = '';
     document.getElementById('up-quota').value     = '';
-    document.getElementById('up-used').value      = '';
     document.getElementById('up-remaining').value = '';
+    document.getElementById('up-used').value      = '';
   }
 
   document.getElementById('upModalOverlay').classList.add('open');
 };
 
-function calcUpRemaining() {
-  const q = Number(document.getElementById('up-quota').value) || 0;
-  const u = Number(document.getElementById('up-used').value)  || 0;
-  document.getElementById('up-remaining').value = q - u;
+function calcUpUsed() {
+  const q = Number(document.getElementById('up-quota').value)     || 0;
+  const r = Number(document.getElementById('up-remaining').value) || 0;
+  document.getElementById('up-used').value = q - r;
 }
 
-document.getElementById('up-quota')?.addEventListener('input', calcUpRemaining);
-document.getElementById('up-used')?.addEventListener('input',  calcUpRemaining);
+document.getElementById('up-quota')?.addEventListener('input',     calcUpUsed);
+document.getElementById('up-remaining')?.addEventListener('input', calcUpUsed);
 
 // Toggle manual mode
 document.getElementById('up-toggle-manual')?.addEventListener('click', () => {
   upManualMode = true;
-  document.getElementById('up-select-section').style.display  = 'none';
-  document.getElementById('up-manual-section').style.display  = '';
+  document.getElementById('up-select-section').style.display      = 'none';
+  document.getElementById('up-manual-section').style.display      = '';
   document.getElementById('up-manual-unit-section').style.display = '';
   document.getElementById('up-manual-name').focus();
 });
 
 document.getElementById('up-cancel-manual')?.addEventListener('click', () => {
   upManualMode = false;
-  document.getElementById('up-select-section').style.display  = '';
-  document.getElementById('up-manual-section').style.display  = 'none';
+  document.getElementById('up-select-section').style.display      = '';
+  document.getElementById('up-manual-section').style.display      = 'none';
   document.getElementById('up-manual-unit-section').style.display = 'none';
 });
 
@@ -2385,8 +2404,8 @@ document.getElementById('upModalOverlay')?.addEventListener('click', e => {
 
 // ── Save ──────────────────────────────────────────────
 document.getElementById('upSaveBtn')?.addEventListener('click', async () => {
-  let ownerName = '';
-  let unit      = '';
+  let ownerName   = '';
+  let unit        = '';
   let personnelId = null;
 
   if (upManualMode) {
@@ -2403,16 +2422,20 @@ document.getElementById('upSaveBtn')?.addEventListener('click', async () => {
     unit        = opt.dataset.unit || '';
   }
 
-  const quota = Number(document.getElementById('up-quota').value);
-  const used  = Number(document.getElementById('up-used').value);
-  if (isNaN(quota) || document.getElementById('up-quota').value === '') { alert('請輸入配額點數'); return; }
-  if (isNaN(used)  || document.getElementById('up-used').value  === '') { alert('請輸入使用點數'); return; }
+  const quotaEl     = document.getElementById('up-quota');
+  const remainingEl = document.getElementById('up-remaining');
+  if (quotaEl.value === '')     { alert('請輸入配額點數'); return; }
+  if (remainingEl.value === '') { alert('請輸入剩餘點數'); return; }
+  const quota     = Number(quotaEl.value);
+  const remaining = Number(remainingEl.value);
+  const used      = quota - remaining;
 
   const data = {
     personnelId,
     ownerName,
     unit,
     quota,
+    remaining,
     used,
     updatedAt: serverTimestamp(),
   };
@@ -2421,7 +2444,7 @@ document.getElementById('upSaveBtn')?.addEventListener('click', async () => {
     if (editingUpId) {
       await updateDoc(doc(db, 'uniformPoints', editingUpId), data);
     } else {
-      data.createdAt = serverTimestamp();
+      data.submittedAt = serverTimestamp();
       await addDoc(COL_UNIFORM_POINTS, data);
     }
     closeUpModal();
@@ -2438,11 +2461,12 @@ window.deleteUniformPoints = async function(id, name) {
 // ── Export CSV ────────────────────────────────────────
 document.getElementById('uniformPointsExportBtn')?.addEventListener('click', () => {
   if (!uniformPoints.length) { alert('尚無點數資料'); return; }
-  const cols = ['姓名', '單位', '配額點數', '使用點數', '剩餘點數'];
+  const cols = ['姓名', '單位', '配額點數', '剩餘點數', '使用點數', '填寫時間'];
   const rows = uniformPoints.map(r => {
-    const quota     = Number(r.quota) || 0;
-    const used      = Number(r.used)  || 0;
-    return [`"${r.ownerName || ''}"`, `"${r.unit || ''}"`, quota, used, quota - used];
+    const quota     = Number(r.quota)     || 0;
+    const remaining = Number(r.remaining) || 0;
+    const used      = quota - remaining;
+    return [`"${r.ownerName || ''}"`, `"${r.unit || ''}"`, quota, remaining, used, `"${fmtUpTs(r.submittedAt || r.createdAt)}"`];
   });
   const csv = '﻿' + [cols.map(c => `"${c}"`).join(','), ...rows.map(r => r.join(','))].join('\n');
   const a = document.createElement('a');

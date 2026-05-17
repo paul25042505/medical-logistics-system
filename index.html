@@ -559,6 +559,7 @@
           <h2 class="page-title">👕 服裝供售點數</h2>
           <div style="display:flex;gap:8px">
             <button class="btn btn-primary btn-sm" onclick="openUniformPointsModal()">＋ 新增</button>
+            <a class="btn btn-secondary btn-sm" href="uniform-form.html" target="_blank">🔗 申報表連結</a>
             <button class="btn btn-secondary btn-sm" id="uniformPointsExportBtn">⬇ 匯出 CSV</button>
           </div>
         </div>
@@ -583,9 +584,10 @@
                 <th class="col-seq">序</th>
                 <th class="col-name">姓名</th>
                 <th class="col-unit">單位</th>
-                <th style="width:90px;text-align:right">配額點數</th>
-                <th style="width:90px;text-align:right">使用點數</th>
-                <th style="width:90px;text-align:right">剩餘點數</th>
+                <th style="width:80px;text-align:right">配額</th>
+                <th style="width:80px;text-align:right">剩餘</th>
+                <th style="width:80px;text-align:right">使用</th>
+                <th style="width:130px">填寫時間</th>
                 <th class="col-actions">操作</th>
               </tr>
             </thead>
@@ -1291,12 +1293,17 @@
             <input type="number" id="up-quota" min="0" placeholder="0">
           </div>
           <div class="form-group">
-            <label>使用點數 <span class="required">*</span></label>
-            <input type="number" id="up-used" min="0" placeholder="0">
+            <label>剩餘點數 <span class="required">*</span></label>
+            <input type="number" id="up-remaining" min="0" placeholder="0">
           </div>
           <div class="form-group full">
-            <label>剩餘點數（自動計算）</label>
-            <input type="number" id="up-remaining" readonly
+            <label>使用點數（自動計算）</label>
+            <input type="number" id="up-used" readonly
+              style="background:var(--bg);color:var(--text-muted);cursor:not-allowed">
+          </div>
+          <div class="form-group full" id="up-submitted-row" style="display:none">
+            <label>填寫時間</label>
+            <input type="text" id="up-submitted-display" readonly
               style="background:var(--bg);color:var(--text-muted);cursor:not-allowed">
           </div>
 
