@@ -2,7 +2,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getFirestore, initializeFirestore, persistentLocalCache,
   collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc,
-  getDoc, serverTimestamp
+  getDoc, getDocs, query, where, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js';
 import {
@@ -167,19 +167,36 @@ onAuthStateChanged(auth, async user => {
 
   if (!userSnap.exists()) {
     const isAdmin = user.email === ADMIN_EMAIL;
+
+    // 查看是否有管理員已核准的帳號申請（email 比對）
+    let isPreApproved = false;
+    if (!isAdmin && user.email) {
+      try {
+        const reqSnap = await getDocs(
+          query(COL_ACCOUNT_REQS,
+            where('email',  '==', user.email),
+            where('status', 'in', ['approved', 'merged'])
+          )
+        );
+        isPreApproved = !reqSnap.empty;
+      } catch {}
+    }
+
+    const approved = isAdmin || isPreApproved;
     await setDoc(userRef, {
       email:       user.email || '',
       displayName: user.displayName || '',
       name:        user.displayName || '',
-      approved:    isAdmin,
+      approved,
       admin:       isAdmin,
       role:        isAdmin ? 'admin' : 'member',
       provider:    'google.com',
       createdAt:   new Date().toISOString(),
       lastLogin:   new Date().toISOString(),
     });
-    if (isAdmin) {
-      showApp(user, { name: user.displayName, admin: true, role: 'admin' });
+
+    if (approved) {
+      showApp(user, { name: user.displayName, admin: isAdmin, role: isAdmin ? 'admin' : 'member' });
       if (!appStarted) { appStarted = true; startApp(); }
     } else {
       document.getElementById('reg-email-display').textContent = user.email;
@@ -193,8 +210,27 @@ onAuthStateChanged(auth, async user => {
       showApp(user, userData);
       if (!appStarted) { appStarted = true; startApp(); }
     } else {
-      document.getElementById('pending-email-display').textContent = user.email;
-      showAuthScreen('pending');
+      // 再次確認是否已有核准申請（成員先填表後才登入的情況）
+      let isPreApproved = false;
+      if (user.email) {
+        try {
+          const reqSnap = await getDocs(
+            query(COL_ACCOUNT_REQS,
+              where('email',  '==', user.email),
+              where('status', 'in', ['approved', 'merged'])
+            )
+          );
+          isPreApproved = !reqSnap.empty;
+        } catch {}
+      }
+      if (isPreApproved) {
+        await updateDoc(userRef, { approved: true });
+        showApp(user, { ...userData, approved: true });
+        if (!appStarted) { appStarted = true; startApp(); }
+      } else {
+        document.getElementById('pending-email-display').textContent = user.email;
+        showAuthScreen('pending');
+      }
     }
   }
 });
