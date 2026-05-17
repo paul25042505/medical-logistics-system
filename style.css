@@ -66,8 +66,19 @@ header h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.5px; }
   background: var(--navy);
   flex-shrink: 0;
   transition: width 0.25s ease;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* 讓 sidebar 隨 viewport 高度捲動 */
+  max-height: calc(100vh - 56px);
+  position: sticky;
+  top: 56px;
+  align-self: flex-start;
+  /* 細捲軸樣式 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
 }
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
 .sidebar.collapsed { width: 0; }
 
 .sidebar ul { list-style: none; padding: 12px 0; }
@@ -580,10 +591,12 @@ main {
     top: 56px;
     left: 0;
     height: calc(100vh - 56px);
+    max-height: none;
     z-index: 90;
     transform: translateX(0);
     transition: transform 0.25s ease;
     box-shadow: 4px 0 16px rgba(0,0,0,0.3);
+    overflow-y: auto;
   }
   .sidebar.collapsed {
     width: 220px;
