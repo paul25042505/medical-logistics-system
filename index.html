@@ -17,6 +17,17 @@
       <!-- 畫面1：登入 -->
       <div id="auth-screen-login">
         <p class="auth-desc">請使用 Google 帳號登入系統</p>
+
+        <!-- LINE 瀏覽器警告（JS 偵測後顯示） -->
+        <div id="line-browser-warning" style="display:none;background:#fef9c3;border:1.5px solid #fde047;border-radius:10px;padding:14px 16px;margin-bottom:14px;text-align:left">
+          <div style="font-size:15px;font-weight:700;color:#854d0e;margin-bottom:6px">⚠️ 偵測到 LINE 瀏覽器</div>
+          <div style="font-size:13px;color:#713f12;line-height:1.6">
+            LINE 內建瀏覽器會封鎖 Google 登入。<br>
+            請點選右上角 <strong>「⋯」→「在瀏覽器中開啟」</strong>，<br>
+            或複製網址到 Safari / Chrome 後再登入。
+          </div>
+        </div>
+
         <div class="auth-error" id="login-error"></div>
         <button class="btn btn-google btn-full" id="google-login-btn">
           <span class="google-icon">G</span> 使用 Google 登入

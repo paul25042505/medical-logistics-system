@@ -112,6 +112,22 @@ function applyRolePermissions(role) {
   if (active && !allowed.has(active)) navigateTo('home');
 }
 
+// ── LINE browser detection ────────────────────────────
+(function() {
+  const ua = navigator.userAgent || '';
+  if (/Line\//i.test(ua)) {
+    const warning = document.getElementById('line-browser-warning');
+    const loginBtn = document.getElementById('google-login-btn');
+    if (warning) warning.style.display = '';
+    if (loginBtn) {
+      loginBtn.disabled = true;
+      loginBtn.style.opacity = '0.4';
+      loginBtn.style.cursor  = 'not-allowed';
+      loginBtn.title = '請先跳出 LINE 瀏覽器';
+    }
+  }
+})();
+
 // ── Auth ──────────────────────────────────────────────
 const ADMIN_EMAIL = 'paul25042505@gmail.com';
 const authPage    = document.getElementById('auth-page');
