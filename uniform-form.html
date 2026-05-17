@@ -85,30 +85,42 @@
 
     /* ── Success screen ── */
     #success-screen { display: none; }
+    #success-screen.visible { display: block; }
 
-    .success-hero { text-align: center; padding: 32px 20px 24px; }
-    .success-icon { font-size: 64px; line-height: 1; margin-bottom: 12px; }
-    .success-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
-    .success-sub { font-size: 14px; color: var(--muted); }
-
-    .summary-box {
-      background: var(--bg); border-radius: 10px; padding: 16px 20px;
-      margin: 0 0 16px; border: 1px solid var(--border);
+    @keyframes popIn {
+      0%   { opacity:0; transform: scale(0.7); }
+      60%  { transform: scale(1.08); }
+      100% { opacity:1; transform: scale(1); }
     }
-    .summary-box .srow { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-    .summary-box .srow:last-child { border-bottom: none; }
-    .summary-box .srow .slabel { color: var(--muted); }
-    .summary-box .srow .sval { font-weight: 600; color: var(--text); }
-    .summary-box .srow .sval.green { color: var(--green); }
-    .summary-box .srow .sval.accent { color: var(--accent); }
+    .success-anim { animation: popIn 0.5s cubic-bezier(.34,1.56,.64,1) both; }
 
-    .reg-notice {
-      background: var(--yellow-bg); border: 1.5px solid #fcd34d; border-radius: 10px;
-      padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: #92400e; line-height: 1.7;
+    .success-hero { text-align: center; padding: 36px 20px 28px; }
+    .success-icon { font-size: 72px; line-height: 1; margin-bottom: 14px; display: block; }
+    .success-title { font-size: 24px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+    .success-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* Points visual */
+    .pts-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 20px 0 16px; }
+    .pts-box { background: var(--bg); border-radius: 10px; padding: 14px 8px; text-align: center; }
+    .pts-box .pts-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing:.04em; }
+    .pts-box .pts-val { font-size: 28px; font-weight: 800; line-height: 1; }
+    .pts-box.quota  .pts-val { color: var(--accent); }
+    .pts-box.remain .pts-val { color: var(--green); }
+    .pts-box.used   .pts-val { color: var(--text); }
+
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .lbl { color: var(--muted); }
+    .info-row .val { font-weight: 600; }
+
+    .notice-box {
+      border-radius: 10px; padding: 14px 16px; margin-top: 14px; font-size: 13px; line-height: 1.7;
     }
-    .reg-notice strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--yellow); }
+    .notice-box.yellow { background: var(--yellow-bg); border: 1.5px solid #fcd34d; color: #92400e; }
+    .notice-box.green  { background: var(--green-bg);  border: 1.5px solid #86efac; color: #14532d; }
+    .notice-box strong { display: block; font-weight: 700; margin-bottom: 4px; font-size: 14px; }
 
-    .refill-btn { margin-top: 4px; }
+    .refill-btn { margin-top: 16px; }
 
     /* ── Loading overlay ── */
     #submitting-overlay {
@@ -141,25 +153,48 @@
   <!-- ══ 成功結尾畫面 ══ -->
   <div id="success-screen">
     <div class="fcard">
+
       <div class="success-hero">
-        <div class="success-icon">✅</div>
+        <span class="success-icon success-anim">✅</span>
         <div class="success-title">申報完成！</div>
-        <div class="success-sub">您的點數資料已成功送出</div>
+        <div class="success-sub">感謝您填寫本月服裝供售點數<br>資料已成功送出，承辦人將進行確認。</div>
       </div>
 
-      <div class="summary-box">
-        <div class="srow"><span class="slabel">姓名</span>      <span class="sval"         id="s-name"></span></div>
-        <div class="srow"><span class="slabel">單位</span>      <span class="sval"         id="s-unit"></span></div>
-        <div class="srow"><span class="slabel">配額點數</span>  <span class="sval accent"  id="s-quota"></span></div>
-        <div class="srow"><span class="slabel">剩餘點數</span>  <span class="sval green"   id="s-remaining"></span></div>
-        <div class="srow"><span class="slabel">使用點數</span>  <span class="sval"         id="s-used"></span></div>
-        <div class="srow"><span class="slabel">填寫時間</span>  <span class="sval"         id="s-time"></span></div>
+      <!-- 點數三格顯示 -->
+      <div class="pts-row">
+        <div class="pts-box quota">
+          <div class="pts-label">配額點數</div>
+          <div class="pts-val" id="s-quota">—</div>
+        </div>
+        <div class="pts-box remain">
+          <div class="pts-label">剩餘點數</div>
+          <div class="pts-val" id="s-remaining">—</div>
+        </div>
+        <div class="pts-box used">
+          <div class="pts-label">使用點數</div>
+          <div class="pts-val" id="s-used">—</div>
+        </div>
       </div>
 
-      <!-- 僅新增帳號申請時顯示 -->
-      <div class="reg-notice" id="s-reg-notice" style="display:none">
+      <!-- 基本資訊 -->
+      <div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:4px">
+        <div class="info-row"><span class="lbl">姓名</span>    <span class="val" id="s-name"></span></div>
+        <div class="info-row"><span class="lbl">單位</span>    <span class="val" id="s-unit"></span></div>
+        <div class="info-row"><span class="lbl">申報月份</span><span class="val" id="s-month"></span></div>
+        <div class="info-row"><span class="lbl">填寫時間</span><span class="val" id="s-time"></span></div>
+      </div>
+
+      <!-- 一般完成說明 -->
+      <div class="notice-box green" id="s-normal-notice">
+        <strong>📋 承辦人已收到您的申報</strong>
+        如有疑問請洽承辦人確認，感謝配合。
+      </div>
+
+      <!-- 帳號申請說明（新人才顯示） -->
+      <div class="notice-box yellow" id="s-reg-notice" style="display:none">
         <strong>📬 帳號申請已一併送出</strong>
-        您的帳號申請將由承辦人審核，開通後即可使用 Google 帳號（<span id="s-email"></span>）登入系統。<br>
+        您的帳號申請將由承辦人審核，開通後即可使用
+        <strong><span id="s-email"></span></strong>（Google 帳號）登入系統。<br>
         點數資料已先行儲存，請耐心等候通知。
       </div>
 
@@ -508,22 +543,29 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit'
     });
+    const [y, m] = yearMonth.split('-');
+    const monthLabel = `${y}年${parseInt(m)}月`;
+
     document.getElementById('s-name').textContent      = ownerName;
     document.getElementById('s-unit').textContent      = unit;
-    document.getElementById('s-quota').textContent     = quota + ' 點';
-    document.getElementById('s-remaining').textContent = remaining + ' 點';
-    document.getElementById('s-used').textContent      = used + ' 點';
+    document.getElementById('s-quota').textContent     = quota;
+    document.getElementById('s-remaining').textContent = remaining;
+    document.getElementById('s-used').textContent      = used;
+    document.getElementById('s-month').textContent     = monthLabel;
     document.getElementById('s-time').textContent      = timeStr;
 
     if (isNewReg) {
-      document.getElementById('s-email').textContent = email;
-      document.getElementById('s-reg-notice').style.display = '';
+      document.getElementById('s-email').textContent         = email;
+      document.getElementById('s-reg-notice').style.display  = 'block';
+      document.getElementById('s-normal-notice').style.display = 'none';
     } else {
-      document.getElementById('s-reg-notice').style.display = 'none';
+      document.getElementById('s-reg-notice').style.display   = 'none';
+      document.getElementById('s-normal-notice').style.display = 'block';
     }
 
-    document.getElementById('form-wrap').style.display    = 'none';
-    document.getElementById('success-screen').style.display = '';
+    // ★ 修正：用 classList 而非 style.display = '' ★
+    document.getElementById('form-wrap').style.display = 'none';
+    document.getElementById('success-screen').classList.add('visible');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
   } catch (e) {
