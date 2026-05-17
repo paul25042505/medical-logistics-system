@@ -501,7 +501,10 @@
       <section id="page-vehicles" class="page">
         <div class="recruit-header">
           <h2 class="page-title">🚗 車輛資訊管理</h2>
-          <button class="btn btn-secondary btn-sm" id="vehicleExportBtn">⬇ 匯出 CSV</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 新增車輛</button>
+            <button class="btn btn-secondary btn-sm" id="vehicleExportBtn">⬇ 匯出 CSV</button>
+          </div>
         </div>
         <div class="toolbar">
           <div class="search-bar">
