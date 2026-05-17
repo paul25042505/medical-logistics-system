@@ -365,14 +365,42 @@
             </div>
           </div>
 
-          <!-- 服裝供售點數（即將推出） -->
-          <div class="profile-card profile-card-coming">
+          <!-- 服裝供售點數 -->
+          <div class="profile-card" id="uniform-points-profile-card">
             <div class="profile-card-header">
               <span class="profile-card-icon">👕</span>
               <span class="profile-card-title">服裝供售點數</span>
-              <span class="coming-badge">即將推出</span>
+              <button class="btn btn-primary btn-sm" id="up-prof-open-btn" style="margin-left:auto">更新本月點數</button>
             </div>
-            <div class="coming-body">功能開發中，敬請期待</div>
+
+            <!-- 檢視模式 -->
+            <div id="up-profile-view" style="margin-top:14px">
+              <div class="prof-empty-hint">尚未申報點數資料</div>
+            </div>
+
+            <!-- 編輯表單（預設隱藏） -->
+            <div id="up-profile-form" style="display:none;margin-top:14px">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px" id="up-prof-month-label"></div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>配額點數 <span class="required">*</span></label>
+                  <input type="number" id="up-prof-quota" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label>剩餘點數 <span class="required">*</span></label>
+                  <input type="number" id="up-prof-remaining" min="0" placeholder="0">
+                </div>
+                <div class="form-group full">
+                  <label>使用點數（自動計算）</label>
+                  <input type="number" id="up-prof-used" readonly
+                    style="background:var(--bg);color:var(--text-muted);cursor:not-allowed">
+                </div>
+              </div>
+              <div class="profile-card-footer" style="margin-top:14px">
+                <button class="btn btn-secondary" id="up-prof-cancel-btn">取消</button>
+                <button class="btn btn-primary" id="up-prof-save-btn">送出申報</button>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -570,8 +598,15 @@
           </div>
         </div>
 
+        <!-- 月份選擇 -->
         <div class="unit-filter-bar">
-          <span class="unit-filter-label">單位篩選：</span>
+          <span class="unit-filter-label">月份：</span>
+          <div class="unit-filter-chips" id="upMonthChips"></div>
+        </div>
+
+        <!-- 單位篩選 -->
+        <div class="unit-filter-bar" style="margin-top:0">
+          <span class="unit-filter-label">單位：</span>
           <div class="unit-filter-chips" id="upUnitChips"></div>
         </div>
 
@@ -583,6 +618,7 @@
 
         <div class="personnel-stats" id="upStats"></div>
 
+        <!-- 已申報列表 -->
         <div class="personnel-table-wrap">
           <table class="personnel-table" id="upTable">
             <thead>
@@ -601,9 +637,19 @@
           </table>
           <div id="upEmpty" class="empty-state" style="display:none">
             <div class="icon">👕</div>
-            <p>尚無點數資料，點擊「＋ 新增」開始建立</p>
+            <p>本月尚無申報資料</p>
           </div>
         </div>
+
+        <!-- 未申報名單 -->
+        <div id="upNotSubmittedSection" style="margin-top:20px;display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #fecaca">
+            <span style="font-size:14px;font-weight:700;color:#dc2626">❗ 未申報名單</span>
+            <span id="upNotSubmittedCount" style="font-size:12px;color:var(--text-muted)"></span>
+          </div>
+          <div id="upNotSubmittedList"></div>
+        </div>
+
       </section>
 
       <!-- 入職申請 -->

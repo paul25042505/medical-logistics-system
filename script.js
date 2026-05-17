@@ -69,9 +69,11 @@ let viewingAppId    = null;
 let vehicles        = [];
 let editingVehicleId = null;
 
-let uniformPoints   = [];
-let editingUpId     = null;
-let upUnitFilter    = '';
+let uniformPoints     = [];
+let editingUpId       = null;
+let upUnitFilter      = '';
+const currentYearMonth = new Date().toISOString().slice(0, 7); // "2026-05"
+let upSelectedMonth   = currentYearMonth;
 
 let accountRequests = [];
 
@@ -426,17 +428,29 @@ function renderAdminPage() {
       reqEmpty.style.display = 'none';
       reqList.innerHTML = accountRequests.map(r => {
         const ts = fmtUpTs(r.requestedAt);
-        const statusBadge = r.status === 'pending'
+        const isPending = r.status === 'pending';
+        const statusBadge = isPending
           ? `<span style="font-size:11px;background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:99px;font-weight:700">待處理</span>`
           : `<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:99px;font-weight:700">已處理</span>`;
-        return `<li class="admin-list-item" style="flex-wrap:wrap;gap:6px">
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:600">${r.name || '—'}</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${r.unit || '—'} ／ ${r.email || '—'} ／ ${ts}</div>
+        const escapedName = (r.name || '').replace(/'/g, "\\'");
+        const escapedUnit = (r.unit || '').replace(/'/g, "\\'");
+        return `<li class="admin-list-item" style="flex-wrap:wrap;gap:8px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;min-width:180px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-weight:700;font-size:14px">${r.name || '—'}</span>
+              ${r.unit ? `<span class="unit-tag">${r.unit}</span>` : ''}
+              ${statusBadge}
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+              📧 ${r.email || '—'}&ensp;／&ensp;🕐 ${ts}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+              開通後請引導本人用此 Google 帳號登入系統，系統將自動建立帳號等待審核。
+            </div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-            ${statusBadge}
-            ${r.status === 'pending' ? `<button class="btn btn-sm btn-secondary" onclick="markAcctReqDone('${r.id}')">✔ 標記已處理</button>` : ''}
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+            ${isPending ? `<button class="btn btn-sm btn-primary" onclick="addPersonnelFromRequest('${r.id}','${escapedName}','${escapedUnit}')">＋ 新增為人員</button>` : ''}
+            ${isPending ? `<button class="btn btn-sm btn-secondary" onclick="markAcctReqDone('${r.id}')">✔ 標記已處理</button>` : ''}
           </div>
         </li>`;
       }).join('');
@@ -521,7 +535,7 @@ const PAGE_INIT = {
   'interview-query': () => renderInterviewQuery(),
   'recruiters':      () => renderRecruiters(),
   'leads':           () => fetchLeadsFromSheets(),
-  'profile':         () => { renderProfilePage(); renderMyVehicles(); },
+  'profile':         () => { renderProfilePage(); renderMyVehicles(); renderMyUniformPoints(); },
   'admin':           () => { renderAdminPage(); },
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
   'applications':    () => renderApplications(),
@@ -1547,6 +1561,7 @@ function startApp() {
     uniformPoints = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     uniformPoints.sort((a, b) => (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW'));
     if (document.getElementById('page-uniform-points').classList.contains('active')) renderUniformPointsPage();
+    if (document.getElementById('page-profile').classList.contains('active')) renderMyUniformPoints();
     markLoaded('uniformPoints');
   }, () => markLoaded('uniformPoints'));
 
@@ -2285,6 +2300,23 @@ document.getElementById('vehicleExportBtn')?.addEventListener('click', () => {
 
 const UP_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
 
+// ── Helpers ───────────────────────────────────────────
+function getRecordYearMonth(r) {
+  if (r.yearMonth) return r.yearMonth;
+  const ts = r.submittedAt || r.createdAt || r.updatedAt;
+  if (!ts) return currentYearMonth;
+  try {
+    const d = ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
+    return d.toISOString().slice(0, 7);
+  } catch { return currentYearMonth; }
+}
+
+function fmtYearMonth(ym) {
+  if (!ym) return '—';
+  const [y, m] = ym.split('-');
+  return `${y}年${parseInt(m)}月`;
+}
+
 function fmtUpTs(ts) {
   if (!ts) return '—';
   try {
@@ -2294,16 +2326,32 @@ function fmtUpTs(ts) {
 }
 
 function renderUniformPointsPage() {
-  // ── Unit filter chips ──
-  const chips = document.getElementById('upUnitChips');
-  if (chips) {
-    const allActive = !upUnitFilter;
-    chips.innerHTML =
-      `<button class="unit-chip${allActive ? ' active' : ''}" data-unit="">全部</button>` +
+  // ── Month chips ──
+  const monthChips = document.getElementById('upMonthChips');
+  if (monthChips) {
+    const monthSet = new Set([currentYearMonth]);
+    uniformPoints.forEach(r => monthSet.add(getRecordYearMonth(r)));
+    const months = [...monthSet].sort((a, b) => b.localeCompare(a));
+    monthChips.innerHTML = months.map(m =>
+      `<button class="unit-chip${upSelectedMonth === m ? ' active' : ''}" data-month="${m}">${fmtYearMonth(m)}${m === currentYearMonth ? ' ★' : ''}</button>`
+    ).join('');
+    monthChips.querySelectorAll('[data-month]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        upSelectedMonth = chip.dataset.month;
+        renderUniformPointsPage();
+      });
+    });
+  }
+
+  // ── Unit chips ──
+  const unitChips = document.getElementById('upUnitChips');
+  if (unitChips) {
+    unitChips.innerHTML =
+      `<button class="unit-chip${!upUnitFilter ? ' active' : ''}" data-unit="">全部</button>` +
       UP_UNITS.map(u =>
         `<button class="unit-chip${upUnitFilter === u ? ' active' : ''}" data-unit="${u}">${u}</button>`
       ).join('');
-    chips.querySelectorAll('.unit-chip').forEach(chip => {
+    unitChips.querySelectorAll('[data-unit]').forEach(chip => {
       chip.addEventListener('click', () => {
         upUnitFilter = chip.dataset.unit;
         renderUniformPointsPage();
@@ -2311,50 +2359,79 @@ function renderUniformPointsPage() {
     });
   }
 
-  // ── Filter ──
+  // ── Filter by month ──
   const q = (document.getElementById('upSearch')?.value || '').toLowerCase();
-  let list = uniformPoints;
+  let list = uniformPoints.filter(r => getRecordYearMonth(r) === upSelectedMonth);
   if (upUnitFilter) list = list.filter(r => r.unit === upUnitFilter);
   if (q)            list = list.filter(r => (r.ownerName || '').toLowerCase().includes(q));
 
   // ── Stats ──
   const statsEl = document.getElementById('upStats');
   if (statsEl) {
-    const totalQuota     = uniformPoints.reduce((s, r) => s + (Number(r.quota)     || 0), 0);
-    const totalRemaining = uniformPoints.reduce((s, r) => s + (Number(r.remaining) || 0), 0);
+    const totalQuota     = list.reduce((s, r) => s + (Number(r.quota)     || 0), 0);
+    const totalRemaining = list.reduce((s, r) => s + (Number(r.remaining) || 0), 0);
     const totalUsed      = totalQuota - totalRemaining;
-    statsEl.textContent = `共 ${uniformPoints.length} 筆 ／ 配額總計 ${totalQuota} 點 ／ 已使用 ${totalUsed} 點 ／ 剩餘 ${totalRemaining} 點`;
+    statsEl.textContent = `${fmtYearMonth(upSelectedMonth)} ／ 已申報 ${list.length} 人 ／ 配額 ${totalQuota} 點 ／ 已使用 ${totalUsed} 點 ／ 剩餘 ${totalRemaining} 點`;
   }
 
-  // ── Table ──
+  // ── Submitted table ──
   const tbody   = document.getElementById('upTableBody');
   const emptyEl = document.getElementById('upEmpty');
-  if (!list.length) { tbody.innerHTML = ''; emptyEl.style.display = ''; return; }
-  emptyEl.style.display = 'none';
+  if (!list.length) { tbody.innerHTML = ''; emptyEl.style.display = ''; }
+  else {
+    emptyEl.style.display = 'none';
+    tbody.innerHTML = list.map((r, i) => {
+      const quota     = Number(r.quota)     || 0;
+      const remaining = Number(r.remaining) || 0;
+      const used      = quota - remaining;
+      const remColor  = remaining < 0 ? 'color:#dc2626;font-weight:700'
+                      : remaining === 0 ? 'color:#64748b'
+                      : 'color:#16a34a;font-weight:600';
+      const ts = fmtUpTs(r.submittedAt || r.updatedAt || r.createdAt);
+      return `
+      <tr>
+        <td class="col-seq">${i + 1}</td>
+        <td class="col-name">${r.ownerName || '—'}</td>
+        <td class="col-unit"><span class="unit-tag">${r.unit || '—'}</span></td>
+        <td style="text-align:right">${quota}</td>
+        <td style="text-align:right;${remColor}">${remaining}</td>
+        <td style="text-align:right">${used}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${ts}</td>
+        <td class="col-actions">
+          <button class="btn-icon" onclick="openUniformPointsModal('${r.id}')">✏️</button>
+          <button class="btn-icon danger" onclick="deleteUniformPoints('${r.id}','${r.ownerName}')">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
 
-  tbody.innerHTML = list.map((r, i) => {
-    const quota     = Number(r.quota)     || 0;
-    const remaining = Number(r.remaining) || 0;
-    const used      = quota - remaining;
-    const remColor  = remaining < 0 ? 'color:#dc2626;font-weight:700'
-                    : remaining === 0 ? 'color:#64748b'
-                    : 'color:#16a34a;font-weight:600';
-    const ts = fmtUpTs(r.submittedAt || r.createdAt);
-    return `
-    <tr>
-      <td class="col-seq">${i + 1}</td>
-      <td class="col-name">${r.ownerName || '—'}</td>
-      <td class="col-unit"><span class="unit-tag">${r.unit || '—'}</span></td>
-      <td style="text-align:right">${quota}</td>
-      <td style="text-align:right;${remColor}">${remaining}</td>
-      <td style="text-align:right">${used}</td>
-      <td style="font-size:12px;color:var(--text-muted)">${ts}</td>
-      <td class="col-actions">
-        <button class="btn-icon" onclick="openUniformPointsModal('${r.id}')">✏️</button>
-        <button class="btn-icon danger" onclick="deleteUniformPoints('${r.id}','${r.ownerName}')">🗑</button>
-      </td>
-    </tr>`;
-  }).join('');
+  // ── Not-submitted section ──
+  const notSection = document.getElementById('upNotSubmittedSection');
+  const notList    = document.getElementById('upNotSubmittedList');
+  const notCount   = document.getElementById('upNotSubmittedCount');
+  if (notSection && notList) {
+    const submittedPIds  = new Set(list.map(r => r.personnelId).filter(Boolean));
+    const submittedNames = new Set(list.map(r => r.ownerName).filter(Boolean));
+    const basePersonnel  = upUnitFilter
+      ? personnel.filter(p => p.unit === upUnitFilter)
+      : personnel;
+    const missing = basePersonnel.filter(p =>
+      !submittedPIds.has(p.id) && !submittedNames.has(p.name)
+    );
+    if (missing.length) {
+      notSection.style.display = '';
+      notCount.textContent = `（${missing.length} 人）`;
+      notList.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px">` +
+        missing.map(p =>
+          `<div style="display:flex;align-items:center;gap:6px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:6px 12px;font-size:13px">
+            <span style="font-weight:600">${p.name}</span>
+            <span style="color:var(--text-muted);font-size:11px">${p.unit || ''}</span>
+          </div>`
+        ).join('') + `</div>`;
+    } else {
+      notSection.style.display = 'none';
+    }
+  }
 }
 
 document.getElementById('upSearch')?.addEventListener('input', renderUniformPointsPage);
@@ -2413,6 +2490,10 @@ window.openUniformPointsModal = function(id = null) {
     document.getElementById('up-remaining').value = '';
     document.getElementById('up-used').value      = '';
   }
+  // Show month info in title
+  const ym = id ? getRecordYearMonth(uniformPoints.find(x => x.id === id)) : upSelectedMonth;
+  document.getElementById('up-modal-title').textContent =
+    (id ? '編輯' : '新增') + '點數記錄（' + fmtYearMonth(ym) + '）';
 
   document.getElementById('upModalOverlay').classList.add('open');
 };
@@ -2479,6 +2560,10 @@ document.getElementById('upSaveBtn')?.addEventListener('click', async () => {
   const remaining = Number(remainingEl.value);
   const used      = quota - remaining;
 
+  const yearMonth = editingUpId
+    ? (uniformPoints.find(x => x.id === editingUpId)?.yearMonth || upSelectedMonth)
+    : upSelectedMonth;
+
   const data = {
     personnelId,
     ownerName,
@@ -2486,6 +2571,7 @@ document.getElementById('upSaveBtn')?.addEventListener('click', async () => {
     quota,
     remaining,
     used,
+    yearMonth,
     updatedAt: serverTimestamp(),
   };
 
@@ -2523,6 +2609,160 @@ document.getElementById('uniformPointsExportBtn')?.addEventListener('click', () 
   a.download = `服裝供售點數_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.csv`;
   a.click();
 });
+
+// ══════════════════════════════════════════════════════
+// ── 個人資料頁：服裝供售點數 ──────────────────────────
+// ══════════════════════════════════════════════════════
+
+function renderMyUniformPoints() {
+  const viewEl = document.getElementById('up-profile-view');
+  if (!viewEl || !currentUser) return;
+
+  const uid = currentUser.uid;
+  // All records for this user, sorted newest first
+  const myRecords = uniformPoints
+    .filter(r => r.personnelId === uid)
+    .sort((a, b) => getRecordYearMonth(b).localeCompare(getRecordYearMonth(a)));
+
+  const thisMonth = myRecords.find(r => getRecordYearMonth(r) === currentYearMonth);
+
+  let html = '';
+
+  // Current month card
+  if (thisMonth) {
+    const quota     = Number(thisMonth.quota)     || 0;
+    const remaining = Number(thisMonth.remaining) || 0;
+    const used      = quota - remaining;
+    const remColor  = remaining < 0 ? '#dc2626' : remaining === 0 ? '#64748b' : '#16a34a';
+    const ts        = fmtUpTs(thisMonth.submittedAt || thisMonth.updatedAt);
+    html += `
+    <div style="background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:600">本月（${fmtYearMonth(currentYearMonth)}）✅ 已申報</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
+        <div style="background:#fff;border-radius:8px;padding:10px">
+          <div style="font-size:11px;color:var(--text-muted)">配額</div>
+          <div style="font-size:18px;font-weight:700;color:var(--primary)">${quota}</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:10px">
+          <div style="font-size:11px;color:var(--text-muted)">剩餘</div>
+          <div style="font-size:18px;font-weight:700;color:${remColor}">${remaining}</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:10px">
+          <div style="font-size:11px;color:var(--text-muted)">使用</div>
+          <div style="font-size:18px;font-weight:700">${used}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:right">最後更新：${ts}</div>
+    </div>`;
+  } else {
+    html += `
+    <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#92400e">
+      ⚠️ 本月（${fmtYearMonth(currentYearMonth)}）尚未申報點數，請點擊「更新本月點數」填寫。
+    </div>`;
+  }
+
+  // History (previous months)
+  const prev = myRecords.filter(r => getRecordYearMonth(r) !== currentYearMonth);
+  if (prev.length) {
+    html += `<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin:12px 0 8px">歷史申報</div>`;
+    html += prev.map(r => {
+      const quota     = Number(r.quota)     || 0;
+      const remaining = Number(r.remaining) || 0;
+      const used      = quota - remaining;
+      return `
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span style="color:var(--text-muted);width:80px;flex-shrink:0">${fmtYearMonth(getRecordYearMonth(r))}</span>
+        <span>配額 <b>${quota}</b></span>
+        <span style="color:#16a34a">剩餘 <b>${remaining}</b></span>
+        <span>使用 <b>${used}</b></span>
+      </div>`;
+    }).join('');
+  }
+
+  viewEl.innerHTML = html || '<div class="prof-empty-hint">尚無服裝供售點數申報紀錄</div>';
+}
+
+// ── Profile form event handlers ───────────────────────
+document.getElementById('up-prof-open-btn')?.addEventListener('click', () => {
+  // pre-fill with current month's data if exists
+  const uid = currentUser?.uid;
+  const existing = uid ? uniformPoints.find(r => r.personnelId === uid && getRecordYearMonth(r) === currentYearMonth) : null;
+  document.getElementById('up-prof-month-label').textContent = `申報月份：${fmtYearMonth(currentYearMonth)}`;
+  document.getElementById('up-prof-quota').value     = existing?.quota     ?? '';
+  document.getElementById('up-prof-remaining').value = existing?.remaining ?? '';
+  document.getElementById('up-prof-used').value      = existing ? (Number(existing.quota) - Number(existing.remaining)) : '';
+  document.getElementById('up-profile-form').style.display = '';
+  document.getElementById('up-prof-quota').focus();
+});
+
+document.getElementById('up-prof-cancel-btn')?.addEventListener('click', () => {
+  document.getElementById('up-profile-form').style.display = 'none';
+});
+
+document.getElementById('up-prof-quota')?.addEventListener('input', () => {
+  const q = Number(document.getElementById('up-prof-quota').value) || 0;
+  const r = Number(document.getElementById('up-prof-remaining').value) || 0;
+  document.getElementById('up-prof-used').value = q - r;
+});
+document.getElementById('up-prof-remaining')?.addEventListener('input', () => {
+  const q = Number(document.getElementById('up-prof-quota').value) || 0;
+  const r = Number(document.getElementById('up-prof-remaining').value) || 0;
+  document.getElementById('up-prof-used').value = q - r;
+});
+
+document.getElementById('up-prof-save-btn')?.addEventListener('click', async () => {
+  if (!currentUser) return;
+  const quotaEl     = document.getElementById('up-prof-quota');
+  const remainingEl = document.getElementById('up-prof-remaining');
+  if (quotaEl.value === '')     { alert('請輸入配額點數'); quotaEl.focus(); return; }
+  if (remainingEl.value === '') { alert('請輸入剩餘點數'); remainingEl.focus(); return; }
+
+  const uid       = currentUser.uid;
+  const quota     = Number(quotaEl.value);
+  const remaining = Number(remainingEl.value);
+  const used      = quota - remaining;
+  const name      = profileData?.name || currentUser.displayName || '';
+  const unit      = profileData?.unit || '';
+
+  const data = {
+    personnelId: uid,
+    ownerName:   name,
+    unit,
+    quota,
+    remaining,
+    used,
+    yearMonth:   currentYearMonth,
+    submittedAt: serverTimestamp(),
+    source:      'profile',
+  };
+
+  const btn = document.getElementById('up-prof-save-btn');
+  btn.disabled = true;
+  try {
+    const existing = uniformPoints.find(r => r.personnelId === uid && getRecordYearMonth(r) === currentYearMonth);
+    if (existing) {
+      await updateDoc(doc(db, 'uniformPoints', existing.id), data);
+    } else {
+      await addDoc(COL_UNIFORM_POINTS, data);
+    }
+    document.getElementById('up-profile-form').style.display = 'none';
+    // Navigate to uniform-points if accessible
+    const allowed = ROLES[currentRole]?.pages || ROLES.member.pages;
+    if (allowed.has('uniform-points')) navigateTo('uniform-points');
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+// ── 帳號申請：新增為人員 ──────────────────────────────
+window.addPersonnelFromRequest = function(reqId, name, unit) {
+  openPersonnelForm(null);
+  setTimeout(() => {
+    const nameEl = document.getElementById('pf-name');
+    const unitEl = document.getElementById('pf-unit');
+    if (nameEl) nameEl.value = name || '';
+    if (unitEl) unitEl.value = unit || '';
+  }, 50);
+};
 
 // ══════════════════════════════════════════════════════
 // ── 入職申請 ─────────────────────────────────────────

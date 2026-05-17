@@ -474,6 +474,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
   try {
     const now = serverTimestamp();
+    const yearMonth = new Date().toISOString().slice(0, 7);
 
     // 儲存點數資料
     await addDoc(COL_UP, {
@@ -483,6 +484,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       quota,
       remaining,
       used,
+      yearMonth,
       email: email || null,
       accountRequested: isNewReg,
       submittedAt: now,
