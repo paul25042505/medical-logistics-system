@@ -75,7 +75,8 @@ let upUnitFilter      = '';
 const currentYearMonth = new Date().toISOString().slice(0, 7); // "2026-05"
 let upSelectedMonth   = currentYearMonth;
 
-let accountRequests = [];
+let accountRequests   = [];
+let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
@@ -411,56 +412,226 @@ function renderAdminPage() {
   makeList('admin-battalion-list', adminSettings.battalions, 'battalions');
   makeList('admin-company-list',   adminSettings.companies,  'companies');
 
-  // ── 帳號申請清單 ──
-  const reqList  = document.getElementById('admin-acct-req-list');
-  const reqEmpty = document.getElementById('acct-req-empty');
-  const reqBadge = document.getElementById('acct-req-badge');
-  if (reqList) {
-    const pending = accountRequests.filter(r => r.status === 'pending');
-    if (reqBadge) {
-      reqBadge.textContent = pending.length ? pending.length : '';
-      reqBadge.style.display = pending.length ? '' : 'none';
-    }
-    if (!accountRequests.length) {
-      reqEmpty.style.display = '';
-      reqList.innerHTML = '';
-    } else {
-      reqEmpty.style.display = 'none';
-      reqList.innerHTML = accountRequests.map(r => {
-        const ts = fmtUpTs(r.requestedAt);
-        const isPending = r.status === 'pending';
-        const statusBadge = isPending
-          ? `<span style="font-size:11px;background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:99px;font-weight:700">待處理</span>`
-          : `<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:99px;font-weight:700">已處理</span>`;
-        const escapedName = (r.name || '').replace(/'/g, "\\'");
-        const escapedUnit = (r.unit || '').replace(/'/g, "\\'");
-        return `<li class="admin-list-item" style="flex-wrap:wrap;gap:8px;padding:12px 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;min-width:180px">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span style="font-weight:700;font-size:14px">${r.name || '—'}</span>
-              ${r.unit ? `<span class="unit-tag">${r.unit}</span>` : ''}
-              ${statusBadge}
-            </div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
-              📧 ${r.email || '—'}&ensp;／&ensp;🕐 ${ts}
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-              開通後請引導本人用此 Google 帳號登入系統，系統將自動建立帳號等待審核。
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
-            ${isPending ? `<button class="btn btn-sm btn-primary" onclick="addPersonnelFromRequest('${r.id}','${escapedName}','${escapedUnit}')">＋ 新增為人員</button>` : ''}
-            ${isPending ? `<button class="btn btn-sm btn-secondary" onclick="markAcctReqDone('${r.id}')">✔ 標記已處理</button>` : ''}
-          </div>
-        </li>`;
-      }).join('');
-    }
+  // ── 帳號 / 申請整合清單 ──
+  renderAdminAccountsSection();
+}
+
+// ── 整合帳號申請 + 已登入帳號 ─────────────────────────
+function renderAdminAccountsSection() {
+  const container = document.getElementById('admin-unified-users-list');
+  if (!container) return;
+
+  const pending = accountRequests.filter(r => r.status === 'pending');
+  const done    = accountRequests.filter(r => r.status !== 'pending');
+
+  // 紅色 badge
+  const badge = document.getElementById('acct-req-badge');
+  if (badge) {
+    badge.textContent  = pending.length || '';
+    badge.style.display = pending.length ? '' : 'none';
   }
+
+  // ── helper: 單一申請列 ──
+  function reqRow(r) {
+    const emailLow    = (r.email || '').toLowerCase();
+    const dupUser     = registeredUsers.find(u => (u.email || '').toLowerCase() === emailLow && emailLow);
+    const dupPersonnel = personnel.find(p =>
+      (p.email && (p.email).toLowerCase() === emailLow && emailLow) ||
+      (p.name  && p.name === r.name)
+    );
+    const rid  = r.id.replace(/'/g, "\\'");
+
+    let notice = '';
+    if (dupPersonnel) {
+      notice = `<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;
+                  padding:5px 10px;font-size:11px;color:#92400e;margin-top:6px">
+        ⚠️ 與人員管理「${dupPersonnel.name}」可能重複
+      </div>`;
+    } else if (dupUser) {
+      notice = `<div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:6px;
+                  padding:5px 10px;font-size:11px;color:#1d4ed8;margin-top:6px">
+        ℹ️ 此 Email 已有登入紀錄（${dupUser.name || dupUser.email}）
+      </div>`;
+    }
+
+    const actionBtns = dupPersonnel
+      ? `<button class="btn btn-sm btn-secondary" onclick="approveReqMerge('${rid}','${dupPersonnel.id}')">合併到現有人員</button>
+         <button class="btn btn-sm btn-primary"   onclick="approveReqCreate('${rid}')">建立新人員</button>`
+      : `<button class="btn btn-sm btn-primary"   onclick="approveReqCreate('${rid}')">✓ 核准建立人員</button>`;
+
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:14px">${r.name || '—'}</span>
+            ${r.unit ? `<span class="unit-tag">${r.unit}</span>` : ''}
+            <span style="font-size:11px;background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:99px;font-weight:700">📬 待審核</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+            📧 ${r.email || '—'}&ensp;・&ensp;🕐 ${fmtUpTs(r.requestedAt)}
+          </div>
+          ${notice}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex-shrink:0;margin-top:2px">
+          ${actionBtns}
+          <button class="btn btn-sm btn-secondary" onclick="markAcctReqDone('${rid}')">略過</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── helper: 單一已登入帳號列 ──
+  function userRow(u) {
+    const statusHtml = u.admin
+      ? `<span style="font-size:12px;color:var(--accent);font-weight:600">管理員</span>`
+      : u.approved
+        ? `<span style="font-size:12px;color:var(--green)">✓ 已核准</span>`
+        : `<button class="btn btn-primary btn-sm" onclick="approveUser('${u.id}')">核准</button>`;
+    // 若此帳號對應到某個 accountRequest 有記錄，顯示來源
+    const fromReq = done.find(r => (r.email || '').toLowerCase() === (u.email || '').toLowerCase());
+    return `<div class="admin-list-item">
+      <div>
+        <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${u.email}${fromReq ? '&ensp;<span style="color:#16a34a;font-size:11px">（已建立人員）</span>' : ''}</div>
+      </div>
+      <div class="admin-item-actions">${statusHtml}</div>
+    </div>`;
+  }
+
+  let html = '';
+
+  // ── 待審核申請區 ──
+  html += `<div style="font-size:12px;font-weight:700;color:var(--text-muted);
+              letter-spacing:.4px;text-transform:uppercase;margin:4px 0 8px">
+    📬 待審核申請 ${pending.length ? `（${pending.length}）` : ''}
+  </div>`;
+  if (pending.length) {
+    html += pending.map(reqRow).join('');
+  } else {
+    html += `<div style="font-size:13px;color:var(--text-muted);padding:6px 0 10px">暫無待審核申請</div>`;
+  }
+
+  // ── 分隔線 ──
+  html += `<div style="border-top:2px solid var(--border);margin:14px 0 10px"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);
+        letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px">
+      ✅ 已登入帳號 ${registeredUsers.length ? `（${registeredUsers.length}）` : ''}
+    </div>`;
+
+  if (!registeredUsers.length) {
+    html += `<div style="font-size:13px;color:var(--text-muted);padding:6px 0">尚無帳號</div>`;
+  } else {
+    html += registeredUsers.map(userRow).join('');
+  }
+
+  container.innerHTML = html;
 }
 
 window.markAcctReqDone = async function(id) {
   try { await updateDoc(doc(db, 'accountRequests', id), { status: 'done' }); }
   catch(e) { console.error(e); alert('更新失敗'); }
+};
+
+// ── 核准申請：建立新人員 ──────────────────────────────
+window.approveReqCreate = async function(id) {
+  const req = accountRequests.find(r => r.id === id);
+  if (!req) return;
+
+  // 若此 email 已登入但未核准 → 一併開通
+  const existUser = registeredUsers.find(u =>
+    (u.email || '').toLowerCase() === (req.email || '').toLowerCase()
+  );
+
+  try {
+    // 建立人員記錄
+    const newRef = doc(COL_PERSONNEL);
+    await setDoc(newRef, {
+      name:        req.name  || '',
+      unit:        req.unit  || '',
+      email:       req.email || '',
+      createdAt:   serverTimestamp(),
+      updatedAt:   serverTimestamp(),
+      createdFrom: 'accountRequest',
+    });
+
+    // 同步核准已登入帳號（若有）
+    if (existUser && !existUser.approved && !existUser.admin) {
+      await updateDoc(doc(db, 'users', existUser.id), { approved: true });
+    }
+
+    // 補上 personnelId 給尚未連結的服裝點數記錄
+    const relPoints = uniformPoints.filter(
+      rp => !rp.personnelId && rp.ownerName === req.name
+    );
+    for (const rp of relPoints) {
+      await updateDoc(doc(db, 'uniformPoints', rp.id), { personnelId: newRef.id });
+    }
+
+    // 標記申請已完成
+    await updateDoc(doc(db, 'accountRequests', id), {
+      status:        'approved',
+      approvedAt:    serverTimestamp(),
+      personnelDocId: newRef.id,
+    });
+
+    alert(`✓ 已核准「${req.name}」並建立人員記錄。${existUser && !existUser.approved ? '\n帳號已同步開通。' : ''}`);
+  } catch(e) {
+    console.error(e);
+    alert('操作失敗：' + e.message);
+  }
+};
+
+// ── 核准申請：合併到現有人員 ─────────────────────────
+window.approveReqMerge = async function(reqId, personnelDocId) {
+  const req  = accountRequests.find(r => r.id === reqId);
+  const pers = personnel.find(p => p.id === personnelDocId);
+  if (!req || !pers) return;
+
+  const replace = confirm(
+    `將「${req.name}」合併到現有人員「${pers.name}」\n\n` +
+    `點「確認」= 用申請資料補充更新現有人員的 email / 單位\n` +
+    `點「取消」= 僅標記完成，不更新現有資料`
+  );
+
+  try {
+    if (replace) {
+      await updateDoc(doc(db, 'personnel', personnelDocId), {
+        ...(req.email && !pers.email ? { email: req.email } : {}),
+        ...(req.unit  && !pers.unit  ? { unit:  req.unit  } : {}),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    // 同步核准帳號（若有）
+    const existUser = registeredUsers.find(u =>
+      (u.email || '').toLowerCase() === (req.email || '').toLowerCase()
+    );
+    if (existUser && !existUser.approved && !existUser.admin) {
+      await updateDoc(doc(db, 'users', existUser.id), { approved: true });
+    }
+
+    // 補上 personnelId 給相關服裝點數
+    const relPoints = uniformPoints.filter(
+      rp => !rp.personnelId && rp.ownerName === req.name
+    );
+    for (const rp of relPoints) {
+      await updateDoc(doc(db, 'uniformPoints', rp.id), { personnelId: personnelDocId });
+    }
+
+    await updateDoc(doc(db, 'accountRequests', reqId), {
+      status:        replace ? 'merged' : 'done',
+      approvedAt:    serverTimestamp(),
+      personnelDocId,
+    });
+
+    alert(replace
+      ? `✓ 已合併到「${pers.name}」的人員記錄。`
+      : '已標記完成（保留現有資料）。'
+    );
+  } catch(e) {
+    console.error(e);
+    alert('操作失敗：' + e.message);
+  }
 };
 
 window.moveAdminItem = async function (key, idx, dir) {
@@ -1366,18 +1537,37 @@ function showProfileEditMode(p) {
 
 async function renderProfilePage() {
   if (!currentUser) return;
-  // 從 personnel/{uid} 讀取（同步到人員資訊管理）
-  const snap = await getDoc(doc(db, 'personnel', currentUser.uid));
-  if (snap.exists()) {
-    profileData = snap.data();
-  } else {
-    // 嘗試從舊的 users/{uid}.profile 遷移
-    const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
-    const ud = userSnap.exists() ? userSnap.data() : {};
-    profileData = ud.profile ? { ...ud.profile, uid: currentUser.uid } : { uid: currentUser.uid };
+  const uid = currentUser.uid;
+
+  // ① 嘗試 personnel/{uid}（標準路徑）
+  let snap = await getDoc(doc(db, 'personnel', uid));
+
+  if (!snap.exists()) {
+    // ② 以 email 在已載入的 personnel 陣列中尋找（帳號申請核准後建立的記錄）
+    const email = (currentUser.email || '').toLowerCase();
+    const emailMatch = email
+      ? personnel.find(p => p.id !== uid && p.email && p.email.toLowerCase() === email)
+      : null;
+
+    if (emailMatch) {
+      // 自動遷移：把資料複製到 personnel/{uid}，刪除舊記錄
+      await setDoc(doc(db, 'personnel', uid), { ...emailMatch, uid, updatedAt: serverTimestamp() });
+      try { await deleteDoc(doc(db, 'personnel', emailMatch.id)); } catch {}
+      snap = await getDoc(doc(db, 'personnel', uid));
+    } else {
+      // ③ 舊版：嘗試從 users/{uid}.profile 遷移
+      const userSnap = await getDoc(doc(db, 'users', uid));
+      const ud = userSnap.exists() ? userSnap.data() : {};
+      profileData = ud.profile ? { ...ud.profile, uid } : { uid };
+      showProfileViewMode(profileData);
+      renderMyUniformPoints();
+      return;
+    }
   }
+
+  profileData = snap.exists() ? snap.data() : { uid };
   showProfileViewMode(profileData);
-  renderMyUniformPoints(); // 在 profileData 設定完畢後才呼叫，確保姓名比對正確
+  renderMyUniformPoints(); // profileData 已設定完畢才呼叫
 }
 
 // 編輯按鈕
@@ -1494,34 +1684,12 @@ function startApp() {
   }, () => markLoaded('personnel'));
 
   onSnapshot(COL_USERS, snap => {
-    const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    registeredUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // 已註冊帳號
-    const el = document.getElementById('admin-users-list');
-    if (el) {
-      el.innerHTML = !allUsers.length
-        ? '<li style="color:var(--text-muted);font-size:13px;padding:8px 0">尚無帳號</li>'
-        : allUsers.map(u => `
-          <li class="admin-list-item">
-            <div>
-              <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
-              <div style="font-size:12px;color:var(--text-muted)">${u.email}</div>
-            </div>
-            <div class="admin-item-actions">
-              ${u.admin
-                ? `<span style="font-size:12px;color:var(--accent);font-weight:600">管理員</span>`
-                : u.approved
-                  ? `<span style="font-size:12px;color:var(--green)">✓ 已核准</span>`
-                  : `<button class="btn btn-primary btn-sm" onclick="approveUser('${u.id}')">核准</button>`
-              }
-            </div>
-          </li>`).join('');
-    }
-
-    // 角色管理
+    // 角色管理列表（仍直接渲染，與 accounts 分開）
     const roleEl = document.getElementById('admin-role-list');
     if (roleEl) {
-      const approved = allUsers.filter(u => u.approved);
+      const approved = registeredUsers.filter(u => u.approved);
       roleEl.innerHTML = !approved.length
         ? '<li style="color:var(--text-muted);font-size:13px;padding:8px 0">尚無已核准用戶</li>'
         : approved.map(u => {
@@ -1541,6 +1709,9 @@ function startApp() {
             </li>`;
           }).join('');
     }
+
+    // 重新渲染整合帳號區塊
+    if (document.getElementById('page-admin').classList.contains('active')) renderAdminAccountsSection();
   }, () => {});
 
   onSnapshot(COL_APPLICATIONS, snap => {
@@ -1657,16 +1828,25 @@ function renderPersonnel() {
   }
   emptyEl.style.display = 'none';
 
+  // 偵測重複：相同姓名的人員
+  const nameCount = {};
+  filtered.forEach(p => { if (p.name) nameCount[p.name] = (nameCount[p.name] || 0) + 1; });
+
   tbody.innerHTML = filtered.map((p, i) => {
     const age      = calcAge(p.birthDate);
     const idMasked = p.idNumber
       ? p.idNumber.slice(0, 1) + '●●●●●●●' + p.idNumber.slice(-2)
       : '—';
+    const isDup = p.name && nameCount[p.name] > 1;
+    const dupBadge = isDup
+      ? ` <span title="同名人員可能重複" style="font-size:10px;background:#fef3c7;color:#d97706;
+            padding:1px 5px;border-radius:4px;cursor:pointer" onclick="flagDupPersonnel('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')">⚠️ 重複</span>`
+      : '';
     return `<tr class="personnel-row" data-id="${p.id}">
       <td class="col-seq">${i + 1}</td>
       <td class="col-unit"><span class="unit-tag">${p.unit || '—'}</span></td>
       <td class="col-rank">${p.rank || '—'}</td>
-      <td class="col-name"><strong>${p.name || '—'}</strong>${p.isRecruiter ? ' <span class="recruiter-badge">招募員</span>' : ''}</td>
+      <td class="col-name"><strong>${p.name || '—'}</strong>${dupBadge}${p.isRecruiter ? ' <span class="recruiter-badge">招募員</span>' : ''}</td>
       <td class="col-gender">${p.gender || '—'}</td>
       <td class="col-age">${age || '—'}</td>
       <td class="col-phone">${p.phone || '—'}</td>
@@ -1780,6 +1960,31 @@ document.getElementById('personnelSaveBtn').addEventListener('click', async () =
 window.openPersonnelEdit = function (id) {
   closePersonnelDetail();
   openPersonnelForm(id);
+};
+
+// ── 重複人員處理 ──────────────────────────────────────
+window.flagDupPersonnel = function(id, name) {
+  const dups = personnel.filter(p => p.name === name);
+  if (dups.length < 2) { alert('目前偵測不到重複記錄。'); return; }
+
+  // 顯示所有同名記錄，讓承辦人選擇要保留哪一筆
+  const lines = dups.map((p, i) =>
+    `${i + 1}. ${p.name}｜${p.unit || '無單位'}｜${p.email || '無Email'}｜${p.id === id ? '← 目前這筆' : ''}`
+  ).join('\n');
+  const keepIdx = prompt(
+    `發現 ${dups.length} 筆同名「${name}」記錄：\n\n${lines}\n\n輸入要【保留】的編號（其餘將刪除）：`
+  );
+  const keepNum = parseInt(keepIdx, 10);
+  if (!keepNum || keepNum < 1 || keepNum > dups.length) return;
+
+  const keepId  = dups[keepNum - 1].id;
+  const delDups = dups.filter(p => p.id !== keepId);
+
+  if (!confirm(`確定刪除 ${delDups.length} 筆重複記錄，保留「${dups[keepNum-1].name}」(${dups[keepNum-1].unit || '無單位'})?`)) return;
+
+  Promise.all(delDups.map(p => deleteDoc(doc(db, 'personnel', p.id))))
+    .then(() => alert('✓ 重複記錄已刪除。'))
+    .catch(e => alert('刪除失敗：' + e.message));
 };
 
 window.deletePersonnel = async function (id) {
