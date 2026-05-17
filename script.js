@@ -6,6 +6,9 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js';
 import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+import {
   getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
@@ -29,6 +32,7 @@ try {
 } catch {
   db = getFirestore(app);
 }
+const storage = getStorage(app);
 const auth    = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
@@ -2024,6 +2028,10 @@ function vsBadge(status) {
   return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:${s.color};background:${s.bg}">${s.label}</span>`;
 }
 
+// ── Vehicle doc keys ──────────────────────────────────
+const VDOC_KEYS = ['front','rear','reg','license','insurance'];
+let vDocFiles = {}; // { front: File|null, rear: File|null, ... }
+
 // ── Modal open/close ──────────────────────────────────
 window.openVehicleModal = function(id = null) {
   editingVehicleId = id;
@@ -2033,20 +2041,78 @@ window.openVehicleModal = function(id = null) {
   document.getElementById('v-plate').value = v?.plate || '';
   document.getElementById('v-brand').value = v?.brand || '';
   document.getElementById('v-color').value = v?.color || '';
+
+  // 車主資訊
+  const isSelf = !v || v.ownerSelf !== false;
+  document.getElementById('v-owner-self-yes').checked = isSelf;
+  document.getElementById('v-owner-self-no').checked  = !isSelf;
+  document.getElementById('v-owner-other-fields').style.display = isSelf ? 'none' : '';
+  document.getElementById('v-owner-name').value = v?.vehicleOwnerName || '';
+  document.getElementById('v-owner-rel').value  = v?.vehicleOwnerRel  || '';
+
+  // 附件預覽（已儲存的 URL）
+  vDocFiles = {};
+  VDOC_KEYS.forEach(key => {
+    const prev = document.getElementById(`vdoc-preview-${key}`);
+    const card = prev.closest('.vdoc-card');
+    const url  = v?.docs?.[key] || '';
+    prev.style.backgroundImage = url ? `url('${url}')` : '';
+    card.classList.toggle('has-file', !!url);
+    // 清除之前選的新檔案
+    const input = card.querySelector('.vdoc-input');
+    if (input) input.value = '';
+  });
+
+  document.getElementById('v-upload-progress').style.display = 'none';
   document.getElementById('vehicleModalOverlay').classList.add('open');
 };
+
 function closeVehicleModal() {
   document.getElementById('vehicleModalOverlay').classList.remove('open');
+  vDocFiles = {};
 }
 document.getElementById('vehicleModalClose').addEventListener('click',  closeVehicleModal);
 document.getElementById('vehicleCancelBtn').addEventListener('click',   closeVehicleModal);
 document.getElementById('vehicleModalOverlay').addEventListener('click', e => { if (e.target.id === 'vehicleModalOverlay') closeVehicleModal(); });
+
+// 車主 radio toggle
+document.querySelectorAll('input[name="v-owner-self"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('v-owner-other-fields').style.display =
+      document.getElementById('v-owner-self-no').checked ? '' : 'none';
+  });
+});
+
+// 文件附件預覽（選取後即時顯示縮圖）
+document.querySelectorAll('.vdoc-input').forEach(input => {
+  input.addEventListener('change', function() {
+    const key  = this.dataset.key;
+    const file = this.files[0];
+    if (!file) return;
+    vDocFiles[key] = file;
+    const prev = document.getElementById(`vdoc-preview-${key}`);
+    const card = this.closest('.vdoc-card');
+    const url  = URL.createObjectURL(file);
+    prev.style.backgroundImage = `url('${url}')`;
+    card.classList.add('has-file');
+  });
+});
 
 // ── Save vehicle ──────────────────────────────────────
 document.getElementById('vehicleSaveBtn').addEventListener('click', async () => {
   const type  = document.getElementById('v-type').value;
   const plate = document.getElementById('v-plate').value.trim().toUpperCase();
   if (!type || !plate) { alert('請填寫車種和車牌'); return; }
+
+  const isSelf = document.getElementById('v-owner-self-yes').checked;
+  if (!isSelf) {
+    const ownerName = document.getElementById('v-owner-name').value.trim();
+    const ownerRel  = document.getElementById('v-owner-rel').value.trim();
+    if (!ownerName || !ownerRel) { alert('請填寫車主姓名與關係'); return; }
+  }
+
+  const btn = document.getElementById('vehicleSaveBtn');
+  btn.disabled = true;
 
   const uid  = currentUser?.uid || 'dev-uid';
   const myPersonnel = personnel.find(p => p.uid === uid);
@@ -2059,21 +2125,60 @@ document.getElementById('vehicleSaveBtn').addEventListener('click', async () => 
     type, plate,
     brand: document.getElementById('v-brand').value.trim(),
     color: document.getElementById('v-color').value.trim(),
+    ownerSelf:        isSelf,
+    vehicleOwnerName: isSelf ? '' : document.getElementById('v-owner-name').value.trim(),
+    vehicleOwnerRel:  isSelf ? '' : document.getElementById('v-owner-rel').value.trim(),
   };
 
   try {
-    if (editingVehicleId) {
-      await updateDoc(doc(db, 'vehicles', editingVehicleId), data);
+    // 1. 先寫入基本資料，取得 doc ID
+    let vehicleId = editingVehicleId;
+    if (vehicleId) {
+      await updateDoc(doc(db, 'vehicles', vehicleId), data);
     } else {
       data.status    = 'pending';
       data.createdAt = serverTimestamp();
-      await addDoc(COL_VEHICLES, data);
+      const docRef = await addDoc(COL_VEHICLES, data);
+      vehicleId = docRef.id;
     }
+
+    // 2. 上傳附件
+    const filesToUpload = Object.entries(vDocFiles).filter(([, f]) => f);
+    if (filesToUpload.length > 0) {
+      const progressBar  = document.getElementById('v-progress-fill');
+      const progressText = document.getElementById('v-progress-text');
+      document.getElementById('v-upload-progress').style.display = '';
+
+      const docUrls = {};
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const [key, file] = filesToUpload[i];
+        progressText.textContent = `上傳 ${i + 1}/${filesToUpload.length}…`;
+        progressBar.style.width  = `${Math.round(((i) / filesToUpload.length) * 100)}%`;
+        const ext  = file.name.split('.').pop() || 'jpg';
+        const ref  = storageRef(storage, `vehicles/${vehicleId}/${key}.${ext}`);
+        await uploadBytes(ref, file);
+        docUrls[key] = await getDownloadURL(ref);
+      }
+      progressBar.style.width = '100%';
+
+      // 取得原有 docs 物件並合併
+      const existing = vehicles.find(v => v.id === vehicleId)?.docs || {};
+      await updateDoc(doc(db, 'vehicles', vehicleId), { docs: { ...existing, ...docUrls } });
+    }
+
     closeVehicleModal();
-  } catch(e) { console.error(e); alert('儲存失敗'); }
+  } catch(e) {
+    console.error(e);
+    alert('儲存失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('v-upload-progress').style.display = 'none';
+  }
 });
 
 // ── My vehicles (profile page) ────────────────────────
+const VDOC_LABELS = { front:'車頭照', rear:'車尾照', reg:'行照', license:'駕照', insurance:'保險卡' };
+
 function renderMyVehicles() {
   const el = document.getElementById('my-vehicle-list');
   if (!el) return;
@@ -2085,25 +2190,51 @@ function renderMyVehicles() {
   }
   const canEdit = s => s === 'pending';
   el.innerHTML = mine.map(v => {
-    const status = v.status || 'pending';
+    const status   = v.status || 'pending';
     const editable = canEdit(status);
+    const docs     = v.docs || {};
+
+    // 附件縮圖列
+    const docThumbs = VDOC_KEYS.map(key => {
+      const url = docs[key];
+      return url
+        ? `<a href="${url}" target="_blank" title="${VDOC_LABELS[key]}"
+             style="display:inline-block;width:36px;height:36px;border-radius:5px;border:1px solid var(--border);
+                    background:url('${url}') center/cover;overflow:hidden;text-decoration:none"></a>`
+        : `<span title="${VDOC_LABELS[key]}"
+              style="display:inline-flex;width:36px;height:36px;border-radius:5px;border:1px dashed var(--border);
+                     align-items:center;justify-content:center;font-size:11px;color:var(--text-muted)">—</span>`;
+    }).join('');
+
+    // 車主非本人提示
+    const ownerNote = !v.ownerSelf && v.vehicleOwnerName
+      ? `<div style="font-size:11px;color:#7c3aed;margin-top:3px">👤 車主：${v.vehicleOwnerName}（${v.vehicleOwnerRel || '—'}）</div>`
+      : '';
+
     return `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:22px">${v.type === '汽車' ? '🚗' : '🏍'}</div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-weight:700;font-size:15px;font-family:monospace;letter-spacing:1px">${v.plate}</span>
-          ${vsBadge(status)}
+    <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:22px">${v.type === '汽車' ? '🚗' : '🏍'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:15px;font-family:monospace;letter-spacing:1px">${v.plate}</span>
+            ${vsBadge(status)}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${v.type}${v.brand ? '・' + v.brand : ''}${v.color ? '・' + v.color : ''}</div>
+          ${ownerNote}
+          ${status === 'pending' ? `<div style="font-size:11px;color:#d97706;margin-top:4px">📄 請列印申請單後送交承辦人</div>` : ''}
+          ${status === 'applying' ? `<div style="font-size:11px;color:#2563eb;margin-top:4px">⏳ 承辦人已收件，等待核發中</div>` : ''}
+          ${status === 'issued'   ? `<div style="font-size:11px;color:#16a34a;margin-top:4px">✅ 車證已核發，請向承辦人領取</div>` : ''}
         </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${v.type}${v.brand ? '・' + v.brand : ''}${v.color ? '・' + v.color : ''}</div>
-        ${status === 'pending' ? `<div style="font-size:11px;color:#d97706;margin-top:4px">📄 請列印申請單後送交承辦人</div>` : ''}
-        ${status === 'applying' ? `<div style="font-size:11px;color:#2563eb;margin-top:4px">⏳ 承辦人已收件，等待核發中</div>` : ''}
-        ${status === 'issued'   ? `<div style="font-size:11px;color:#16a34a;margin-top:4px">✅ 車證已核發，請向承辦人領取</div>` : ''}
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn-icon" title="列印申請單" onclick="printVehicleForm('${v.id}')">🖨</button>
+          ${editable ? `<button class="btn-icon" onclick="openVehicleModal('${v.id}')">✏️</button>` : ''}
+          ${editable ? `<button class="btn-icon danger" onclick="deleteVehicle('${v.id}','${v.plate}')">🗑</button>` : ''}
+        </div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="btn-icon" title="列印申請單" onclick="printVehicleForm('${v.id}')">🖨</button>
-        ${editable ? `<button class="btn-icon" onclick="openVehicleModal('${v.id}')">✏️</button>` : ''}
-        ${editable ? `<button class="btn-icon danger" onclick="deleteVehicle('${v.id}','${v.plate}')">🗑</button>` : ''}
+      <div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text-muted);margin-right:2px">附件：</span>
+        ${docThumbs}
       </div>
     </div>`;
   }).join('') + '<div style="padding-bottom:4px"></div>';
