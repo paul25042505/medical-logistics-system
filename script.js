@@ -41,6 +41,7 @@ const COL_PERSONNEL     = collection(db, 'personnel');
 const COL_USERS         = collection(db, 'users');
 const COL_APPLICATIONS  = collection(db, 'applications');
 const COL_VEHICLES      = collection(db, 'vehicles');
+const COL_UNIFORM_POINTS = collection(db, 'uniformPoints');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -67,13 +68,17 @@ let viewingAppId    = null;
 let vehicles        = [];
 let editingVehicleId = null;
 
+let uniformPoints   = [];
+let editingUpId     = null;
+let upUnitFilter    = '';
+
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads']) },
   personnel: { label: '人事管理承辦', pages: new Set(['home','profile','personnel','applications']) },
-  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','vehicles']) },
+  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','vehicles','uniform-points']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile']) },
 };
 let currentRole = 'member';
@@ -256,7 +261,7 @@ window.approveUser = async function(uid) {
 const loaded = new Set();
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 8) {
+  if (loaded.size >= 9) {
     const ls = document.getElementById('loading-screen');
     if (ls) ls.style.display = 'none';
   }
@@ -479,6 +484,7 @@ const PAGE_INIT = {
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
   'applications':    () => renderApplications(),
   'vehicles':        () => renderVehiclesPage(),
+  'uniform-points':  () => renderUniformPointsPage(),
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -1494,6 +1500,13 @@ function startApp() {
     if (document.getElementById('page-profile').classList.contains('active')) renderMyVehicles();
     markLoaded('vehicles');
   }, () => markLoaded('vehicles'));
+
+  onSnapshot(COL_UNIFORM_POINTS, snap => {
+    uniformPoints = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    uniformPoints.sort((a, b) => (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW'));
+    if (document.getElementById('page-uniform-points').classList.contains('active')) renderUniformPointsPage();
+    markLoaded('uniformPoints');
+  }, () => markLoaded('uniformPoints'));
 }
 
 window.changeUserRole = async function(uid, role) {
@@ -2214,6 +2227,227 @@ document.getElementById('vehicleExportBtn')?.addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `車輛申請_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.csv`;
+  a.click();
+});
+
+// ══════════════════════════════════════════════════════
+// ── 服裝供售點數 ──────────────────────────────────────
+// ══════════════════════════════════════════════════════
+
+const UP_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
+
+function renderUniformPointsPage() {
+  // ── Unit filter chips ──
+  const chips = document.getElementById('upUnitChips');
+  if (chips) {
+    const allActive = !upUnitFilter;
+    chips.innerHTML =
+      `<button class="unit-chip${allActive ? ' active' : ''}" data-unit="">全部</button>` +
+      UP_UNITS.map(u =>
+        `<button class="unit-chip${upUnitFilter === u ? ' active' : ''}" data-unit="${u}">${u}</button>`
+      ).join('');
+    chips.querySelectorAll('.unit-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        upUnitFilter = chip.dataset.unit;
+        renderUniformPointsPage();
+      });
+    });
+  }
+
+  // ── Filter ──
+  const q = (document.getElementById('upSearch')?.value || '').toLowerCase();
+  let list = uniformPoints;
+  if (upUnitFilter) list = list.filter(r => r.unit === upUnitFilter);
+  if (q)            list = list.filter(r => (r.ownerName || '').toLowerCase().includes(q));
+
+  // ── Stats ──
+  const statsEl = document.getElementById('upStats');
+  if (statsEl) {
+    const totalQuota     = uniformPoints.reduce((s, r) => s + (Number(r.quota) || 0), 0);
+    const totalUsed      = uniformPoints.reduce((s, r) => s + (Number(r.used)  || 0), 0);
+    const totalRemaining = totalQuota - totalUsed;
+    statsEl.textContent = `共 ${uniformPoints.length} 人 ／ 配額總計 ${totalQuota} 點 ／ 已使用 ${totalUsed} 點 ／ 剩餘 ${totalRemaining} 點`;
+  }
+
+  // ── Table ──
+  const tbody   = document.getElementById('upTableBody');
+  const emptyEl = document.getElementById('upEmpty');
+  if (!list.length) { tbody.innerHTML = ''; emptyEl.style.display = ''; return; }
+  emptyEl.style.display = 'none';
+
+  tbody.innerHTML = list.map((r, i) => {
+    const quota     = Number(r.quota) || 0;
+    const used      = Number(r.used)  || 0;
+    const remaining = quota - used;
+    const remColor  = remaining < 0 ? 'color:#dc2626;font-weight:700'
+                    : remaining === 0 ? 'color:#64748b'
+                    : 'color:#16a34a;font-weight:600';
+    return `
+    <tr>
+      <td class="col-seq">${i + 1}</td>
+      <td class="col-name">${r.ownerName || '—'}</td>
+      <td class="col-unit"><span class="unit-tag">${r.unit || '—'}</span></td>
+      <td style="text-align:right">${quota}</td>
+      <td style="text-align:right">${used}</td>
+      <td style="text-align:right;${remColor}">${remaining}</td>
+      <td class="col-actions">
+        <button class="btn-icon" onclick="openUniformPointsModal('${r.id}')">✏️</button>
+        <button class="btn-icon danger" onclick="deleteUniformPoints('${r.id}','${r.ownerName}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('upSearch')?.addEventListener('input', renderUniformPointsPage);
+
+// ── Modal ─────────────────────────────────────────────
+let upManualMode = false;
+
+window.openUniformPointsModal = function(id = null) {
+  editingUpId  = id;
+  upManualMode = false;
+  const r = id ? uniformPoints.find(x => x.id === id) : null;
+
+  document.getElementById('up-modal-title').textContent = id ? '編輯點數記錄' : '新增點數記錄';
+
+  // Reset manual/select mode
+  document.getElementById('up-select-section').style.display  = '';
+  document.getElementById('up-manual-section').style.display  = 'none';
+  document.getElementById('up-manual-unit-section').style.display = 'none';
+  document.getElementById('up-manual-name').value = '';
+  document.getElementById('up-manual-unit').value = '';
+
+  // Populate personnel dropdown
+  const pSel = document.getElementById('up-personnel');
+  const sorted = [...personnel].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
+  pSel.innerHTML = '<option value="">請選擇人員</option>' +
+    sorted.map(p => `<option value="${p.id}" data-name="${p.name}" data-unit="${p.unit || ''}">${p.name}${p.unit ? '（' + p.unit + '）' : ''}</option>`).join('');
+
+  // Fill existing values
+  if (r) {
+    if (r.personnelId) {
+      pSel.value = r.personnelId;
+    } else {
+      // was manual entry — show manual fields pre-filled
+      upManualMode = true;
+      document.getElementById('up-select-section').style.display  = 'none';
+      document.getElementById('up-manual-section').style.display  = '';
+      document.getElementById('up-manual-unit-section').style.display = '';
+      document.getElementById('up-manual-name').value = r.ownerName || '';
+      document.getElementById('up-manual-unit').value = r.unit      || '';
+    }
+    document.getElementById('up-quota').value = r.quota ?? '';
+    document.getElementById('up-used').value  = r.used  ?? '';
+    calcUpRemaining();
+  } else {
+    pSel.value = '';
+    document.getElementById('up-quota').value     = '';
+    document.getElementById('up-used').value      = '';
+    document.getElementById('up-remaining').value = '';
+  }
+
+  document.getElementById('upModalOverlay').classList.add('open');
+};
+
+function calcUpRemaining() {
+  const q = Number(document.getElementById('up-quota').value) || 0;
+  const u = Number(document.getElementById('up-used').value)  || 0;
+  document.getElementById('up-remaining').value = q - u;
+}
+
+document.getElementById('up-quota')?.addEventListener('input', calcUpRemaining);
+document.getElementById('up-used')?.addEventListener('input',  calcUpRemaining);
+
+// Toggle manual mode
+document.getElementById('up-toggle-manual')?.addEventListener('click', () => {
+  upManualMode = true;
+  document.getElementById('up-select-section').style.display  = 'none';
+  document.getElementById('up-manual-section').style.display  = '';
+  document.getElementById('up-manual-unit-section').style.display = '';
+  document.getElementById('up-manual-name').focus();
+});
+
+document.getElementById('up-cancel-manual')?.addEventListener('click', () => {
+  upManualMode = false;
+  document.getElementById('up-select-section').style.display  = '';
+  document.getElementById('up-manual-section').style.display  = 'none';
+  document.getElementById('up-manual-unit-section').style.display = 'none';
+});
+
+function closeUpModal() {
+  document.getElementById('upModalOverlay').classList.remove('open');
+}
+document.getElementById('upModalClose')?.addEventListener('click',  closeUpModal);
+document.getElementById('upCancelBtn')?.addEventListener('click',   closeUpModal);
+document.getElementById('upModalOverlay')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeUpModal();
+});
+
+// ── Save ──────────────────────────────────────────────
+document.getElementById('upSaveBtn')?.addEventListener('click', async () => {
+  let ownerName = '';
+  let unit      = '';
+  let personnelId = null;
+
+  if (upManualMode) {
+    ownerName = document.getElementById('up-manual-name').value.trim();
+    unit      = document.getElementById('up-manual-unit').value;
+    if (!ownerName) { alert('請輸入姓名'); return; }
+    if (!unit)      { alert('請選擇單位'); return; }
+  } else {
+    const pSel = document.getElementById('up-personnel');
+    const opt  = pSel.options[pSel.selectedIndex];
+    if (!pSel.value) { alert('請選擇人員'); return; }
+    personnelId = pSel.value;
+    ownerName   = opt.dataset.name || opt.text;
+    unit        = opt.dataset.unit || '';
+  }
+
+  const quota = Number(document.getElementById('up-quota').value);
+  const used  = Number(document.getElementById('up-used').value);
+  if (isNaN(quota) || document.getElementById('up-quota').value === '') { alert('請輸入配額點數'); return; }
+  if (isNaN(used)  || document.getElementById('up-used').value  === '') { alert('請輸入使用點數'); return; }
+
+  const data = {
+    personnelId,
+    ownerName,
+    unit,
+    quota,
+    used,
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    if (editingUpId) {
+      await updateDoc(doc(db, 'uniformPoints', editingUpId), data);
+    } else {
+      data.createdAt = serverTimestamp();
+      await addDoc(COL_UNIFORM_POINTS, data);
+    }
+    closeUpModal();
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+});
+
+// ── Delete ────────────────────────────────────────────
+window.deleteUniformPoints = async function(id, name) {
+  if (!confirm(`確定要刪除「${name}」的點數記錄？`)) return;
+  try { await deleteDoc(doc(db, 'uniformPoints', id)); }
+  catch(e) { console.error(e); alert('刪除失敗'); }
+};
+
+// ── Export CSV ────────────────────────────────────────
+document.getElementById('uniformPointsExportBtn')?.addEventListener('click', () => {
+  if (!uniformPoints.length) { alert('尚無點數資料'); return; }
+  const cols = ['姓名', '單位', '配額點數', '使用點數', '剩餘點數'];
+  const rows = uniformPoints.map(r => {
+    const quota     = Number(r.quota) || 0;
+    const used      = Number(r.used)  || 0;
+    return [`"${r.ownerName || ''}"`, `"${r.unit || ''}"`, quota, used, quota - used];
+  });
+  const csv = '﻿' + [cols.map(c => `"${c}"`).join(','), ...rows.map(r => r.join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `服裝供售點數_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.csv`;
   a.click();
 });
 
