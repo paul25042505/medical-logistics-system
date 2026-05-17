@@ -535,7 +535,7 @@ const PAGE_INIT = {
   'interview-query': () => renderInterviewQuery(),
   'recruiters':      () => renderRecruiters(),
   'leads':           () => fetchLeadsFromSheets(),
-  'profile':         () => { renderProfilePage(); renderMyVehicles(); renderMyUniformPoints(); },
+  'profile':         () => { renderProfilePage(); renderMyVehicles(); }, // renderMyUniformPoints 由 renderProfilePage 在 profileData 載入後呼叫
   'admin':           () => { renderAdminPage(); },
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
   'applications':    () => renderApplications(),
@@ -1377,6 +1377,7 @@ async function renderProfilePage() {
     profileData = ud.profile ? { ...ud.profile, uid: currentUser.uid } : { uid: currentUser.uid };
   }
   showProfileViewMode(profileData);
+  renderMyUniformPoints(); // 在 profileData 設定完畢後才呼叫，確保姓名比對正確
 }
 
 // 編輯按鈕
@@ -2694,15 +2695,21 @@ function renderMyUniformPoints() {
   }
 
   // ── 歷史記錄 ──
-  if (prevRecords.length) {
+  if (myRecords.length === 0) {
+    // 完全沒有任何記錄
+    html = '<div class="prof-empty-hint">尚無服裝供售點數申報紀錄</div>';
+  } else {
+    // 有記錄：不管有沒有歷史，都顯示歷史區塊標題
     html += `
     <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--border)">
       <span style="font-size:13px;font-weight:700">📂 歷史申報紀錄</span>
-      <span style="font-size:12px;color:var(--text-muted)">共 ${prevRecords.length} 筆</span>
+      <span style="font-size:12px;color:var(--text-muted)">${prevRecords.length > 0 ? `共 ${prevRecords.length} 筆` : '暫無'}</span>
     </div>`;
-    html += prevRecords.map(r => monthCard(r, false)).join('');
-  } else if (myRecords.length === 0) {
-    html = '<div class="prof-empty-hint">尚無服裝供售點數申報紀錄</div>';
+    if (prevRecords.length) {
+      html += prevRecords.map(r => monthCard(r, false)).join('');
+    } else {
+      html += `<div class="prof-empty-hint" style="margin:0 0 8px">過往月份尚無申報記錄</div>`;
+    }
   }
 
   viewEl.innerHTML = html;
