@@ -42,8 +42,10 @@ const COL_BATCHES    = collection(db, 'batches');
 const COL_RECRUITERS = collection(db, 'recruiters');
 const COL_ACTIVITIES = collection(db, 'activities');
 const COL_LEADS      = collection(db, 'leads');
-const COL_PERSONNEL  = collection(db, 'personnel');
-const COL_USERS      = collection(db, 'users');
+const COL_PERSONNEL     = collection(db, 'personnel');
+const COL_USERS         = collection(db, 'users');
+const COL_APPLICATIONS  = collection(db, 'applications');
+const COL_VEHICLES      = collection(db, 'vehicles');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -66,13 +68,19 @@ let personnelUnitFilter = [];
 let editingPersonnelId = null;
 let viewingPersonnelId = null;
 
+let applications    = [];
+let viewingAppId    = null;
+
+let vehicles        = [];
+let editingVehicleId = null;
+
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel','applications','vehicles','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads','personnel','applications','vehicles']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','activity','leads']) },
-  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','personnel']) },
-  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile']) },
+  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','personnel','applications']) },
+  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','vehicles']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile']) },
 };
 let currentRole = 'member';
@@ -227,7 +235,7 @@ window.approveUser = async function(uid) {
 const loaded = new Set();
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 7) {
+  if (loaded.size >= 9) {
     const ls = document.getElementById('loading-screen');
     if (ls) ls.style.display = 'none';
   }
@@ -447,9 +455,11 @@ const PAGE_INIT = {
   'recruiters':      () => renderRecruiters(),
   'activity':        () => { renderActivities(); updateStorageBar(); },
   'leads':           () => renderLeads(),
-  'profile':         () => renderProfilePage(),
+  'profile':         () => { renderProfilePage(); renderMyVehicles(); },
   'admin':           () => { renderAdminPage(); },
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
+  'applications':    () => renderApplications(),
+  'vehicles':        () => renderVehiclesPage(),
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -1654,6 +1664,21 @@ function startApp() {
           }).join('');
     }
   }, () => {});
+
+  onSnapshot(COL_APPLICATIONS, snap => {
+    applications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    applications.sort((a, b) => (b.submittedAt?.seconds || 0) - (a.submittedAt?.seconds || 0));
+    if (document.getElementById('page-applications').classList.contains('active')) renderApplications();
+    markLoaded('applications');
+  }, () => markLoaded('applications'));
+
+  onSnapshot(COL_VEHICLES, snap => {
+    vehicles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    vehicles.sort((a, b) => (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW'));
+    if (document.getElementById('page-vehicles').classList.contains('active')) renderVehiclesPage();
+    if (document.getElementById('page-profile').classList.contains('active')) renderMyVehicles();
+    markLoaded('vehicles');
+  }, () => markLoaded('vehicles'));
 }
 
 window.changeUserRole = async function(uid, role) {
@@ -2167,4 +2192,492 @@ document.getElementById('personnelImportClose').addEventListener('click', closeI
 document.getElementById('importCancelBtn').addEventListener('click', closeImportModal);
 document.getElementById('personnelImportOverlay').addEventListener('click', e => {
   if (e.target.id === 'personnelImportOverlay') closeImportModal();
+});
+
+// ══════════════════════════════════════════════════════
+// ── 車輛資訊 ──────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+
+// ── Status config ─────────────────────────────────────
+const VS = {
+  pending:  { label: '待送紙本', color: '#d97706', bg: '#fef3c7' },
+  applying: { label: '申請中',   color: '#2563eb', bg: '#dbeafe' },
+  issued:   { label: '已核發',   color: '#16a34a', bg: '#dcfce7' },
+};
+function vsBadge(status) {
+  const s = VS[status] || VS.pending;
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:${s.color};background:${s.bg}">${s.label}</span>`;
+}
+
+// ── Modal open/close ──────────────────────────────────
+window.openVehicleModal = function(id = null) {
+  editingVehicleId = id;
+  const v = id ? vehicles.find(x => x.id === id) : null;
+  document.getElementById('vehicle-modal-title').textContent = v ? '編輯車輛' : '新增車輛';
+  document.getElementById('v-type').value  = v?.type  || '';
+  document.getElementById('v-plate').value = v?.plate || '';
+  document.getElementById('v-brand').value = v?.brand || '';
+  document.getElementById('v-color').value = v?.color || '';
+  document.getElementById('vehicleModalOverlay').classList.add('open');
+};
+function closeVehicleModal() {
+  document.getElementById('vehicleModalOverlay').classList.remove('open');
+}
+document.getElementById('vehicleModalClose').addEventListener('click',  closeVehicleModal);
+document.getElementById('vehicleCancelBtn').addEventListener('click',   closeVehicleModal);
+document.getElementById('vehicleModalOverlay').addEventListener('click', e => { if (e.target.id === 'vehicleModalOverlay') closeVehicleModal(); });
+
+// ── Save vehicle ──────────────────────────────────────
+document.getElementById('vehicleSaveBtn').addEventListener('click', async () => {
+  const type  = document.getElementById('v-type').value;
+  const plate = document.getElementById('v-plate').value.trim().toUpperCase();
+  if (!type || !plate) { alert('請填寫車種和車牌'); return; }
+
+  const uid  = currentUser?.uid || 'dev-uid';
+  const myPersonnel = personnel.find(p => p.uid === uid);
+  const headerName  = document.getElementById('header-email').textContent;
+
+  const data = {
+    uid,
+    ownerName: myPersonnel?.name || headerName || '',
+    unit:      myPersonnel?.unit || '',
+    type, plate,
+    brand: document.getElementById('v-brand').value.trim(),
+    color: document.getElementById('v-color').value.trim(),
+  };
+
+  try {
+    if (editingVehicleId) {
+      await updateDoc(doc(db, 'vehicles', editingVehicleId), data);
+    } else {
+      data.status    = 'pending';
+      data.createdAt = serverTimestamp();
+      await addDoc(COL_VEHICLES, data);
+    }
+    closeVehicleModal();
+  } catch(e) { console.error(e); alert('儲存失敗'); }
+});
+
+// ── My vehicles (profile page) ────────────────────────
+function renderMyVehicles() {
+  const el = document.getElementById('my-vehicle-list');
+  if (!el) return;
+  const uid  = currentUser?.uid || 'dev-uid';
+  const mine = vehicles.filter(v => v.uid === uid);
+  if (!mine.length) {
+    el.innerHTML = '<div class="prof-empty-hint">尚無車輛資訊，點擊「＋ 新增車輛」開始建立</div>';
+    return;
+  }
+  const canEdit = s => s === 'pending';
+  el.innerHTML = mine.map(v => {
+    const status = v.status || 'pending';
+    const editable = canEdit(status);
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:22px">${v.type === '汽車' ? '🚗' : '🏍'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-weight:700;font-size:15px;font-family:monospace;letter-spacing:1px">${v.plate}</span>
+          ${vsBadge(status)}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${v.type}${v.brand ? '・' + v.brand : ''}${v.color ? '・' + v.color : ''}</div>
+        ${status === 'pending' ? `<div style="font-size:11px;color:#d97706;margin-top:4px">📄 請列印申請單後送交承辦人</div>` : ''}
+        ${status === 'applying' ? `<div style="font-size:11px;color:#2563eb;margin-top:4px">⏳ 承辦人已收件，等待核發中</div>` : ''}
+        ${status === 'issued'   ? `<div style="font-size:11px;color:#16a34a;margin-top:4px">✅ 車證已核發，請向承辦人領取</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn-icon" title="列印申請單" onclick="printVehicleForm('${v.id}')">🖨</button>
+        ${editable ? `<button class="btn-icon" onclick="openVehicleModal('${v.id}')">✏️</button>` : ''}
+        ${editable ? `<button class="btn-icon danger" onclick="deleteVehicle('${v.id}','${v.plate}')">🗑</button>` : ''}
+      </div>
+    </div>`;
+  }).join('') + '<div style="padding-bottom:4px"></div>';
+}
+
+document.getElementById('addVehicleBtn')?.addEventListener('click', () => openVehicleModal());
+
+// ── Print vehicle form ────────────────────────────────
+window.printVehicleForm = function(id) {
+  const v = vehicles.find(x => x.id === id);
+  if (!v) return;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="zh-TW"><head>
+    <meta charset="UTF-8"><title>車證申請單</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:'Segoe UI',sans-serif; padding:40px 48px; color:#1e293b; }
+      h1 { font-size:20px; font-weight:700; text-align:center; margin-bottom:4px; }
+      .subtitle { font-size:13px; color:#64748b; text-align:center; margin-bottom:32px; }
+      table { width:100%; border-collapse:collapse; }
+      th,td { border:1px solid #94a3b8; padding:10px 14px; font-size:14px; }
+      th { background:#f1f5f9; font-weight:600; width:120px; text-align:left; }
+      .sign-row th,td { height:60px; vertical-align:top; }
+      .footer { margin-top:32px; font-size:12px; color:#94a3b8; text-align:center; }
+      @media print { body { padding:20px 24px; } }
+    </style>
+  </head><body>
+    <h1>車輛通行證申請單</h1>
+    <p class="subtitle">衛生營後勤資訊管理系統 ／ 申請日期：${new Date().toLocaleDateString('zh-TW')}</p>
+    <table>
+      <tr><th>申請人姓名</th><td>${v.ownerName || '—'}</td><th>所屬單位</th><td>${v.unit || '—'}</td></tr>
+      <tr><th>車種</th><td>${v.type || '—'}</td><th>車牌號碼</th><td style="font-weight:700;letter-spacing:2px;font-size:16px">${v.plate || '—'}</td></tr>
+      <tr><th>廠牌</th><td>${v.brand || '—'}</td><th>顏色</th><td>${v.color || '—'}</td></tr>
+      <tr class="sign-row"><th>申請人簽名</th><td></td><th>承辦人簽章</th><td></td></tr>
+      <tr class="sign-row"><th>主管核示</th><td colspan="3"></td></tr>
+    </table>
+    <p class="footer">本申請單一式兩份，申請人留存一份，承辦人留存一份</p>
+  </body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 300);
+};
+
+// ── Vehicles management page ──────────────────────────
+function renderVehiclesPage() {
+  const q      = (document.getElementById('vehicleSearch')?.value || '').toLowerCase();
+  const type   = document.getElementById('vehicleTypeFilter')?.value   || '';
+  const status = document.getElementById('vehicleStatusFilter')?.value || '';
+  const unit   = document.getElementById('vehicleUnitFilter')?.value   || '';
+
+  let list = vehicles;
+  if (q)      list = list.filter(v => (v.ownerName||'').toLowerCase().includes(q) || (v.plate||'').toLowerCase().includes(q));
+  if (type)   list = list.filter(v => v.type === type);
+  if (status) list = list.filter(v => (v.status || 'pending') === status);
+  if (unit)   list = list.filter(v => v.unit === unit);
+
+  const unitSel = document.getElementById('vehicleUnitFilter');
+  if (unitSel) {
+    const units = [...new Set(vehicles.map(v => v.unit).filter(Boolean))].sort();
+    const cur   = unitSel.value;
+    unitSel.innerHTML = '<option value="">全部單位</option>' + units.map(u => `<option${u === cur ? ' selected' : ''}>${u}</option>`).join('');
+  }
+
+  const statsEl = document.getElementById('vehicleStats');
+  if (statsEl) {
+    const pending  = vehicles.filter(v => (v.status||'pending') === 'pending').length;
+    const applying = vehicles.filter(v => v.status === 'applying').length;
+    const issued   = vehicles.filter(v => v.status === 'issued').length;
+    statsEl.textContent = `共 ${vehicles.length} 筆 ／ 待送紙本 ${pending} ／ 申請中 ${applying} ／ 已核發 ${issued}`;
+  }
+
+  const tbody   = document.getElementById('vehicleTableBody');
+  const emptyEl = document.getElementById('vehicleEmpty');
+  if (!list.length) { tbody.innerHTML = ''; emptyEl.style.display = ''; return; }
+  emptyEl.style.display = 'none';
+
+  tbody.innerHTML = list.map((v, i) => {
+    const st = v.status || 'pending';
+    const nextBtn = st === 'pending'
+      ? `<button class="btn btn-primary btn-sm" onclick="changeVehicleStatus('${v.id}','applying')">申請中</button>`
+      : st === 'applying'
+      ? `<button class="btn btn-primary btn-sm" style="background:var(--green)" onclick="changeVehicleStatus('${v.id}','issued')">已核發</button>`
+      : `<span style="font-size:12px;color:var(--green);font-weight:600">✓ 核發完成</span>`;
+    return `
+    <tr>
+      <td class="col-seq">${i + 1}</td>
+      <td class="col-name">${v.ownerName || '—'}</td>
+      <td class="col-unit"><span class="unit-tag">${v.unit || '—'}</span></td>
+      <td>${v.type === '汽車' ? '🚗' : '🏍'} ${v.type || '—'}</td>
+      <td style="font-family:monospace;font-weight:700;letter-spacing:1px">${v.plate || '—'}</td>
+      <td>${v.brand || '—'}</td>
+      <td>${v.color || '—'}</td>
+      <td>${vsBadge(st)}</td>
+      <td class="col-actions" style="white-space:nowrap">
+        ${nextBtn}
+        <button class="btn-icon danger" style="margin-left:4px" onclick="deleteVehicle('${v.id}','${v.plate}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('vehicleSearch')?.addEventListener('input', renderVehiclesPage);
+document.getElementById('vehicleTypeFilter')?.addEventListener('change', renderVehiclesPage);
+document.getElementById('vehicleStatusFilter')?.addEventListener('change', renderVehiclesPage);
+document.getElementById('vehicleUnitFilter')?.addEventListener('change', renderVehiclesPage);
+
+// ── Change status ─────────────────────────────────────
+window.changeVehicleStatus = async function(id, newStatus) {
+  const v = vehicles.find(x => x.id === id);
+  if (!v) return;
+  const labels = { applying: '申請中', issued: '已核發' };
+  if (!confirm(`確認將「${v.plate}」狀態更新為「${labels[newStatus]}」？`)) return;
+  try {
+    const update = { status: newStatus };
+    if (newStatus === 'applying') update.appliedAt  = serverTimestamp();
+    if (newStatus === 'issued')   update.issuedAt   = serverTimestamp();
+    await updateDoc(doc(db, 'vehicles', id), update);
+  } catch(e) { console.error(e); alert('更新失敗'); }
+};
+
+// ── Delete vehicle ────────────────────────────────────
+window.deleteVehicle = async function(id, plate) {
+  if (!confirm(`確定要刪除車牌「${plate}」的車輛資訊？`)) return;
+  try { await deleteDoc(doc(db, 'vehicles', id)); }
+  catch(e) { console.error(e); alert('刪除失敗'); }
+};
+
+// ── Export CSV ────────────────────────────────────────
+document.getElementById('vehicleExportBtn')?.addEventListener('click', () => {
+  if (!vehicles.length) { alert('尚無車輛資料'); return; }
+  const cols = ['姓名','單位','車種','車牌','廠牌','顏色','狀態'];
+  const rows = vehicles.map(v => [
+    v.ownerName, v.unit, v.type, v.plate, v.brand, v.color,
+    VS[v.status || 'pending']?.label || '待送紙本',
+  ].map(x => `"${(x||'').replace(/"/g,'""')}"`));
+  const csv = '﻿' + [cols.map(c => `"${c}"`).join(','), ...rows.map(r => r.join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `車輛申請_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.csv`;
+  a.click();
+});
+
+// ══════════════════════════════════════════════════════
+// ── 入職申請 ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+
+function renderApplications() {
+  const q   = (document.getElementById('appSearch')?.value || '').trim().toLowerCase();
+  const st  = document.getElementById('appStatusFilter')?.value || '';
+  let list  = applications;
+  if (q)  list = list.filter(a => (a.name||'').toLowerCase().includes(q) || (a.phone||'').includes(q));
+  if (st) list = list.filter(a => a.status === st);
+
+  const pending  = applications.filter(a => a.status === 'pending').length;
+  const imported = applications.filter(a => a.status === 'imported').length;
+  const statsEl  = document.getElementById('appStats');
+  if (statsEl) statsEl.textContent = `共 ${applications.length} 筆 ／ 待處理 ${pending} ／ 已匯入 ${imported}`;
+
+  const el = document.getElementById('app-list');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📥</div><p>尚無申請資料</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(a => {
+    const ts = a.submittedAt?.toDate?.() || null;
+    const dateStr = ts ? ts.toLocaleDateString('zh-TW') : '—';
+    const isPending = a.status !== 'imported';
+    return `
+    <div class="recruit-card" onclick="openAppDetail('${a.id}')" style="border-left-color:${isPending ? 'var(--yellow)' : 'var(--green)'}">
+      <div class="recruit-avatar">${(a.name||'?')[0]}</div>
+      <div class="recruit-info">
+        <div class="recruit-name">${a.name || '—'}
+          <span class="tag ${isPending ? 'tag-中' : ''}" style="${!isPending ? 'background:var(--green-bg);color:var(--green)' : ''};margin-left:8px">
+            ${isPending ? '待處理' : '已匯入'}
+          </span>
+        </div>
+        <div class="recruit-meta">
+          <span>📞 ${a.phone || '—'}</span>
+          <span>🎂 ${a.birthDate || '—'}</span>
+          <span>📅 ${dateStr}</span>
+          ${a.education ? `<span>🎓 ${a.education}</span>` : ''}
+        </div>
+      </div>
+      <div class="recruit-actions">
+        <button class="btn-icon danger" onclick="event.stopPropagation();deleteApplication('${a.id}','${(a.name||'').replace(/'/g,"\\'")}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('appSearch')?.addEventListener('input', renderApplications);
+document.getElementById('appStatusFilter')?.addEventListener('change', renderApplications);
+
+// ── Detail modal ──────────────────────────────────────
+window.openAppDetail = function(id) {
+  const a = applications.find(x => x.id === id);
+  if (!a) return;
+  viewingAppId = id;
+
+  const ts = a.submittedAt?.toDate?.() || null;
+  const dateStr = ts ? ts.toLocaleString('zh-TW') : '—';
+
+  const row  = (label, val) => val ? `<div class="pd-row"><div class="pd-label">${label}</div><div class="pd-val">${val}</div></div>` : '';
+  const sec  = (title) => `<div class="pd-section-title">${title}</div>`;
+  const grid = (items) => `<div class="pd-grid">${items}</div>`;
+
+  const addr = [a.addrCity, a.addrDistrict, a.addrDetail].filter(Boolean).join('');
+  const cur  = [a.curAddrCity, a.curAddrDistrict, a.curAddrDetail].filter(Boolean).join('');
+  const licenses = Array.isArray(a.licenses) ? a.licenses.join('、') : (a.licenses || '—');
+  const hobbies  = Array.isArray(a.hobbies)  ? a.hobbies.join('、')  : (a.hobbies  || '—');
+  const fmRows = Array.isArray(a.familyMembers) && a.familyMembers.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
+        <thead><tr style="background:var(--bg)"><th style="padding:6px 10px;text-align:left">關係</th><th style="padding:6px 10px;text-align:left">年齡</th><th style="padding:6px 10px;text-align:left">職業</th></tr></thead>
+        <tbody>${a.familyMembers.map(m => `<tr><td style="padding:6px 10px">${m.relation||'—'}</td><td style="padding:6px 10px">${m.age||'—'}</td><td style="padding:6px 10px">${m.job||'—'}</td></tr>`).join('')}</tbody>
+      </table>`
+    : '無';
+
+  document.getElementById('app-detail-title').textContent = `入職申請 — ${a.name || '—'}`;
+  document.getElementById('app-detail-body').innerHTML = `
+    <div class="pd-section">
+      ${sec('📋 基本資料')}
+      ${grid(`
+        ${row('姓名', a.name)} ${row('性別', a.gender)}
+        ${row('出生年月日', a.birthDate)} ${row('身分證', a.idNumber)}
+        ${row('電話', a.phone)} ${row('LINE', a.lineId)}
+        ${row('Email', a.email)} ${row('婚姻狀況', a.marital)}
+        ${row('戶籍地址', addr || '—')} ${row('現居地址', cur || addr || '—')}
+      `)}
+    </div>
+    <div class="pd-section">
+      ${sec('🎓 學歷與工作')}
+      ${grid(`
+        ${row('最高學歷', a.education)} ${row('學校', a.school)}
+        ${row('科系', a.department)} ${row('在學狀態', a.studyStatus)}
+        ${row('目前職業', a.job)} ${row('工作單位', a.company)}
+        ${row('工作性質', a.jobType)} ${row('月薪範圍', a.salary)}
+        ${row('兵役狀況', a.military)} ${row('服役單位', a.militaryUnit)}
+      `)}
+      ${a.workHistory ? `<div style="margin-top:10px"><div class="pd-label">工作經歷</div><div class="pd-val" style="white-space:pre-wrap">${a.workHistory}</div></div>` : ''}
+      ${a.militaryExp ? `<div style="margin-top:6px"><div class="pd-label">服役經歷</div><div class="pd-val" style="white-space:pre-wrap">${a.militaryExp}</div></div>` : ''}
+    </div>
+    <div class="pd-section">
+      ${sec('⭐ 興趣與專長')}
+      ${grid(`
+        ${row('駕照', licenses)} ${row('興趣', hobbies)}
+        ${row('英語程度', a.english)} ${row('其他語言', a.otherLang)}
+      `)}
+      ${a.skills ? `<div style="margin-top:6px"><div class="pd-label">專業技能</div><div class="pd-val" style="white-space:pre-wrap">${a.skills}</div></div>` : ''}
+      ${a.certs  ? `<div style="margin-top:6px"><div class="pd-label">持有證照</div><div class="pd-val" style="white-space:pre-wrap">${a.certs}</div></div>` : ''}
+    </div>
+    <div class="pd-section">
+      ${sec('👨‍👩‍👧 家庭狀況')}
+      ${grid(`${row('子女數', a.children)} ${row('家庭所在縣市', a.homeCity)}`)}
+      ${a.familyNote ? `<div style="margin-top:6px"><div class="pd-label">家庭簡介</div><div class="pd-val">${a.familyNote}</div></div>` : ''}
+      <div style="margin-top:10px"><div class="pd-label" style="margin-bottom:4px">家庭成員</div>${fmRows}</div>
+    </div>
+    <div class="pd-section">
+      ${sec('📋 其他資訊')}
+      ${grid(`${row('可報到日期', a.availDate)} ${row('接受派遣', a.relocate)} ${row('健康狀況', a.health)}`)}
+      ${a.motivation ? `<div style="margin-top:6px"><div class="pd-label">加入動機</div><div class="pd-val" style="white-space:pre-wrap">${a.motivation}</div></div>` : ''}
+      ${a.strength   ? `<div style="margin-top:6px"><div class="pd-label">個人優勢</div><div class="pd-val" style="white-space:pre-wrap">${a.strength}</div></div>` : ''}
+      ${a.healthNote ? `<div style="margin-top:6px"><div class="pd-label">健康備註</div><div class="pd-val">${a.healthNote}</div></div>` : ''}
+      ${grid(`${row('緊急聯絡人', a.emergencyName)} ${row('關係', a.emergencyRel)} ${row('緊急電話', a.emergencyPhone)}`)}
+      ${a.notes ? `<div style="margin-top:6px"><div class="pd-label">其他備註</div><div class="pd-val" style="white-space:pre-wrap">${a.notes}</div></div>` : ''}
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);text-align:right;margin-top:8px">申請時間：${dateStr}</div>
+  `;
+
+  const importBtn = document.getElementById('appImportBtn');
+  importBtn.textContent = a.status === 'imported' ? '✓ 已匯入' : '⬆ 匯入人員資料';
+  importBtn.disabled = a.status === 'imported';
+
+  document.getElementById('appDetailOverlay').classList.add('open');
+};
+
+document.getElementById('appDetailClose').addEventListener('click',  () => document.getElementById('appDetailOverlay').classList.remove('open'));
+document.getElementById('appDetailClose2').addEventListener('click', () => document.getElementById('appDetailOverlay').classList.remove('open'));
+
+document.getElementById('appDeleteBtn').addEventListener('click', () => {
+  const a = applications.find(x => x.id === viewingAppId);
+  if (a) deleteApplication(a.id, a.name || '此筆申請');
+});
+
+window.deleteApplication = async function(id, name) {
+  if (!confirm(`確定要刪除「${name}」的入職申請？此動作無法復原。`)) return;
+  try {
+    await deleteDoc(doc(db, 'applications', id));
+    document.getElementById('appDetailOverlay').classList.remove('open');
+  } catch(e) {
+    console.error(e);
+    alert('刪除失敗，請稍後再試');
+  }
+};
+document.getElementById('appDetailOverlay').addEventListener('click', e => {
+  if (e.target.id === 'appDetailOverlay') document.getElementById('appDetailOverlay').classList.remove('open');
+});
+
+// ── Print ─────────────────────────────────────────────
+document.getElementById('appPrintBtn').addEventListener('click', () => {
+  const body   = document.getElementById('app-detail-body').innerHTML;
+  const title  = document.getElementById('app-detail-title').textContent;
+  const win    = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="zh-TW"><head>
+    <meta charset="UTF-8"><title>${title}</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:'Segoe UI',sans-serif; font-size:13px; color:#1e293b; padding:24px 32px; }
+      h1 { font-size:18px; font-weight:700; margin-bottom:4px; color:#0b1f3a; }
+      .subtitle { font-size:12px; color:#64748b; margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid #0b1f3a; }
+      .pd-section { margin-bottom:18px; }
+      .pd-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#64748b; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #dde3ea; }
+      .pd-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; }
+      .pd-row { display:flex; flex-direction:column; gap:1px; }
+      .pd-label { font-size:10px; color:#64748b; font-weight:600; text-transform:uppercase; }
+      .pd-val { font-size:13px; color:#1e293b; }
+      table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
+      th,td { padding:5px 8px; text-align:left; border:1px solid #dde3ea; }
+      th { background:#f0f4f8; }
+      @media print { body { padding:12px 16px; } }
+    </style>
+  </head><body>
+    <h1>${title}</h1>
+    <div class="subtitle">列印日期：${new Date().toLocaleDateString('zh-TW')}</div>
+    ${body}
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+});
+
+// ── Import to personnel ────────────────────────────────
+document.getElementById('appImportBtn').addEventListener('click', async () => {
+  const a = applications.find(x => x.id === viewingAppId);
+  if (!a || a.status === 'imported') return;
+  if (!confirm(`確認將「${a.name}」的基本資料匯入人員管理？`)) return;
+
+  const btn = document.getElementById('appImportBtn');
+  btn.disabled = true;
+  btn.textContent = '匯入中…';
+
+  try {
+    await addDoc(COL_PERSONNEL, {
+      name:           a.name || '',
+      gender:         a.gender || '',
+      birthDate:      a.birthDate || '',
+      idNumber:       a.idNumber || '',
+      phone:          a.phone || '',
+      addrCity:       a.addrCity || '',
+      addrDistrict:   a.addrDistrict || '',
+      addrDetail:     a.addrDetail || '',
+      emergencyName:  a.emergencyName || '',
+      emergencyRel:   a.emergencyRel || '',
+      emergencyPhone: a.emergencyPhone || '',
+      notes:          a.notes || '',
+      unit:           '',
+      rank:           '',
+      joinDate:       '',
+      isRecruiter:    false,
+      importedFrom:   viewingAppId,
+      createdAt:      serverTimestamp(),
+    });
+    await updateDoc(doc(db, 'applications', viewingAppId), { status: 'imported' });
+    btn.textContent = '✓ 已匯入';
+    alert(`「${a.name}」已匯入人員管理，請至人員資訊管理補齊級職與單位。`);
+    document.getElementById('appDetailOverlay').classList.remove('open');
+  } catch (e) {
+    console.error(e);
+    alert('匯入失敗，請稍後再試');
+    btn.disabled = false;
+    btn.textContent = '⬆ 匯入人員資料';
+  }
+});
+
+// ── Export CSV ────────────────────────────────────────
+document.getElementById('appExportBtn')?.addEventListener('click', () => {
+  if (!applications.length) { alert('尚無申請資料'); return; }
+  const cols = ['姓名','性別','出生年月日','身分證','電話','LINE','Email','婚姻','最高學歷','學校','科系','職業','工作單位','兵役','駕照','興趣','專長','緊急聯絡人','緊急關係','緊急電話','加入動機','申請日期','狀態'];
+  const rows = applications.map(a => [
+    a.name, a.gender, a.birthDate, a.idNumber, a.phone, a.lineId, a.email, a.marital,
+    a.education, a.school, a.department, a.job, a.company, a.military,
+    Array.isArray(a.licenses) ? a.licenses.join('|') : '',
+    Array.isArray(a.hobbies)  ? a.hobbies.join('|')  : '',
+    a.skills, a.emergencyName, a.emergencyRel, a.emergencyPhone, a.motivation,
+    a.submittedAt?.toDate?.()?.toLocaleDateString('zh-TW') || '',
+    a.status === 'imported' ? '已匯入' : '待處理',
+  ].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`));
+  const csv = '﻿' + [cols.map(c => `"${c}"`).join(','), ...rows.map(r => r.join(','))].join('\n');
+  const a2  = document.createElement('a');
+  a2.href   = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a2.download = `入職申請_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.csv`;
+  a2.click();
 });

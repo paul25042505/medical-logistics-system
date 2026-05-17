@@ -1390,7 +1390,9 @@ main {
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 .personnel-table {
   width: 100%;
@@ -1487,11 +1489,12 @@ main {
   font-weight: 500;
 }
 
-/* 手機版表格：隱藏次要欄位 */
+/* 手機版表格：隱藏次要欄位、強制最小寬度觸發橫向捲動 */
 @media (max-width: 700px) {
   .col-id, .col-age, .col-gender { display: none; }
   .col-phone { width: auto; }
   .pd-grid { grid-template-columns: 1fr; }
+  .personnel-table { min-width: 460px; }
 }
 
 /* ── 超小螢幕（≤480px）補強 ── */

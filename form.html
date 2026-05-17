@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>入職申請表 — 衛生營後勤資訊管理系統</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy: #0b1f3a; --accent: #2563eb; --accent-hover: #1d4ed8;
+      --bg: #f0f4f8; --white: #fff; --border: #dde3ea;
+      --text: #1e293b; --muted: #64748b; --green: #16a34a;
+      --red: #dc2626; --green-bg: #dcfce7; --red-bg: #fee2e2;
+    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+    /* Header */
+    .fh { background: var(--navy); color: #fff; text-align: center; padding: 28px 20px 24px; }
+    .fh-logo { font-size: 36px; margin-bottom: 8px; }
+    .fh h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .fh p { font-size: 13px; color: rgba(255,255,255,0.65); }
+
+    /* Progress */
+    .prog-wrap { background: var(--white); border-bottom: 1px solid var(--border); padding: 16px 20px; overflow-x: auto; }
+    .prog-steps { display: flex; align-items: center; gap: 0; min-width: 420px; max-width: 680px; margin: 0 auto; }
+    .prog-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+    .prog-step::before {
+      content: ''; position: absolute; top: 14px; left: 50%; right: -50%;
+      height: 2px; background: var(--border); z-index: 0;
+    }
+    .prog-step:last-child::before { display: none; }
+    .prog-dot {
+      width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
+      background: var(--white); display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--muted); position: relative; z-index: 1;
+      transition: all 0.25s;
+    }
+    .prog-step.done .prog-dot { background: var(--green); border-color: var(--green); color: #fff; }
+    .prog-step.active .prog-dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .prog-label { font-size: 11px; color: var(--muted); margin-top: 5px; white-space: nowrap; }
+    .prog-step.active .prog-label { color: var(--accent); font-weight: 600; }
+    .prog-step.done .prog-label { color: var(--green); }
+
+    /* Main */
+    .fmain { max-width: 720px; margin: 0 auto; padding: 24px 16px 40px; }
+
+    /* Card */
+    .fcard { background: var(--white); border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 28px 28px; margin-bottom: 20px; }
+    @media (max-width: 480px) { .fcard { padding: 18px 16px; } }
+
+    .step-panel { display: none; }
+    .step-panel.active { display: block; }
+
+    .step-title { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
+
+    /* Form grid */
+    .fg { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 540px) { .fg { grid-template-columns: 1fr; } }
+    .fg-full { grid-column: 1 / -1; }
+    .fgroup { display: flex; flex-direction: column; gap: 5px; }
+    .fgroup label { font-size: 13px; font-weight: 500; }
+    .req { color: var(--red); }
+    .fgroup input, .fgroup select, .fgroup textarea {
+      padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; font-family: inherit; outline: none; background: #fff;
+      transition: border-color 0.2s;
+    }
+    .fgroup input:focus, .fgroup select:focus, .fgroup textarea:focus { border-color: var(--accent); }
+    .fgroup textarea { resize: vertical; }
+
+    /* Checkbox / radio group */
+    .cg { display: flex; gap: 14px; flex-wrap: wrap; padding-top: 4px; }
+    .cg label { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; }
+
+    /* Section label */
+    .slabel { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin: 22px 0 12px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+
+    /* Family members table */
+    .fm-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .fm-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 8px; align-items: center; background: var(--bg); border-radius: 8px; padding: 10px 12px;
+    }
+    @media (max-width: 480px) { .fm-row { grid-template-columns: 1fr 1fr; gap: 6px; } }
+    .fm-row select, .fm-row input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; width: 100%; }
+    .fm-del { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 16px; padding: 4px 6px; border-radius: 4px; flex-shrink: 0; }
+    .fm-del:hover { background: var(--red-bg); color: var(--red); }
+    .btn-add-fm { background: none; border: 1px dashed var(--border); border-radius: 8px; padding: 9px 16px; font-size: 13px; cursor: pointer; color: var(--muted); width: 100%; transition: all 0.15s; }
+    .btn-add-fm:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+
+    /* Nav */
+    .fnav { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .fnav .hint { font-size: 12px; color: var(--muted); }
+    .btn { padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--white); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--bg); }
+    .btn-big { padding: 12px 36px; font-size: 15px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Error */
+    .ferr { color: var(--red); font-size: 12px; display: none; margin-top: 3px; }
+    .fgroup.has-error input, .fgroup.has-error select, .fgroup.has-error textarea { border-color: var(--red); }
+    .fgroup.has-error .ferr { display: block; }
+
+    /* Success screen */
+    #success-screen { display: none; text-align: center; padding: 40px 20px; }
+    .success-icon { font-size: 64px; margin-bottom: 16px; }
+    .success-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .success-msg { font-size: 14px; color: var(--muted); line-height: 1.7; }
+    .success-code { display: inline-block; background: var(--bg); border-radius: 8px; padding: 10px 20px; font-size: 16px; font-weight: 700; color: var(--accent); margin: 16px 0; letter-spacing: 2px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="fh">
+  <div class="fh-logo">🏥</div>
+  <h1>衛生營入職申請表</h1>
+  <p>請詳實填寫以下各項資料，填寫完成後點擊送出</p>
+</div>
+
+<!-- Progress bar -->
+<div class="prog-wrap">
+  <div class="prog-steps" id="progSteps">
+    <div class="prog-step active" data-step="1"><div class="prog-dot">1</div><div class="prog-label">基本資料</div></div>
+    <div class="prog-step" data-step="2"><div class="prog-dot">2</div><div class="prog-label">學歷與工作</div></div>
+    <div class="prog-step" data-step="3"><div class="prog-dot">3</div><div class="prog-label">興趣與專長</div></div>
+    <div class="prog-step" data-step="4"><div class="prog-dot">4</div><div class="prog-label">家庭狀況</div></div>
+    <div class="prog-step" data-step="5"><div class="prog-dot">5</div><div class="prog-label">其他資訊</div></div>
+  </div>
+</div>
+
+<div class="fmain">
+
+  <!-- ══ Success ══ -->
+  <div class="fcard" id="success-screen">
+    <div class="success-icon">✅</div>
+    <div class="success-title">申請表已送出！</div>
+    <div class="success-msg">感謝您填寫申請資料，我們已收到您的表單。<br>請記下以下編號，以便後續查詢。</div>
+    <div class="success-code" id="success-code"></div>
+    <p class="success-msg">承辦人員將於收到後與您聯繫，<br>報到當天請攜帶相關證件。</p>
+  </div>
+
+  <!-- ══ Form ══ -->
+  <div id="form-wrap">
+    <form id="applyForm" novalidate>
+
+      <!-- ── Step 1：基本資料 ── -->
+      <div class="fcard step-panel active" data-step="1">
+        <div class="step-title">👤 基本資料</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>姓名 <span class="req">*</span></label>
+            <input type="text" id="f-name" placeholder="真實姓名">
+            <span class="ferr">請輸入姓名</span>
+          </div>
+          <div class="fgroup">
+            <label>性別 <span class="req">*</span></label>
+            <select id="f-gender">
+              <option value="">請選擇</option>
+              <option>男</option><option>女</option>
+            </select>
+            <span class="ferr">請選擇性別</span>
+          </div>
+          <div class="fgroup">
+            <label>出生年月日 <span class="req">*</span></label>
+            <input type="date" id="f-birthDate">
+            <span class="ferr">請填寫出生日期</span>
+          </div>
+          <div class="fgroup">
+            <label>身分證字號</label>
+            <input type="text" id="f-idNumber" placeholder="A123456789" maxlength="10">
+          </div>
+          <div class="fgroup">
+            <label>聯絡電話 <span class="req">*</span></label>
+            <input type="tel" id="f-phone" placeholder="09xxxxxxxx">
+            <span class="ferr">請填寫聯絡電話</span>
+          </div>
+          <div class="fgroup">
+            <label>LINE ID</label>
+            <input type="text" id="f-lineId" placeholder="LINE ID">
+          </div>
+          <div class="fgroup">
+            <label>電子信箱</label>
+            <input type="email" id="f-email" placeholder="example@email.com">
+          </div>
+          <div class="fgroup">
+            <label>婚姻狀況</label>
+            <select id="f-marital">
+              <option value="">請選擇</option>
+              <option>未婚</option><option>已婚</option><option>離婚</option><option>喪偶</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="slabel">戶籍地址</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>縣市</label>
+            <select id="f-addrCity"><option value="">請選擇縣市</option></select>
+          </div>
+          <div class="fgroup">
+            <label>鄉鎮市區</label>
+            <select id="f-addrDistrict" disabled><option value="">請先選縣市</option></select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>詳細地址</label>
+            <input type="text" id="f-addrDetail" placeholder="路段、門號…">
+          </div>
+        </div>
+
+        <div class="slabel">現居地址</div>
+        <div class="fg">
+          <div class="fgroup fg-full">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;cursor:pointer">
+              <input type="checkbox" id="f-sameAddr"> 同戶籍地址
+            </label>
+          </div>
+          <div id="currentAddrFields" class="fg-full">
+            <div class="fg">
+              <div class="fgroup">
+                <label>縣市</label>
+                <select id="f-curCity"><option value="">請選擇縣市</option></select>
+              </div>
+              <div class="fgroup">
+                <label>鄉鎮市區</label>
+                <select id="f-curDistrict" disabled><option value="">請先選縣市</option></select>
+              </div>
+              <div class="fgroup fg-full">
+                <label>詳細地址</label>
+                <input type="text" id="f-curDetail" placeholder="路段、門號…">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Step 2：學歷與工作 ── -->
+      <div class="fcard step-panel" data-step="2">
+        <div class="step-title">🎓 學歷與工作背景</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>最高學歷</label>
+            <select id="f-education">
+              <option value="">請選擇</option>
+              <option>國中（含以下）</option><option>高中／職</option>
+              <option>專科</option><option>大學</option><option>研究所（含以上）</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>學校名稱</label>
+            <input type="text" id="f-school" placeholder="就讀或畢業學校">
+          </div>
+          <div class="fgroup">
+            <label>科系／學程</label>
+            <input type="text" id="f-department" placeholder="護理、急救醫學、資訊…">
+          </div>
+          <div class="fgroup">
+            <label>目前在學／在職</label>
+            <select id="f-studyStatus">
+              <option value="">請選擇</option>
+              <option>在學中</option><option>已畢業</option><option>肄業</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="slabel">工作經歷</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>目前職業／職稱</label>
+            <input type="text" id="f-job" placeholder="護士、司機、學生…">
+          </div>
+          <div class="fgroup">
+            <label>工作單位／公司</label>
+            <input type="text" id="f-company" placeholder="單位或公司名稱">
+          </div>
+          <div class="fgroup">
+            <label>工作性質</label>
+            <select id="f-jobType">
+              <option value="">請選擇</option>
+              <option>全職</option><option>兼職</option><option>自營</option><option>待業中</option><option>學生</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>月薪範圍（約略）</label>
+            <select id="f-salary">
+              <option value="">不填寫</option>
+              <option>3萬以下</option><option>3～4萬</option><option>4～5萬</option>
+              <option>5～7萬</option><option>7萬以上</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>過去工作或實習經歷（簡述）</label>
+            <textarea id="f-workHistory" rows="3" placeholder="依序列出相關工作或實習經歷…"></textarea>
+          </div>
+        </div>
+
+        <div class="slabel">服役背景</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>兵役狀況</label>
+            <select id="f-military">
+              <option value="">請選擇</option>
+              <option>尚未服役</option><option>役畢</option><option>現役</option>
+              <option>替代役</option><option>免役</option><option>女性（免役）</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>曾服役單位（如有）</label>
+            <input type="text" id="f-militaryUnit" placeholder="服役單位名稱">
+          </div>
+          <div class="fgroup fg-full">
+            <label>服役期間學到的技能或經歷</label>
+            <textarea id="f-militaryExp" rows="2" placeholder="無則留空…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Step 3：興趣與專長 ── -->
+      <div class="fcard step-panel" data-step="3">
+        <div class="step-title">⭐ 興趣與專長</div>
+
+        <div class="slabel">駕照種類（可複選）</div>
+        <div class="cg" id="license-group">
+          <label><input type="checkbox" name="license" value="汽車自排"> 汽車自排</label>
+          <label><input type="checkbox" name="license" value="汽車手排"> 汽車手排</label>
+          <label><input type="checkbox" name="license" value="機車"> 機車</label>
+          <label><input type="checkbox" name="license" value="大型重型機車"> 大型重型機車</label>
+          <label><input type="checkbox" name="license" value="大型車"> 大型車（聯結車）</label>
+          <label><input type="checkbox" name="license" value="無駕照"> 無駕照</label>
+        </div>
+
+        <div class="slabel">平時興趣</div>
+        <div class="cg" id="hobby-group">
+          <label><input type="checkbox" name="hobby" value="運動健身"> 運動健身</label>
+          <label><input type="checkbox" name="hobby" value="閱讀"> 閱讀</label>
+          <label><input type="checkbox" name="hobby" value="音樂"> 音樂</label>
+          <label><input type="checkbox" name="hobby" value="游泳"> 游泳</label>
+          <label><input type="checkbox" name="hobby" value="登山健行"> 登山健行</label>
+          <label><input type="checkbox" name="hobby" value="電競遊戲"> 電競遊戲</label>
+          <label><input type="checkbox" name="hobby" value="烹飪"> 烹飪</label>
+          <label><input type="checkbox" name="hobby" value="攝影"> 攝影</label>
+          <label><input type="checkbox" name="hobby" value="旅遊"> 旅遊</label>
+          <label><input type="checkbox" name="hobby" value="志工服務"> 志工服務</label>
+        </div>
+        <div class="fg" style="margin-top:10px">
+          <div class="fgroup fg-full">
+            <label>其他興趣（補充）</label>
+            <input type="text" id="f-hobbyOther" placeholder="其他未列出的興趣…">
+          </div>
+        </div>
+
+        <div class="slabel">專業技能與語言</div>
+        <div class="fg">
+          <div class="fgroup fg-full">
+            <label>專業技能／特殊能力</label>
+            <textarea id="f-skills" rows="2" placeholder="EMT、護理、電腦維修、急救、美工…"></textarea>
+          </div>
+          <div class="fgroup">
+            <label>英語能力</label>
+            <select id="f-english">
+              <option value="">請選擇</option>
+              <option>基本溝通</option><option>中等（可閱讀文件）</option>
+              <option>良好（流利對話）</option><option>精通</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>其他語言（如有）</label>
+            <input type="text" id="f-otherLang" placeholder="台語、客語、日語、手語…">
+          </div>
+          <div class="fgroup fg-full">
+            <label>持有證照（含急救、護理、電腦等）</label>
+            <textarea id="f-certs" rows="2" placeholder="EMT-1、急救員、丙級廚師、電腦檢定…每項一行"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Step 4：家庭狀況 ── -->
+      <div class="fcard step-panel" data-step="4">
+        <div class="step-title">👨‍👩‍👧 家庭狀況</div>
+
+        <div class="fg">
+          <div class="fgroup">
+            <label>子女數</label>
+            <select id="f-children">
+              <option value="0">無</option>
+              <option value="1">1 位</option><option value="2">2 位</option>
+              <option value="3">3 位</option><option value="4+">4 位以上</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>家庭主要居住地（縣市）</label>
+            <select id="f-homeCity">
+              <option value="">請選擇</option>
+              <option>台北市</option><option>新北市</option><option>基隆市</option>
+              <option>桃園市</option><option>新竹市</option><option>新竹縣</option>
+              <option>苗栗縣</option><option>台中市</option><option>彰化縣</option>
+              <option>南投縣</option><option>雲林縣</option><option>嘉義市</option>
+              <option>嘉義縣</option><option>台南市</option><option>高雄市</option>
+              <option>屏東縣</option><option>宜蘭縣</option><option>花蓮縣</option>
+              <option>台東縣</option><option>澎湖縣</option><option>金門縣</option><option>連江縣</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>家庭簡介（家庭氛圍、家人態度等，選填）</label>
+            <textarea id="f-familyNote" rows="2" placeholder="例如：家人支持從軍、父親曾服役…"></textarea>
+          </div>
+        </div>
+
+        <div class="slabel">家庭成員</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px">請填寫同住或重要家庭成員（父母、配偶、兄弟姊妹等）</p>
+        <div class="fm-list" id="fm-list"></div>
+        <button type="button" class="btn-add-fm" id="addFmBtn">＋ 新增家庭成員</button>
+      </div>
+
+      <!-- ── Step 5：其他資訊 ── -->
+      <div class="fcard step-panel" data-step="5">
+        <div class="step-title">📋 其他資訊</div>
+        <div class="fg">
+          <div class="fgroup fg-full">
+            <label>為何想要加入衛生營／志願從軍？ <span class="req">*</span></label>
+            <textarea id="f-motivation" rows="4" placeholder="請詳述您的動機與目標…"></textarea>
+            <span class="ferr">請填寫您的動機</span>
+          </div>
+          <div class="fgroup fg-full">
+            <label>個人優勢或對本職務的了解</label>
+            <textarea id="f-strength" rows="3" placeholder="您認為自己適合此職務的原因…"></textarea>
+          </div>
+          <div class="fgroup">
+            <label>預計可報到日期</label>
+            <input type="date" id="f-availDate">
+          </div>
+          <div class="fgroup">
+            <label>是否接受外縣市派遣</label>
+            <select id="f-relocate">
+              <option value="">請選擇</option>
+              <option>接受</option><option>不接受</option><option>視情況而定</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="slabel">健康狀況</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>整體健康狀況</label>
+            <select id="f-health">
+              <option value="">請選擇</option>
+              <option>良好</option><option>一般</option><option>需注意</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>慢性病、過敏或特殊疾病（如無請填「無」）</label>
+            <textarea id="f-healthNote" rows="2" placeholder="例如：氣喘、糖尿病、花粉過敏…"></textarea>
+          </div>
+        </div>
+
+        <div class="slabel">緊急聯絡人</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>緊急聯絡人姓名 <span class="req">*</span></label>
+            <input type="text" id="f-emgName" placeholder="姓名">
+            <span class="ferr">請填寫緊急聯絡人</span>
+          </div>
+          <div class="fgroup">
+            <label>與本人關係</label>
+            <select id="f-emgRel">
+              <option value="">請選擇</option>
+              <option>配偶</option><option>父</option><option>母</option>
+              <option>子</option><option>女</option><option>兄</option><option>弟</option>
+              <option>姊</option><option>妹</option><option>祖父</option><option>祖母</option>
+              <option>外祖父</option><option>外祖母</option><option>伯父</option>
+              <option>叔父</option><option>姑母</option><option>舅父</option><option>姨母</option>
+              <option>岳父</option><option>岳母</option><option>公公</option><option>婆婆</option>
+              <option>其他</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>緊急聯絡電話 <span class="req">*</span></label>
+            <input type="tel" id="f-emgPhone" placeholder="09xxxxxxxx">
+            <span class="ferr">請填寫緊急聯絡電話</span>
+          </div>
+          <div class="fgroup fg-full">
+            <label>其他備註</label>
+            <textarea id="f-notes" rows="3" placeholder="任何其他想讓承辦人知道的事項…"></textarea>
+          </div>
+        </div>
+      </div>
+
+    </form>
+
+    <!-- Nav buttons -->
+    <div class="fcard fnav" style="padding:16px 28px">
+      <button class="btn btn-secondary" id="prevBtn" style="display:none">← 上一步</button>
+      <span class="hint" id="stepHint">第 1 步 / 共 5 步</span>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" id="nextBtn">下一步 →</button>
+        <button class="btn btn-primary btn-big" id="submitBtn" style="display:none">✔ 送出申請</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="form.js"></script>
+</body>
+</html>

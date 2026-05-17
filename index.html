@@ -97,8 +97,9 @@
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
         <div class="nav-section-label" id="nav-section-personnel" style="margin-top:12px">人事管理</div>
         <li data-roles="admin,manager,personnel"><a href="#" class="nav-link" data-page="personnel">📋 人員資訊管理</a></li>
+        <li data-roles="admin,manager,personnel"><a href="#" class="nav-link" data-page="applications">📥 入職申請</a></li>
         <div class="nav-section-label" id="nav-section-logistics" style="margin-top:12px">後勤管理</div>
-        <li><a href="#" class="nav-link nav-coming">🚗 車輛資訊管理</a></li>
+        <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="vehicles">🚗 車輛資訊管理</a></li>
         <div class="nav-section-label" id="nav-section-system" style="margin-top:12px">系統</div>
         <li id="admin-nav-item" style="display:none"><a href="#" class="nav-link" data-page="admin">⚙️ 後台管理</a></li>
       </ul>
@@ -233,7 +234,23 @@
                 </div>
                 <div class="form-group">
                   <label>級職</label>
-                  <input type="text" id="prof-rank" placeholder="上兵、上士、中尉…">
+                  <select id="prof-rank">
+                    <option value="">請選擇</option>
+                    <option>中校</option>
+                    <option>少校</option>
+                    <option>上尉</option>
+                    <option>中尉</option>
+                    <option>少尉</option>
+                    <option>一等士官長</option>
+                    <option>二等士官長</option>
+                    <option>三等士官長</option>
+                    <option>上士</option>
+                    <option>中士</option>
+                    <option>下士</option>
+                    <option>上等兵</option>
+                    <option>一等兵</option>
+                    <option>二等兵</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label>所屬單位</label>
@@ -278,7 +295,44 @@
                 </div>
                 <div class="form-group">
                   <label>與本人關係</label>
-                  <input type="text" id="prof-emergencyRel" placeholder="父、母、配偶…">
+                  <select id="prof-emergencyRel">
+                    <option value="">請選擇</option>
+                    <option>配偶</option>
+                    <option>父</option>
+                    <option>母</option>
+                    <option>子</option>
+                    <option>女</option>
+                    <option>兄</option>
+                    <option>弟</option>
+                    <option>姊</option>
+                    <option>妹</option>
+                    <option>祖父</option>
+                    <option>祖母</option>
+                    <option>外祖父</option>
+                    <option>外祖母</option>
+                    <option>孫子</option>
+                    <option>孫女</option>
+                    <option>伯父</option>
+                    <option>叔父</option>
+                    <option>姑母</option>
+                    <option>舅父</option>
+                    <option>姨母</option>
+                    <option>姪子</option>
+                    <option>姪女</option>
+                    <option>外甥</option>
+                    <option>外甥女</option>
+                    <option>岳父</option>
+                    <option>岳母</option>
+                    <option>公公</option>
+                    <option>婆婆</option>
+                    <option>媳婦</option>
+                    <option>女婿</option>
+                    <option>繼父</option>
+                    <option>繼母</option>
+                    <option>養父</option>
+                    <option>養母</option>
+                    <option>其他</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label>緊急聯絡電話</label>
@@ -317,14 +371,16 @@
             </div>
           </div>
 
-          <!-- 車輛資訊（即將推出） -->
-          <div class="profile-card profile-card-coming">
+          <!-- 車輛資訊 -->
+          <div class="profile-card" id="vehicle-profile-card">
             <div class="profile-card-header">
               <span class="profile-card-icon">🚗</span>
               <span class="profile-card-title">車輛資訊</span>
-              <span class="coming-badge">即將推出</span>
+              <button class="btn btn-primary btn-sm" id="addVehicleBtn" style="margin-left:auto">＋ 新增車輛</button>
             </div>
-            <div class="coming-body">功能開發中，敬請期待</div>
+            <div id="my-vehicle-list" style="margin-top:14px">
+              <div class="prof-empty-hint">尚無車輛資訊</div>
+            </div>
           </div>
 
           <!-- 服裝供售點數（即將推出） -->
@@ -438,6 +494,83 @@
             <p>尚無人員資料，點擊「＋ 新增人員」開始建立</p>
           </div>
         </div>
+      </section>
+
+      <!-- 車輛資訊管理 -->
+      <section id="page-vehicles" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">🚗 車輛資訊管理</h2>
+          <button class="btn btn-secondary btn-sm" id="vehicleExportBtn">⬇ 匯出 CSV</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-bar">
+            <input type="text" id="vehicleSearch" placeholder="搜尋姓名、車牌…">
+          </div>
+          <div class="filter-bar">
+            <select id="vehicleTypeFilter">
+              <option value="">全部車種</option>
+              <option value="汽車">汽車</option>
+              <option value="機車">機車</option>
+            </select>
+            <select id="vehicleStatusFilter">
+              <option value="">全部狀態</option>
+              <option value="pending">待送紙本</option>
+              <option value="applying">申請中</option>
+              <option value="issued">已核發</option>
+            </select>
+            <select id="vehicleUnitFilter">
+              <option value="">全部單位</option>
+            </select>
+          </div>
+        </div>
+        <div class="personnel-stats" id="vehicleStats"></div>
+        <div class="personnel-table-wrap">
+          <table class="personnel-table" id="vehicleTable">
+            <thead>
+              <tr>
+                <th class="col-seq">序</th>
+                <th class="col-name">姓名</th>
+                <th class="col-unit">單位</th>
+                <th style="width:55px">車種</th>
+                <th style="width:110px">車牌</th>
+                <th style="width:90px">廠牌</th>
+                <th style="width:55px">顏色</th>
+                <th style="width:90px">狀態</th>
+                <th class="col-actions">操作</th>
+              </tr>
+            </thead>
+            <tbody id="vehicleTableBody"></tbody>
+          </table>
+          <div id="vehicleEmpty" class="empty-state" style="display:none">
+            <div class="icon">🚗</div>
+            <p>尚無車輛資料，請由個人資料頁填寫</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 入職申請 -->
+      <section id="page-applications" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">📥 入職申請</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <a class="btn btn-secondary btn-sm" href="form.html" target="_blank">🔗 申請表連結</a>
+            <button class="btn btn-secondary btn-sm" id="appExportBtn">⬇ 匯出 CSV</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="search-bar">
+            <input type="text" id="appSearch" placeholder="搜尋姓名、電話…">
+          </div>
+          <div class="filter-bar">
+            <select id="appStatusFilter">
+              <option value="">全部狀態</option>
+              <option value="pending">待處理</option>
+              <option value="imported">已匯入</option>
+            </select>
+          </div>
+        </div>
+        <div class="personnel-stats" id="appStats"></div>
+        <div id="app-list" class="recruit-list"></div>
       </section>
 
       <!-- 問卷填答 -->
@@ -861,7 +994,23 @@
             </div>
             <div class="form-group">
               <label>級職 <span class="required">*</span></label>
-              <input type="text" id="pf-rank" placeholder="上士、中尉、士官長…">
+              <select id="pf-rank">
+                <option value="">請選擇</option>
+                <option>中校</option>
+                <option>少校</option>
+                <option>上尉</option>
+                <option>中尉</option>
+                <option>少尉</option>
+                <option>一等士官長</option>
+                <option>二等士官長</option>
+                <option>三等士官長</option>
+                <option>上士</option>
+                <option>中士</option>
+                <option>下士</option>
+                <option>上等兵</option>
+                <option>一等兵</option>
+                <option>二等兵</option>
+              </select>
             </div>
             <div class="form-group">
               <label>姓名 <span class="required">*</span></label>
@@ -910,7 +1059,44 @@
             </div>
             <div class="form-group">
               <label>與本人關係</label>
-              <input type="text" id="pf-emergencyRel" placeholder="父母、配偶…">
+              <select id="pf-emergencyRel">
+                <option value="">請選擇</option>
+                <option>配偶</option>
+                <option>父</option>
+                <option>母</option>
+                <option>子</option>
+                <option>女</option>
+                <option>兄</option>
+                <option>弟</option>
+                <option>姊</option>
+                <option>妹</option>
+                <option>祖父</option>
+                <option>祖母</option>
+                <option>外祖父</option>
+                <option>外祖母</option>
+                <option>孫子</option>
+                <option>孫女</option>
+                <option>伯父</option>
+                <option>叔父</option>
+                <option>姑母</option>
+                <option>舅父</option>
+                <option>姨母</option>
+                <option>姪子</option>
+                <option>姪女</option>
+                <option>外甥</option>
+                <option>外甥女</option>
+                <option>岳父</option>
+                <option>岳母</option>
+                <option>公公</option>
+                <option>婆婆</option>
+                <option>媳婦</option>
+                <option>女婿</option>
+                <option>繼父</option>
+                <option>繼母</option>
+                <option>養父</option>
+                <option>養母</option>
+                <option>其他</option>
+              </select>
             </div>
             <div class="form-group">
               <label>緊急聯絡電話</label>
@@ -1032,6 +1218,67 @@
       </div>
     </div>
   </div>
+
+  <!-- ══ 新增/編輯車輛 ══ -->
+  <div class="modal-overlay" id="vehicleModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="vehicle-modal-title">新增車輛</h3>
+        <button class="modal-close" id="vehicleModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>車種 <span class="required">*</span></label>
+              <select id="v-type">
+                <option value="">請選擇</option>
+                <option value="汽車">🚗 汽車</option>
+                <option value="機車">🏍 機車</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>車牌號碼 <span class="required">*</span></label>
+              <input type="text" id="v-plate" placeholder="ABC-1234" maxlength="10" style="text-transform:uppercase">
+            </div>
+            <div class="form-group">
+              <label>廠牌</label>
+              <input type="text" id="v-brand" placeholder="Toyota、Yamaha…">
+            </div>
+            <div class="form-group">
+              <label>顏色</label>
+              <input type="text" id="v-color" placeholder="白、黑、紅…">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="vehicleCancelBtn">取消</button>
+        <button class="btn btn-primary" id="vehicleSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 入職申請詳情 ══ -->
+  <div class="modal-overlay" id="appDetailOverlay">
+    <div class="modal modal-large" id="appDetailModal">
+      <div class="modal-header">
+        <h3 id="app-detail-title">入職申請詳情</h3>
+        <button class="modal-close" id="appDetailClose">✕</button>
+      </div>
+      <div class="modal-body" id="app-detail-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="appDeleteBtn">🗑 刪除</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-secondary" id="appDetailClose2">關閉</button>
+        <button class="btn btn-secondary" id="appPrintBtn">🖨 列印報表</button>
+        <button class="btn btn-primary" id="appImportBtn">⬆ 匯入人員資料</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 列印區（隱藏，列印時顯示） -->
+  <div id="print-area" style="display:none"></div>
 
   <script type="module" src="script.js"></script>
 </body>
