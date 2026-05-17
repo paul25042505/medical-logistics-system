@@ -2618,68 +2618,94 @@ function renderMyUniformPoints() {
   const viewEl = document.getElementById('up-profile-view');
   if (!viewEl || !currentUser) return;
 
-  const uid = currentUser.uid;
-  // All records for this user, sorted newest first
+  const uid      = currentUser.uid;
+  const myName   = profileData?.name || '';
+
+  // 比對 personnelId 或姓名（公開表單不一定有 personnelId）
   const myRecords = uniformPoints
-    .filter(r => r.personnelId === uid)
+    .filter(r =>
+      r.personnelId === uid ||
+      (!r.personnelId && myName && r.ownerName === myName)
+    )
     .sort((a, b) => getRecordYearMonth(b).localeCompare(getRecordYearMonth(a)));
 
   const thisMonth = myRecords.find(r => getRecordYearMonth(r) === currentYearMonth);
+  const prevRecords = myRecords.filter(r => getRecordYearMonth(r) !== currentYearMonth);
+
+  // ── 點數卡片 HTML helper ──
+  function monthCard(r, isCurrent = false) {
+    const quota     = Number(r.quota)     || 0;
+    const remaining = Number(r.remaining) || 0;
+    const used      = quota - remaining;
+    const remColor  = remaining < 0 ? '#dc2626' : remaining === 0 ? '#94a3b8' : '#16a34a';
+    const usePct    = quota > 0 ? Math.min(100, Math.round(used / quota * 100)) : 0;
+    const barColor  = usePct >= 90 ? '#dc2626' : usePct >= 60 ? '#d97706' : '#2563eb';
+    const ts        = fmtUpTs(r.submittedAt || r.updatedAt || r.createdAt);
+    const ym        = fmtYearMonth(getRecordYearMonth(r));
+
+    return `
+    <div style="background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:10px;
+                ${isCurrent ? 'border:2px solid #2563eb' : 'border:1px solid var(--border)'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:700;color:${isCurrent ? '#2563eb' : 'var(--text-muted)'}">
+          ${isCurrent ? '📅 本月 ' : ''}${ym}
+        </span>
+        ${isCurrent ? '<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:99px;font-weight:700">✅ 已申報</span>' : ''}
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:10px">
+        <div style="background:#fff;border-radius:8px;padding:10px 6px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">配額</div>
+          <div style="font-size:${isCurrent ? '20' : '16'}px;font-weight:700;color:#2563eb">${quota}</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:10px 6px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">剩餘</div>
+          <div style="font-size:${isCurrent ? '20' : '16'}px;font-weight:700;color:${remColor}">${remaining}</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:10px 6px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">使用</div>
+          <div style="font-size:${isCurrent ? '20' : '16'}px;font-weight:700">${used}</div>
+        </div>
+      </div>
+
+      <!-- 使用率進度條 -->
+      ${quota > 0 ? `
+      <div style="height:5px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${usePct}%;background:${barColor};border-radius:99px;transition:width .5s"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);text-align:right;margin-bottom:4px">使用率 ${usePct}%</div>
+      ` : ''}
+
+      <div style="font-size:11px;color:var(--text-muted);text-align:right">最後更新：${ts}</div>
+    </div>`;
+  }
 
   let html = '';
 
-  // Current month card
+  // ── 本月狀態 ──
   if (thisMonth) {
-    const quota     = Number(thisMonth.quota)     || 0;
-    const remaining = Number(thisMonth.remaining) || 0;
-    const used      = quota - remaining;
-    const remColor  = remaining < 0 ? '#dc2626' : remaining === 0 ? '#64748b' : '#16a34a';
-    const ts        = fmtUpTs(thisMonth.submittedAt || thisMonth.updatedAt);
-    html += `
-    <div style="background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:600">本月（${fmtYearMonth(currentYearMonth)}）✅ 已申報</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
-        <div style="background:#fff;border-radius:8px;padding:10px">
-          <div style="font-size:11px;color:var(--text-muted)">配額</div>
-          <div style="font-size:18px;font-weight:700;color:var(--primary)">${quota}</div>
-        </div>
-        <div style="background:#fff;border-radius:8px;padding:10px">
-          <div style="font-size:11px;color:var(--text-muted)">剩餘</div>
-          <div style="font-size:18px;font-weight:700;color:${remColor}">${remaining}</div>
-        </div>
-        <div style="background:#fff;border-radius:8px;padding:10px">
-          <div style="font-size:11px;color:var(--text-muted)">使用</div>
-          <div style="font-size:18px;font-weight:700">${used}</div>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:right">最後更新：${ts}</div>
-    </div>`;
+    html += monthCard(thisMonth, true);
   } else {
     html += `
-    <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#92400e">
+    <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;
+                padding:13px 15px;margin-bottom:12px;font-size:13px;color:#92400e">
       ⚠️ 本月（${fmtYearMonth(currentYearMonth)}）尚未申報點數，請點擊「更新本月點數」填寫。
     </div>`;
   }
 
-  // History (previous months)
-  const prev = myRecords.filter(r => getRecordYearMonth(r) !== currentYearMonth);
-  if (prev.length) {
-    html += `<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin:12px 0 8px">歷史申報</div>`;
-    html += prev.map(r => {
-      const quota     = Number(r.quota)     || 0;
-      const remaining = Number(r.remaining) || 0;
-      const used      = quota - remaining;
-      return `
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
-        <span style="color:var(--text-muted);width:80px;flex-shrink:0">${fmtYearMonth(getRecordYearMonth(r))}</span>
-        <span>配額 <b>${quota}</b></span>
-        <span style="color:#16a34a">剩餘 <b>${remaining}</b></span>
-        <span>使用 <b>${used}</b></span>
-      </div>`;
-    }).join('');
+  // ── 歷史記錄 ──
+  if (prevRecords.length) {
+    html += `
+    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--border)">
+      <span style="font-size:13px;font-weight:700">📂 歷史申報紀錄</span>
+      <span style="font-size:12px;color:var(--text-muted)">共 ${prevRecords.length} 筆</span>
+    </div>`;
+    html += prevRecords.map(r => monthCard(r, false)).join('');
+  } else if (myRecords.length === 0) {
+    html = '<div class="prof-empty-hint">尚無服裝供售點數申報紀錄</div>';
   }
 
-  viewEl.innerHTML = html || '<div class="prof-empty-hint">尚無服裝供售點數申報紀錄</div>';
+  viewEl.innerHTML = html;
 }
 
 // ── Profile form event handlers ───────────────────────
