@@ -209,11 +209,23 @@ devBtn.addEventListener('click', () => {
 
 // Google 登入
 document.getElementById('google-login-btn').addEventListener('click', async () => {
-  document.getElementById('login-error').textContent = '';
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
   try { await signInWithPopup(auth, googleProvider); }
   catch (e) {
-    const m = { 'auth/popup-closed-by-user': '登入視窗已關閉', 'auth/network-request-failed': '網路連線失敗' };
-    document.getElementById('login-error').textContent = m[e.code] || '登入失敗，請再試一次';
+    console.error('[Google Login]', e.code, e.message);
+    const m = {
+      'auth/popup-closed-by-user':      '登入視窗已關閉，請再試一次',
+      'auth/cancelled-popup-request':   '登入已取消，請再試一次',
+      'auth/popup-blocked':             '瀏覽器封鎖了登入視窗，請允許彈出視窗後再試',
+      'auth/network-request-failed':    '網路連線失敗，請確認網路後再試',
+      'auth/unauthorized-domain':       '此網域未在 Firebase 授權清單，請聯絡管理員',
+      'auth/operation-not-allowed':     'Google 登入尚未啟用，請聯絡管理員',
+      'auth/internal-error':            '登入服務暫時異常，請稍後再試',
+      'auth/user-disabled':             '此帳號已被停用',
+    };
+    errEl.innerHTML = (m[e.code] || '登入失敗，請再試一次') +
+      `<br><span style="font-size:11px;opacity:0.6">(${e.code || e.message})</span>`;
   }
 });
 
