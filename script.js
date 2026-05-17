@@ -1452,11 +1452,13 @@ function populatePersonnelUnit() {
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">請選擇</option>' +
-    (adminSettings.units || []).map(u => `<option${u === cur ? ' selected' : ''}>${u}</option>`).join('');
+    PERSONNEL_UNITS.map(u => `<option${u === cur ? ' selected' : ''}>${u}</option>`).join('');
 }
 
+const PERSONNEL_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
+
 function renderPersonnelUnitFilters() {
-  const units  = adminSettings.units || [];
+  const units  = PERSONNEL_UNITS;
   const chips  = document.getElementById('personnelUnitChips');
   if (!chips) return;
   const allActive = personnelUnitFilter.length === 0;
