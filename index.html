@@ -440,6 +440,26 @@
           </div>
 
           <div class="admin-card admin-card-full">
+            <div class="admin-card-title">📊 問卷填答來源（Google Sheets）</div>
+            <p style="font-size:13px;color:var(--text-muted);margin:0 0 14px">設定後「問卷填答」頁將直接從 Google Sheet 即時讀取，不再需要 MAKE 同步。</p>
+            <div class="form-grid" style="margin-bottom:14px">
+              <div class="form-group">
+                <label>Google Sheets API Key</label>
+                <input type="text" id="admin-sheets-apikey" placeholder="AIzaSy…">
+              </div>
+              <div class="form-group">
+                <label>試算表 ID（網址 /d/ 後面那串）</label>
+                <input type="text" id="admin-sheets-id" placeholder="1aBcDeFgHiJkLmNoPqRsT…">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" id="admin-sheets-save">💾 儲存設定</button>
+              <button class="btn btn-secondary btn-sm" id="admin-sheets-test">🔗 測試連線</button>
+              <span id="admin-sheets-status" style="font-size:12px;color:var(--text-muted)"></span>
+            </div>
+          </div>
+
+          <div class="admin-card admin-card-full">
             <div class="admin-card-title">👤 已註冊帳號</div>
             <ul class="admin-list" id="admin-users-list"></ul>
           </div>
@@ -588,7 +608,9 @@
       <section id="page-leads" class="page">
         <div class="recruit-header">
           <h2 class="page-title">📝 問卷填答</h2>
+          <button class="btn btn-secondary btn-sm" id="leads-refresh-btn">🔄 重新整理</button>
         </div>
+        <div id="leads-load-status" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
         <div class="search-bar">
           <input type="text" id="leads-search" placeholder="搜尋姓名、聯絡方式、學校／工作…">
         </div>

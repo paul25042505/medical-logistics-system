@@ -482,7 +482,7 @@ const PAGE_INIT = {
   'interview-query': () => renderInterviewQuery(),
   'recruiters':      () => renderRecruiters(),
   'activity':        () => { renderActivities(); updateStorageBar(); },
-  'leads':           () => renderLeads(),
+  'leads':           () => fetchLeadsFromSheets(),
   'profile':         () => { renderProfilePage(); renderMyVehicles(); },
   'admin':           () => { renderAdminPage(); },
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
@@ -1376,6 +1376,100 @@ window.closeLightbox = function () {
   document.getElementById('lightbox-img').src = '';
 };
 
+// ── Google Sheets fetch ───────────────────────────────
+async function fetchLeadsFromSheets() {
+  const apiKey  = adminSettings.sheetsApiKey  || '';
+  const sheetId = adminSettings.sheetsSheetId || '';
+  const statusEl = document.getElementById('leads-load-status');
+
+  if (!apiKey || !sheetId) {
+    if (statusEl) statusEl.innerHTML =
+      '⚠️ 尚未設定 Google Sheets 來源，請至「後台管理 → 問卷填答來源」填寫。';
+    renderLeads();
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = '讀取中…';
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:L?key=${apiKey}`;
+    const res  = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    const rows = (json.values || []).slice(1); // 去掉標題列
+
+    leads = rows
+      .map((row, i) => ({
+        id:                    `sheet-${i}`,
+        submittedAt:           row[0]  || '',
+        name:                  row[1]  || '',
+        age:                   row[2]  || '',
+        identity:              row[3]  || '',
+        school:                row[4]  || '',
+        phone:                 row[5]  || '',
+        location:              row[6]  || '',
+        interests:             row[7]  || '',
+        workValues:            row[8]  || '',
+        militaryConsideration: row[9]  || '',
+        wantToKnow:            row[10] || '',
+        lineConsent:           row[11] || '',
+      }))
+      .filter(l => l.name || l.phone); // 過濾完全空白的列
+
+    const now = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    if (statusEl) statusEl.textContent = `共 ${leads.length} 筆｜最後更新 ${now}`;
+    renderLeads();
+  } catch (e) {
+    console.error('[Sheets]', e);
+    if (statusEl) statusEl.innerHTML =
+      `<span style="color:#dc2626">❌ 讀取失敗：${e.message}</span>`;
+    renderLeads();
+  }
+}
+
+document.getElementById('leads-refresh-btn')?.addEventListener('click', fetchLeadsFromSheets);
+
+// ── 後台 Google Sheets 設定 ────────────────────────────
+function renderAdminSheetsSettings() {
+  const el1 = document.getElementById('admin-sheets-apikey');
+  const el2 = document.getElementById('admin-sheets-id');
+  if (el1) el1.value = adminSettings.sheetsApiKey  || '';
+  if (el2) el2.value = adminSettings.sheetsSheetId || '';
+}
+
+document.getElementById('admin-sheets-save')?.addEventListener('click', async () => {
+  const apiKey  = document.getElementById('admin-sheets-apikey').value.trim();
+  const sheetId = document.getElementById('admin-sheets-id').value.trim();
+  const st = document.getElementById('admin-sheets-status');
+  st.textContent = '儲存中…';
+  try {
+    await setDoc(DOC_ADMIN, { ...adminSettings, sheetsApiKey: apiKey, sheetsSheetId: sheetId });
+    st.textContent = '✅ 已儲存';
+    setTimeout(() => { st.textContent = ''; }, 3000);
+  } catch(e) { st.textContent = '❌ 儲存失敗：' + e.message; }
+});
+
+document.getElementById('admin-sheets-test')?.addEventListener('click', async () => {
+  const apiKey  = document.getElementById('admin-sheets-apikey').value.trim();
+  const sheetId = document.getElementById('admin-sheets-id').value.trim();
+  const st = document.getElementById('admin-sheets-status');
+  if (!apiKey || !sheetId) { st.textContent = '⚠️ 請先填寫 API Key 和試算表 ID'; return; }
+  st.textContent = '測試中…';
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:L1?key=${apiKey}`;
+    const res  = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    const headers = (json.values?.[0] || []).join('、');
+    st.innerHTML = `✅ 連線成功！欄位：${headers || '（無欄位）'}`;
+  } catch(e) { st.innerHTML = `❌ 失敗：${e.message}`; }
+});
+
 // ── 問卷填答 Render ───────────────────────────────────
 function renderLeads() {
   const q = (document.getElementById('leads-search')?.value || '').trim().toLowerCase();
@@ -1591,6 +1685,7 @@ function startApp() {
   onSnapshot(DOC_ADMIN, snap => {
     adminSettings = snap.exists() ? snap.data() : { units: [], battalions: [], companies: [] };
     renderAdminPage();
+    renderAdminSheetsSettings();
     populateAdminDropdowns();
     if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnelUnitFilters();
     populatePersonnelUnit();
@@ -1630,11 +1725,8 @@ function startApp() {
     markLoaded('activities');
   }, () => markLoaded('activities'));
 
-  onSnapshot(COL_LEADS, snap => {
-    leads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (document.getElementById('page-leads').classList.contains('active')) renderLeads();
-    markLoaded('leads');
-  }, () => markLoaded('leads'));
+  // leads 不再用 Firestore listener，改由 fetchLeadsFromSheets() 讀取
+  markLoaded('leads');
 
   onSnapshot(COL_PERSONNEL, snap => {
     personnel = snap.docs.map(d => ({ id: d.id, ...d.data() }));
