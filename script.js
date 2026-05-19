@@ -2078,7 +2078,11 @@ function startApp() {
       personnel = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnel();
       if (document.getElementById('page-recruiters').classList.contains('active')) renderRecruiters();
-      if (document.getElementById('page-daily-inventory')?.classList.contains('active')) populateDiChargePerson();
+      if (document.getElementById('page-daily-inventory')?.classList.contains('active')) {
+        populateDiRecorder();
+        populateDiChargeUnit();
+        populateDiChargePerson();
+      }
       // Refresh header name using actual personnel record
       if (currentUser) {
         const me = registeredUsers?.find?.(u => u.id === currentUser.uid);
@@ -4759,27 +4763,84 @@ window.deleteMedEquip = async function(id, name) {
 // ── 每日清點 helpers ───────────────────────────────────
 
 /** 填充 本日車長人員 下拉選單（以單位 optgroup 分組） */
-function populateDiChargePerson() {
-  const sel = document.getElementById('di-charge-person');
+// 清點人 下拉（按單位分組，預設選目前登入者）
+function populateDiRecorder() {
+  const sel = document.getElementById('di-recorder');
   if (!sel) return;
   const cur = sel.value;
 
-  // 按單位分組 personnel
+  const unitOrder = adminSettings.units || [];
   const unitMap = {};
   (personnel || []).forEach(p => {
     const u = p.unit || '其他';
     if (!unitMap[u]) unitMap[u] = [];
     unitMap[u].push(p);
   });
+  // 按 adminSettings 單位順序排
+  const units = Object.keys(unitMap).sort((a, b) => {
+    const ia = unitOrder.indexOf(a), ib = unitOrder.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1; if (ib !== -1) return 1;
+    return a.localeCompare(b, 'zh-TW');
+  });
 
   sel.innerHTML = '<option value="">— 請選擇 —</option>' +
-    Object.entries(unitMap).map(([unit, people]) => {
-      const opts = people
+    units.map(unit => {
+      const opts = (unitMap[unit] || [])
         .sort((a, b) => rankWeight(a.rank) - rankWeight(b.rank))
         .map(p => `<option value="${p.id}">${p.rank ? p.rank + ' ' : ''}${p.name}</option>`)
         .join('');
       return `<optgroup label="${unit}">${opts}</optgroup>`;
     }).join('');
+
+  // 預設選目前登入者
+  if (!cur && currentUser) {
+    const me = registeredUsers?.find?.(u => u.id === currentUser.uid);
+    const linked = (personnel || []).find(p =>
+      p.id === me?.personnelId || p.id === currentUser.uid ||
+      (p.email && p.email.toLowerCase() === (currentUser.email || '').toLowerCase())
+    );
+    if (linked) sel.value = linked.id;
+  } else if (cur && [...sel.options].some(o => o.value === cur)) {
+    sel.value = cur;
+  }
+}
+
+// 本日車長：先選單位
+function populateDiChargeUnit() {
+  const sel = document.getElementById('di-charge-unit');
+  if (!sel) return;
+  const cur = sel.value;
+  const unitOrder = adminSettings.units || [];
+  const units = [...new Set((personnel || []).map(p => p.unit).filter(Boolean))];
+  units.sort((a, b) => {
+    const ia = unitOrder.indexOf(a), ib = unitOrder.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1; if (ib !== -1) return 1;
+    return a.localeCompare(b, 'zh-TW');
+  });
+  sel.innerHTML = '<option value="">— 選擇單位 —</option>' +
+    units.map(u => `<option value="${u}">${u}</option>`).join('');
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+// 本日車長：依所選單位篩人員（按階級排序）
+function populateDiChargePerson() {
+  const sel = document.getElementById('di-charge-person');
+  if (!sel) return;
+  const cur = sel.value;
+  const unitFilter = document.getElementById('di-charge-unit')?.value || '';
+
+  let people = [...(personnel || [])];
+  if (unitFilter) people = people.filter(p => p.unit === unitFilter);
+  people.sort((a, b) => {
+    const wr = rankWeight(a.rank) - rankWeight(b.rank);
+    if (wr !== 0) return wr;
+    return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+  });
+
+  sel.innerHTML = '<option value="">— 請選擇人員 —</option>' +
+    people.map(p => `<option value="${p.id}">${p.rank ? p.rank + ' ' : ''}${p.name}</option>`).join('');
 
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
@@ -4789,29 +4850,21 @@ function renderDailyInventory() {
   const diDate = document.getElementById('di-date');
   if (diDate && !diDate.value) diDate.value = new Date().toISOString().slice(0, 10);
 
-  const diRec = document.getElementById('di-recorder');
-  if (diRec && !diRec.value && currentUser) {
-    const me = registeredUsers.find(u => u.id === currentUser.uid);
-    const linkedPers = personnel?.find?.(p => p.id === me?.personnelId || (p.email && p.email.toLowerCase() === (me?.email||'').toLowerCase()));
-    const recName = linkedPers
-      ? `${linkedPers.rank ? linkedPers.rank + ' ' : ''}${linkedPers.name}`.trim()
-      : (me?.name || '');
-    diRec.value = recName;
-  }
-
-  // 同步醫務所選單 + 本日車長人員
+  // 同步醫務所選單、清點人、本日車長
   populatePharmacySelects();
+  populateDiRecorder();
+  populateDiChargeUnit();
   populateDiChargePerson();
 
   const container = document.getElementById('di-drug-list');
   const empty     = document.getElementById('di-empty');
   if (!container) return;
 
-  // 按所選醫務所篩選藥品
+  // 按所選醫務所篩選藥品，並依 sortOrder 排序（與藥材清點頁一致），排除隱藏品項
   const selectedPharmaId = document.getElementById('di-pharmacy')?.value || '';
-  const list = filterByUnitScope(medSupplies).filter(s =>
-    !selectedPharmaId || s.pharmacyId === selectedPharmaId
-  );
+  const list = filterByUnitScope(medSupplies)
+    .filter(s => (!selectedPharmaId || s.pharmacyId === selectedPharmaId) && !s.hidden)
+    .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || (a.name||'').localeCompare(b.name||'', 'zh-TW'));
   if (!list.length) {
     container.innerHTML = '';
     if (empty) empty.style.display = '';
@@ -4986,17 +5039,23 @@ document.getElementById('di-pharmacy')?.addEventListener('change', () => {
   renderDailyInventory();
 });
 
+// 選完單位後重整人員清單
+document.getElementById('di-charge-unit')?.addEventListener('change', () => {
+  populateDiChargePerson();
+});
+
 // ── 每日清點 submit ────────────────────────────────────
 document.getElementById('di-submit-btn')?.addEventListener('click', () => {
   const date         = document.getElementById('di-date')?.value;
-  const recorder     = document.getElementById('di-recorder')?.value.trim();
+  const recorderEl   = document.getElementById('di-recorder');
+  const recorder     = recorderEl?.options[recorderEl.selectedIndex]?.text || '';
   const pharmacyId   = document.getElementById('di-pharmacy')?.value || '';
   const chargeSelEl  = document.getElementById('di-charge-person');
   const chargeId     = chargeSelEl?.value || '';
   const chargeName   = chargeSelEl?.options[chargeSelEl.selectedIndex]?.text || '';
 
   if (!date)       { alert('請選擇清點日期'); return; }
-  if (!recorder)   { alert('請填入清點人姓名'); return; }
+  if (!recorder || recorder === '— 請選擇 —') { alert('請選擇清點人'); return; }
   if (!pharmacyId) { alert('請選擇醫務所'); return; }
 
   const pharmacyName = (adminSettings.pharmacies || []).find(p => p.id === pharmacyId)?.name || '';
@@ -5092,6 +5151,7 @@ document.getElementById('diSignConfirmBtn')?.addEventListener('click', async () 
     // Reset form
     document.getElementById('di-date').value = '';
     document.getElementById('di-recorder').value = '';
+    document.getElementById('di-charge-unit').value = '';
     renderDailyInventory();
     alert(`✅ 清點完成！${pharmacyName ? pharmacyName + '・' : ''}${date}・清點人：${recorder}`);
   } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }

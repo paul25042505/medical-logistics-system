@@ -2411,8 +2411,29 @@ main {
   .med-supply-table { table-layout: auto; }
 }
 @media (max-width: 600px) {
-  .di-batch-header, .di-batch-row { grid-template-columns: 1fr 1fr 30px; gap: 6px; }
   .di-meta-bar { flex-direction: column; gap: 10px; }
   .di-meta-bar .form-group { min-width: unset; flex: unset; width: 100%; }
   .pharmacy-tab-btn { font-size: 12px; padding: 5px 12px; }
+}
+/* iPhone：效期與數量垂直堆疊，防止擠在同一行重疊 */
+@media (max-width: 480px) {
+  .di-batch-header {
+    grid-template-columns: 1fr 30px;
+  }
+  .di-batch-header span:nth-child(2) { display: none; }
+  .di-batch-row {
+    grid-template-columns: 1fr 30px;
+    grid-template-rows: auto auto;
+    gap: 6px 8px;
+  }
+  .di-batch-row .di-batch-expiry {
+    grid-column: 1; grid-row: 1;
+  }
+  .di-batch-row .di-batch-qty {
+    grid-column: 1; grid-row: 2;
+  }
+  .di-batch-row .di-batch-remove {
+    grid-column: 2; grid-row: 1 / span 2;
+    align-self: center;
+  }
 }
