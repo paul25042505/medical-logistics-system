@@ -148,6 +148,17 @@ function showAuthScreen(screen) {
   ['login', 'register', 'pending'].forEach(s => {
     document.getElementById(`auth-screen-${s}`).style.display = s === screen ? '' : 'none';
   });
+  // 顯示申請表時：從 Firestore 載入單位清單
+  if (screen === 'register') {
+    const unitSel = document.getElementById('reg-unit');
+    if (unitSel && unitSel.options.length <= 1) {
+      getDoc(doc(db, 'settings', 'admin')).then(snap => {
+        const units = snap.exists() ? (snap.data().units || []) : [];
+        unitSel.innerHTML = '<option value="">— 請選擇單位 —</option>' +
+          units.map(u => `<option value="${u}">${u}</option>`).join('');
+      }).catch(() => {});
+    }
+  }
 }
 
 function showApp(user, userData) {
@@ -271,15 +282,33 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
 
 // 提交申請
 document.getElementById('submit-register-btn').addEventListener('click', async () => {
-  const name  = document.getElementById('reg-name').value.trim();
   const errEl = document.getElementById('reg-error');
   errEl.textContent = '';
-  if (!name) { errEl.textContent = '請填寫您的姓名'; return; }
+  const name  = document.getElementById('reg-name').value.trim();
+  const unit  = document.getElementById('reg-unit').value;
+  const rank  = document.getElementById('reg-rank')?.value.trim()  || '';
+  const phone = document.getElementById('reg-phone')?.value.trim() || '';
+
+  if (!name) { errEl.textContent = '請填寫姓名';        return; }
+  if (!unit) { errEl.textContent = '請選擇所屬單位';    return; }
+
   try {
-    await updateDoc(doc(db, 'users', currentUser.uid), { name });
+    // 更新 users/{uid}
+    await updateDoc(doc(db, 'users', currentUser.uid), { name, unit, rank, phone });
+
+    // 立即建立 personnel/{uid}，核准後即在人員管理出現
+    await setDoc(doc(db, 'personnel', currentUser.uid), {
+      uid:         currentUser.uid,
+      name, unit, rank, phone,
+      email:       currentUser.email || '',
+      createdAt:   serverTimestamp(),
+      updatedAt:   serverTimestamp(),
+      createdFrom: 'googleRegister',
+    }, { merge: true });
+
     document.getElementById('pending-email-display').textContent = currentUser.email;
     showAuthScreen('pending');
-  } catch (e) { errEl.textContent = '送出失敗，請再試一次'; }
+  } catch (e) { console.error(e); errEl.textContent = '送出失敗，請再試一次'; }
 });
 
 // 取消申請（回到登入畫面並登出）
@@ -1293,19 +1322,64 @@ function renderRecruiters() {
     c.innerHTML = `<div class="empty-state"><div class="icon">🪖</div><p>尚無招募員，點擊「＋ 新增招募員」新增人員並設定</p></div>`;
     return;
   }
-  c.innerHTML = recs.map(p => `
-    <div class="recruiter-card">
+
+  const today     = new Date(); today.setHours(0,0,0,0);
+  const day90     = new Date(today); day90.setDate(today.getDate() + 90);
+
+  // 效期狀態 helper
+  function certStatus(expiry) {
+    if (!expiry) return null;
+    const exp = new Date(expiry); exp.setHours(0,0,0,0);
+    const diffDays = Math.ceil((exp - today) / 86400000);
+    if (diffDays < 0)  return { label: `已過期 ${-diffDays} 天`, color: '#dc2626', bg: '#fef2f2', icon: '🚨' };
+    if (diffDays === 0) return { label: '今日到期',              color: '#dc2626', bg: '#fef2f2', icon: '🚨' };
+    if (diffDays <= 90) return { label: `剩 ${diffDays} 天`,     color: '#d97706', bg: '#fefce8', icon: '⚠️' };
+    return { label: `剩 ${diffDays} 天`, color: '#16a34a', bg: '#f0fdf4', icon: '✅' };
+  }
+
+  // 警示橫幅（過期或 90 天內）
+  const alertRecs = recs.filter(p => {
+    if (!p.certExpiry) return false;
+    const exp = new Date(p.certExpiry); exp.setHours(0,0,0,0);
+    return exp <= day90;
+  });
+
+  let bannerHtml = '';
+  if (alertRecs.length) {
+    const items = alertRecs.map(p => {
+      const s = certStatus(p.certExpiry);
+      return `<span style="margin-right:12px">${s.icon} <strong>${p.name}</strong>（${p.certExpiry}，${s.label}）</span>`;
+    }).join('');
+    bannerHtml = `<div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;
+        padding:10px 14px;margin-bottom:16px;font-size:13px;color:#92400e;line-height:1.8">
+      ⏰ <strong>即將到期 / 已過期的招募員證照：</strong><br>${items}
+    </div>`;
+  }
+
+  const cards = recs.map(p => {
+    const s = certStatus(p.certExpiry);
+    const expiryBadge = s
+      ? `<div class="recruiter-meta" style="color:${s.color};font-weight:600">
+           ${s.icon} 效期：${p.certExpiry}（${s.label}）
+         </div>`
+      : `<div class="recruiter-meta" style="color:var(--text-muted)">📋 效期：未填寫</div>`;
+
+    return `<div class="recruiter-card" style="${s && s.color === '#dc2626' ? 'border:2px solid #fca5a5' : ''}">
       <div class="recruiter-avatar">${p.name?.[0] || '?'}</div>
       <div class="recruiter-info">
-        <div class="recruiter-name">${p.rank} ${p.name}</div>
+        <div class="recruiter-name">${p.rank || ''} ${p.name}</div>
         ${p.unit  ? `<div class="recruiter-meta">🏢 ${p.unit}</div>` : ''}
         ${p.phone ? `<div class="recruiter-meta">📞 ${p.phone}</div>` : ''}
+        ${expiryBadge}
       </div>
       <div class="recruit-actions" onclick="event.stopPropagation()">
         <button class="btn-icon" onclick="openPersonnelEdit('${p.id}')">✏️</button>
         <button class="btn-icon danger" onclick="unsetRecruiter('${p.id}')">✕</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  c.innerHTML = bannerHtml + cards;
 }
 
 document.getElementById('addRecruiterBtn').addEventListener('click', () => {
@@ -1922,9 +1996,11 @@ function clearPersonnelForm() {
   ['pf-unit','pf-gender','pf-addr-city']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   updateDistrictSel('pf-addr-city', 'pf-addr-district', '');
-  document.getElementById('pf-birthDate').value = '';
-  document.getElementById('pf-joinDate').value  = '';
-  document.getElementById('pf-isRecruiter').checked = false;
+  document.getElementById('pf-birthDate').value      = '';
+  document.getElementById('pf-joinDate').value       = '';
+  document.getElementById('pf-certExpiry').value     = '';
+  document.getElementById('pf-isRecruiter').checked  = false;
+  document.getElementById('pf-certExpiry-group').style.display = 'none';
 }
 
 function fillPersonnelForm(p) {
@@ -1940,6 +2016,9 @@ function fillPersonnelForm(p) {
   sv('pf-addr-detail', p.addrDetail);
   sv('pf-notes', p.notes);
   document.getElementById('pf-isRecruiter').checked = p.isRecruiter || false;
+  const expiryEl = document.getElementById('pf-certExpiry');
+  if (expiryEl) expiryEl.value = p.certExpiry || '';
+  document.getElementById('pf-certExpiry-group').style.display = p.isRecruiter ? '' : 'none';
 }
 
 function readPersonnelForm() {
@@ -1961,6 +2040,7 @@ function readPersonnelForm() {
     addrDetail:     gv('pf-addr-detail'),
     notes:          gv('pf-notes'),
     isRecruiter:    document.getElementById('pf-isRecruiter').checked,
+    certExpiry:     document.getElementById('pf-certExpiry')?.value || '',
   };
 }
 
@@ -1970,6 +2050,12 @@ function closePersonnelForm() {
 }
 
 document.getElementById('personnelAddBtn').addEventListener('click', () => openPersonnelForm(null));
+
+// 勾選招募員時顯示/隱藏證照效期欄位
+document.getElementById('pf-isRecruiter').addEventListener('change', function() {
+  document.getElementById('pf-certExpiry-group').style.display = this.checked ? '' : 'none';
+  if (!this.checked) document.getElementById('pf-certExpiry').value = '';
+});
 document.getElementById('personnelCancelBtn').addEventListener('click', closePersonnelForm);
 document.getElementById('personnelModalClose').addEventListener('click', closePersonnelForm);
 document.getElementById('personnelModalOverlay').addEventListener('click', e => {

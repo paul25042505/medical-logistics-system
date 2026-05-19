@@ -54,16 +54,32 @@
         </div>
       </div>
 
-      <!-- 畫面2：新用戶填寫姓名 -->
+      <!-- 畫面2：新用戶填寫資料 -->
       <div id="auth-screen-register" style="display:none">
-        <p class="auth-desc">歡迎！請填寫申請資料</p>
+        <p class="auth-desc">歡迎！請先填寫基本資料</p>
         <div class="auth-email-tag" id="reg-email-display"></div>
-        <div class="form-group" style="margin-top:14px">
-          <label>您的姓名</label>
-          <input type="text" id="reg-name" placeholder="請輸入真實姓名">
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
+          <div class="form-group">
+            <label>姓名 <span style="color:#dc2626">*</span></label>
+            <input type="text" id="reg-name" placeholder="請輸入真實姓名">
+          </div>
+          <div class="form-group">
+            <label>所屬單位 <span style="color:#dc2626">*</span></label>
+            <select id="reg-unit">
+              <option value="">— 請選擇單位 —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>級職</label>
+            <input type="text" id="reg-rank" placeholder="例：中士、上尉">
+          </div>
+          <div class="form-group">
+            <label>聯絡電話</label>
+            <input type="tel" id="reg-phone" placeholder="手機或軍線">
+          </div>
         </div>
         <div class="auth-error" id="reg-error"></div>
-        <button class="btn btn-primary btn-full" id="submit-register-btn">提交申請</button>
+        <button class="btn btn-primary btn-full" id="submit-register-btn" style="margin-top:14px">提交申請</button>
         <button class="btn btn-secondary btn-full" id="reg-cancel-btn" style="margin-top:6px">取消</button>
       </div>
 
@@ -1076,6 +1092,10 @@
                 <input type="checkbox" id="pf-isRecruiter">
                 <span class="toggle-text">此成員擔任招募員</span>
               </label>
+            </div>
+            <div class="form-group" id="pf-certExpiry-group" style="display:none">
+              <label>招募員證照效期</label>
+              <input type="date" id="pf-certExpiry">
             </div>
           </div>
         </div>
