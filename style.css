@@ -2415,52 +2415,49 @@ main {
   .di-meta-bar .form-group { min-width: unset; flex: unset; width: 100%; }
   .pharmacy-tab-btn { font-size: 12px; padding: 5px 12px; }
 }
-/* iPhone：效期上排全寬，數量＋× 下排並列 */
+/* iPhone：效期上排全寬，數量＋× 下排並列（flexbox，避免 iOS grid spanning 計算偏差） */
 @media (max-width: 480px) {
-  .di-drug-card { padding: 12px 10px; }
+  .di-drug-card { padding: 12px 10px; overflow: hidden; }
 
-  /* 標題行：效期佔左側，數量靠右對齊 × 按鈕欄 */
+  /* 標題行：效期左、數量右 */
   .di-batch-header {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 6px;
+    display: flex;
+    justify-content: space-between;
   }
-  /* 隱藏原本第三個空白欄標題 */
   .di-batch-header span:last-child { display: none; }
 
-  /* 每批次改成兩列：效期全寬 / 數量＋× 同行 */
+  /* 每批次：flex wrap，效期獨佔第一列，數量＋× 第二列 */
   .di-batch-row {
-    display: grid;
-    grid-template-columns: 1fr 36px;
-    grid-template-rows: auto auto;
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     align-items: center;
   }
   .di-batch-row .di-batch-expiry {
-    grid-column: 1 / -1;   /* 效期：跨兩欄，全寬 */
-    grid-row: 1;
+    flex: 0 0 100%;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
   }
   .di-batch-row .di-batch-qty {
-    grid-column: 1;
-    grid-row: 2;
+    flex: 1 1 0;
     min-width: 0;
+    box-sizing: border-box;
   }
   .di-batch-row .di-batch-remove {
-    grid-column: 2;
-    grid-row: 2;
+    flex: 0 0 36px;
+    width: 36px;
   }
 
-  /* 統一輸入框高度，防止 iOS month 原生 UI 撐高 */
+  /* 統一輸入框高度 */
   .di-batch-row input {
     height: 44px;
-    min-width: 0;
     box-sizing: border-box;
     padding: 0 8px;
     font-size: 13px;
-    width: 100%;
   }
   .di-batch-remove {
-    width: 36px;
     height: 44px;
     border-radius: 8px;
     align-self: center;
