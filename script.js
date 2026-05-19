@@ -502,6 +502,35 @@ window.approveUser = async function(uid) {
   } catch (e) { alert('核准失敗：' + e.message); }
 };
 
+window.linkUserToPersonnel = async function(userId) {
+  const sel = document.getElementById('link-sel-' + userId);
+  const personnelDocId = sel?.value;
+  if (!personnelDocId) { alert('請選擇要連結的人員'); return; }
+  const u = registeredUsers.find(x => x.id === userId);
+  const p = personnel.find(x => x.id === personnelDocId);
+  if (!u || !p) return;
+  if (!confirm(`將帳號「${u.email}」連結到「${p.rank||''} ${p.name}」？`)) return;
+  try {
+    await updateDoc(doc(db, 'users', userId), { personnelId: personnelDocId });
+    await updateDoc(doc(db, 'personnel', personnelDocId), { uid: userId, email: u.email || '' });
+    alert('✓ 連結成功');
+  } catch(e) { alert('連結失敗：' + e.message); }
+};
+
+window.unlinkPersonnelAccount = async function() {
+  if (!editingPersonnelId) return;
+  if (!confirm('確定解除帳號綁定？解除後對方下次以相同信箱登入仍可自動重新連結。')) return;
+  try {
+    const p = personnel.find(x => x.id === editingPersonnelId);
+    if (p?.uid) {
+      try { await updateDoc(doc(db, 'users', p.uid), { personnelId: '' }); } catch {}
+    }
+    await updateDoc(doc(db, 'personnel', editingPersonnelId), { uid: '' });
+    fillPersonnelForm({ ...(p || {}), uid: '' });
+    alert('已解除綁定');
+  } catch(e) { alert('解除失敗：' + e.message); }
+};
+
 // ── Loading ───────────────────────────────────────────
 const loaded = new Set();
 let _loadingTimer = null;
@@ -753,14 +782,36 @@ function renderAdminAccountsSection() {
       : u.approved
         ? `<span style="font-size:12px;color:var(--green)">✓ 已核准</span>`
         : `<button class="btn btn-primary btn-sm" onclick="approveUser('${u.id}')">核准</button>`;
-    // 若此帳號對應到某個 accountRequest 有記錄，顯示來源
-    const fromReq = done.find(r => (r.email || '').toLowerCase() === (u.email || '').toLowerCase());
-    return `<div class="admin-list-item">
-      <div>
-        <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
-        <div style="font-size:12px;color:var(--text-muted)">${u.email}${fromReq ? '&ensp;<span style="color:#16a34a;font-size:11px">（已建立人員）</span>' : ''}</div>
+
+    // 檢查是否已連結人員記錄
+    const linkedPers = personnel.find(p =>
+      p.uid === u.id ||
+      p.id  === u.personnelId ||
+      (p.email && p.email.toLowerCase() === (u.email || '').toLowerCase())
+    );
+
+    // 已核准但尚未連結 → 顯示連結選單
+    const linkSection = (u.approved || u.admin) && !linkedPers ? `
+      <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <select id="link-sel-${u.id}" style="flex:1;min-width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+          <option value="">— 選擇要連結的人員 —</option>
+          ${[...personnel].sort((a,b)=>(a.name||'').localeCompare(b.name||'','zh-TW'))
+            .map(p=>`<option value="${p.id}">${p.rank ? p.rank+' ' : ''}${p.name}${p.unit ? '　'+p.unit : ''}</option>`)
+            .join('')}
+        </select>
+        <button class="btn btn-sm btn-primary" onclick="linkUserToPersonnel('${u.id}')">連結人員</button>
+      </div>` : linkedPers ? `
+      <div style="font-size:11px;color:#16a34a;margin-top:4px">🔗 已連結：${linkedPers.rank||''} ${linkedPers.name}</div>` : '';
+
+    return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${u.email || '—'}</div>
+        </div>
+        <div class="admin-item-actions">${statusHtml}</div>
       </div>
-      <div class="admin-item-actions">${statusHtml}</div>
+      ${linkSection}
     </div>`;
   }
 
@@ -2586,9 +2637,24 @@ function fillPersonnelForm(p) {
   const acctDisplay = document.getElementById('pf-account-display');
   if (acctSection && acctDisplay) {
     acctSection.style.display = '';
-    acctDisplay.innerHTML = p.uid
-      ? `<span style="background:#dcfce7;color:#16a34a;font-size:12px;padding:2px 10px;border-radius:6px;font-weight:600">已綁定</span> <span style="color:#64748b">${p.email || ''}</span>`
+    const badge = p.uid
+      ? `<span style="background:#dcfce7;color:#16a34a;font-size:12px;padding:2px 10px;border-radius:6px;font-weight:600">已綁定</span>`
       : `<span style="background:#f1f5f9;color:#94a3b8;font-size:12px;padding:2px 10px;border-radius:6px">未綁定</span>`;
+    const unbindBtn = p.uid
+      ? `<button type="button" onclick="unlinkPersonnelAccount()"
+           style="font-size:11px;padding:3px 10px;border:1px solid #fca5a5;background:#fff;color:#ef4444;border-radius:6px;cursor:pointer">
+           解除綁定</button>`
+      : '';
+    acctDisplay.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        ${badge} ${unbindBtn}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <label style="font-size:12px;color:#64748b;white-space:nowrap">綁定信箱</label>
+        <input id="pf-email" type="email" value="${p.email || ''}" placeholder="輸入 Google 帳號信箱"
+          style="flex:1;min-width:180px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">填入信箱後儲存，對方下次登入即自動連結；更改信箱會重置綁定狀態。</div>`;
   }
 }
 
@@ -2612,6 +2678,7 @@ function readPersonnelForm() {
     notes:          gv('pf-notes'),
     isRecruiter:    document.getElementById('pf-isRecruiter').checked,
     certExpiry:     document.getElementById('pf-certExpiry')?.value || '',
+    email:          document.getElementById('pf-email')?.value?.trim() || '',
   };
 }
 
@@ -2641,6 +2708,8 @@ document.getElementById('personnelSaveBtn').addEventListener('click', async () =
   btn.disabled = true;
   try {
     if (editingPersonnelId) {
+      const orig = personnel.find(p => p.id === editingPersonnelId);
+      if (orig && data.email !== (orig.email || '')) data.uid = '';
       await updateDoc(doc(db, 'personnel', editingPersonnelId), data);
     } else {
       await addDoc(COL_PERSONNEL, { ...data, createdAt: serverTimestamp() });
