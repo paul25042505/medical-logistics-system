@@ -1842,8 +1842,13 @@ function showProfileViewMode(p) {
   const hasEmergency = p.emergencyName || p.emergencyRel || p.emergencyPhone;
   const hasOther     = p.addrCity || p.addrDetail || p.address || p.notes;
 
+  const myEmail = currentUser?.email || '';
   view.innerHTML = `
     <div class="prof-view-name">${p.name}</div>
+    <div class="prof-info-section">
+      <div class="prof-info-section-title">帳號</div>
+      ${row('綁定信箱', myEmail)}
+    </div>
     ${hasBasic ? `
     <div class="prof-info-section">
       <div class="prof-info-section-title">基本資料</div>
@@ -2557,6 +2562,8 @@ function clearPersonnelForm() {
   document.getElementById('pf-certExpiry').value     = '';
   document.getElementById('pf-isRecruiter').checked  = false;
   document.getElementById('pf-certExpiry-group').style.display = 'none';
+  const acctSec = document.getElementById('pf-account-section');
+  if (acctSec) acctSec.style.display = 'none';
 }
 
 function fillPersonnelForm(p) {
@@ -2575,6 +2582,14 @@ function fillPersonnelForm(p) {
   const expiryEl = document.getElementById('pf-certExpiry');
   if (expiryEl) expiryEl.value = p.certExpiry || '';
   document.getElementById('pf-certExpiry-group').style.display = p.isRecruiter ? '' : 'none';
+  const acctSection = document.getElementById('pf-account-section');
+  const acctDisplay = document.getElementById('pf-account-display');
+  if (acctSection && acctDisplay) {
+    acctSection.style.display = '';
+    acctDisplay.innerHTML = p.uid
+      ? `<span style="background:#dcfce7;color:#16a34a;font-size:12px;padding:2px 10px;border-radius:6px;font-weight:600">已綁定</span> <span style="color:#64748b">${p.email || ''}</span>`
+      : `<span style="background:#f1f5f9;color:#94a3b8;font-size:12px;padding:2px 10px;border-radius:6px">未綁定</span>`;
+  }
 }
 
 function readPersonnelForm() {
@@ -2834,8 +2849,18 @@ function renderPersonnelDetailBody(p) {
   const row = (label, val) =>
     val ? `<div class="pd-row"><span class="pd-label">${label}</span><span class="pd-val">${val}</span></div>` : '';
 
+  const accountBadge = p.uid
+    ? `<span style="background:#dcfce7;color:#16a34a;font-size:12px;padding:2px 10px;border-radius:6px;font-weight:600">已綁定</span> <span style="font-size:13px;color:#64748b">${p.email || ''}</span>`
+    : `<span style="background:#f1f5f9;color:#94a3b8;font-size:12px;padding:2px 10px;border-radius:6px">未綁定</span>`;
+
   document.getElementById('personnelDetailBody').innerHTML = `
     ${p.isRecruiter ? '<div class="pd-recruiter-banner">🪖 招募員</div>' : ''}
+    <div class="pd-section">
+      <div class="pd-section-title">帳號</div>
+      <div class="pd-grid">
+        <div class="pd-row" style="grid-column:1/-1"><span class="pd-label">綁定狀態</span><span class="pd-val">${accountBadge}</span></div>
+      </div>
+    </div>
     <div class="pd-section">
       <div class="pd-section-title">基本資料</div>
       <div class="pd-grid">
