@@ -4848,7 +4848,10 @@ function populateDiChargePerson() {
 // ── 每日清點 ───────────────────────────────────────────
 function renderDailyInventory() {
   const diDate = document.getElementById('di-date');
-  if (diDate && !diDate.value) diDate.value = new Date().toISOString().slice(0, 10);
+  if (diDate && !diDate.value) {
+    const t = new Date();
+    diDate.value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
 
   // 同步醫務所選單、清點人、本日車長
   populatePharmacySelects();
