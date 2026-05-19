@@ -1,5 +1,128 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ── 機敏資料警語橫幅 ── */
+.classified-banner {
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 18px;
+}
+.classified-banner-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #b91c1c;
+  letter-spacing: .5px;
+  margin-bottom: 4px;
+}
+.classified-banner-body {
+  font-size: 12px;
+  color: #7f1d1d;
+  line-height: 1.7;
+}
+
+/* ── 頁尾機敏聲明 ── */
+.classified-footer {
+  background: #1e293b;
+  color: rgba(255,255,255,.55);
+  font-size: 11px;
+  text-align: center;
+  padding: 10px 20px;
+  letter-spacing: .3px;
+  flex-shrink: 0;
+}
+
+/* ── 人員管理浮水印 ── */
+#page-personnel { position: relative; }
+#page-personnel::before {
+  content: '密 公務機密 密 公務機密 密 公務機密\A密 公務機密 密 公務機密 密 公務機密\A密 公務機密 密 公務機密 密 公務機密';
+  white-space: pre;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 900;
+  color: rgba(180,0,0,.06);
+  pointer-events: none;
+  z-index: 0;
+  transform: rotate(-30deg);
+  line-height: 2.8;
+  letter-spacing: 28px;
+  user-select: none;
+}
+#page-personnel > * { position: relative; z-index: 1; }
+
+/* ── 藥材清單 拖曳排序把手 ── */
+.drag-handle {
+  display: inline-block;
+  font-size: 16px;
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color .12s, background .12s;
+}
+.drag-handle:hover { color: var(--accent); background: #e8f0fe; }
+.drag-handle:active { cursor: grabbing; }
+
+/* 拖曳中的列 */
+.med-supply-row.dragging {
+  opacity: 0.4;
+  background: #e8f0fe !important;
+}
+/* 已隱藏藥材列 */
+.med-supply-row.mst-row-hidden {
+  opacity: 0.45;
+  background: #f9f9f9 !important;
+}
+.med-supply-row.mst-row-hidden td { color: var(--text-muted); }
+.mst-hidden-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #e5e7eb;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+/* 顯示隱藏按鈕啟動態 */
+#medSupplyShowHiddenBtn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+/* 目標位置高亮 */
+.med-supply-row.drag-over {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: #f0f6ff !important;
+}
+
+/* ── 稽核紀錄分頁 ── */
+.personnel-audit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── 全域日期輸入框：防止 iOS 超出容器 + 確保最低高度 ── */
+input[type="date"] {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 36px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 :root {
   --navy: #0b1f3a;
   --navy-light: #142d52;
@@ -524,6 +647,50 @@ main {
 }
 .filter-bar select:focus { border-color: var(--accent); }
 
+/* ── 約談查詢日期範圍選擇器 ── */
+.ivq-date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  flex-wrap: nowrap;
+  min-height: 36px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.ivq-date-range:focus-within { border-color: var(--accent); }
+.ivq-date-icon { font-size: 15px; flex-shrink: 0; }
+.ivq-date-field { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ivq-date-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ivq-date-field input[type="date"] {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text);
+  min-height: 30px;
+  width: 130px;
+  max-width: 100%;
+  padding: 0;
+  flex-shrink: 1;
+}
+.ivq-date-sep {
+  color: var(--text-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
 /* ── 招募員列表 ── */
 .recruiter-list { display: flex; flex-direction: column; gap: 10px; }
 .recruiter-card {
@@ -690,8 +857,10 @@ main {
   .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
   .toolbar .search-bar { min-width: unset; }
   .filter-bar { flex-wrap: wrap; gap: 6px; }
-  .filter-bar select,
-  .filter-bar input[type="date"] { flex: 1; min-width: 110px; }
+  .filter-bar select { flex: 1; min-width: 110px; }
+  .filter-bar input[type="date"] { flex: 1; min-width: 110px; max-width: 100%; }
+  .ivq-date-range { flex: 1; min-width: 0; flex-wrap: wrap; }
+  .ivq-date-field input[type="date"] { width: 110px; }
 
   /* Tabs：可橫向滑動 */
   .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
@@ -1018,11 +1187,15 @@ main {
   padding: 10px 14px;
   background: var(--bg);
   border-radius: 8px;
+  overflow: hidden;
+  gap: 8px;
 }
 .date-row-label {
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .date-row-item input[type="date"] {
   border: 1px solid var(--border);
@@ -1031,6 +1204,9 @@ main {
   font-size: 13px;
   background: white;
   color: var(--text);
+  width: 160px;
+  max-width: 100%;
+  flex-shrink: 1;
 }
 .date-row-item input[type="date"]:focus {
   outline: none;
@@ -1730,3 +1906,513 @@ main {
 .import-status-ok  { color: #16a34a; font-weight: 600; }
 .import-status-err { color: #dc2626; font-size: 11px; }
 
+/* ── 帳號角色＋資料範圍分配 ── */
+.user-role-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 0;
+}
+.user-role-info { min-width: 0; }
+.user-role-controls { display: flex; flex-wrap: wrap; gap: 14px; width: 100%; }
+.user-role-section { display: flex; flex-direction: column; gap: 5px; }
+.user-role-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+}
+.unit-scope-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.unit-scope-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: all .15s;
+}
+.unit-scope-pill input[type="checkbox"] { display: none; }
+.unit-scope-pill.active {
+  background: #eff6ff;
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.unit-scope-pill:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+/* ── 角色業務設定 ── */
+.role-mgmt-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0;
+}
+.role-mgmt-tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  border-radius: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.role-mgmt-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.role-mgmt-tab:hover:not(.active) { color: var(--text); }
+
+.role-config-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.role-config-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+  width: 160px;
+  flex-shrink: 0;
+}
+.role-config-content {
+  flex: 1;
+  min-width: 0;
+}
+.role-config-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--bg);
+  transition: all 0.15s;
+}
+.role-config-item:hover { border-color: var(--accent); background: #eff6ff; }
+.role-config-item.active { border-color: var(--accent); background: #eff6ff; box-shadow: 0 0 0 1px var(--accent); }
+.role-config-item-label { font-weight: 600; font-size: 13px; }
+.role-config-item-count { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.role-config-item-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 99px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.role-config-item-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width 0.3s;
+}
+
+.role-config-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.role-perm-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.role-perm-group {
+  background: var(--bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.role-perm-group-title {
+  padding: 10px 14px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+.role-perm-group-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+.role-perm-group-check input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.role-perm-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 14px;
+}
+.role-perm-feature {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.role-perm-feature:has(input:checked) {
+  border-color: var(--accent);
+  background: #eff6ff;
+  color: var(--accent);
+  font-weight: 600;
+}
+.role-perm-feature input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .role-config-layout { flex-direction: column; }
+  .role-config-sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; }
+  .role-config-item { flex: 1; min-width: 130px; }
+}
+
+/* ── 每日清點 ── */
+.di-count-input:focus { outline: none; border-color: var(--accent) !important; }
+.di-note-input:focus  { outline: none; border-color: var(--accent) !important; }
+
+/* ── 清點紀錄卡片 ── */
+.inv-log-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.inv-log-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.inv-log-sig-wrap {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.inv-log-sig-wrap::before {
+  content: '✍️ 清點人簽名';
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  align-self: flex-end;
+}
+.inv-log-sig-img {
+  max-width: 260px;
+  max-height: 90px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  object-fit: contain;
+}
+
+
+
+/* ── 每日清點 meta bar ── */
+.di-meta-bar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  background: var(--white);
+  border-radius: 10px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+}
+.di-meta-bar .form-group { margin: 0; min-width: 150px; flex: 1; }
+
+/* ── Drug cards ── */
+.di-drug-list { display: flex; flex-direction: column; gap: 10px; }
+.di-drug-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  transition: box-shadow 0.15s;
+}
+.di-drug-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.di-drug-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.di-drug-name { font-weight: 700; font-size: 15px; }
+.di-drug-cat  {
+  margin-left: 8px;
+  font-size: 11px;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+.di-drug-unit {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+.di-batch-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 32px;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+.di-batch-rows { display: flex; flex-direction: column; gap: 6px; }
+.di-batch-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 32px;
+  gap: 8px;
+  align-items: center;
+}
+.di-batch-row input {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 14px;
+  width: 100%;
+  background: white;
+  transition: border-color 0.15s;
+}
+.di-batch-row input:focus { outline: none; border-color: var(--accent); }
+.di-batch-remove {
+  width: 30px; height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  line-height: 1;
+  padding: 0;
+}
+.di-batch-remove:hover { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+.di-add-batch-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 7px;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.di-add-batch-btn:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+
+/* ── Canvas signature ── */
+.sig-canvas-wrap {
+  position: relative;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+.sig-canvas-wrap canvas { display: block; width: 100%; cursor: crosshair; touch-action: none; }
+.sig-clear-btn {
+  position: absolute;
+  top: 8px; right: 8px;
+  font-size: 11px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.15s;
+}
+.sig-clear-btn:hover { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+.sig-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #cbd5e1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── 藥材清點 全版面表格（繼承 personnel-table 風格）── */
+.med-supply-table-wrap {
+  /* 與人員資訊管理相同：auto 在有溢出時才顯示捲軸，無溢出時不顯示 */
+  overflow-x: auto;
+}
+.med-supply-table {
+  table-layout: fixed;
+  width: calc(100% - 1px); /* sub-pixel 安全邊距，防止 1-3px 浮點誤差觸發捲軸 */
+}
+/* 緊湊 padding（覆蓋 personnel-table 的 10px 14px） */
+.med-supply-table td,
+.med-supply-table th { padding: 8px 8px; }
+
+/* 拖曳把手欄 */
+.med-supply-table .mst-col-drag { width: 30px; text-align: center; cursor: default; }
+
+/* 欄寬：固定欄加寬，讓藥品名稱欄縮短 */
+.med-supply-table .mst-name   { width: auto; min-width: 70px; }
+.med-supply-table .mst-cat    { width: 78px; }
+.med-supply-table .mst-unit   { width: 48px;  text-align: center; }
+.med-supply-table .mst-qty    { width: 68px;  text-align: center; }
+.med-supply-table .mst-expiry { width: 88px;  text-align: center; }
+.med-supply-table .mst-avg    { width: 58px;  text-align: center; font-size: 12px; color: var(--text-muted); }
+.med-supply-table .mst-base   { width: 58px;  text-align: center; font-size: 12px; }
+.med-supply-table .mst-safe   { width: 66px;  text-align: center; font-size: 12px; }
+.med-supply-table .mst-status { width: 82px;  text-align: center; }
+/* 操作欄：三個按鈕，padding-left 縮小讓按鈕靠左 */
+.med-supply-table .col-actions { width: 122px; padding-left: 2px; }
+
+/* 藥品名稱 ellipsis */
+.med-supply-table .mst-name strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 類別小標籤（同 unit-tag 風格，但顏色不同） */
+.mst-cat-tag {
+  display: inline-block;
+  background: rgba(99,102,241,.1);
+  color: #4f46e5;
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 狀態徽章 */
+.mst-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.mst-badge.ok     { background: var(--green-bg); color: var(--green); }
+.mst-badge.warn   { background: var(--yellow-bg); color: #b45309; }
+.mst-badge.danger { background: var(--red-bg); color: var(--red); }
+.mst-badge.grey   { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ── 藥材清單 stats（緊湊版）── */
+.med-stats-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+.msc-item { display: flex; align-items: center; gap: 4px; }
+.msc-item strong { font-size: 15px; font-weight: 700; color: var(--text); }
+.msc-item.warn   strong { color: var(--yellow); }
+.msc-item.danger strong { color: var(--red);    }
+.msc-sep { color: var(--border); font-size: 16px; }
+
+/* Keep old classes for equipment page */
+.med-stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.med-stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  min-width: 100px;
+  text-align: center;
+  flex: 1;
+}
+.med-stat-card .val { font-size: 22px; font-weight: 700; }
+.med-stat-card .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.med-stat-card.red   { border-color: var(--red);    }
+.med-stat-card.yellow { border-color: #fcd34d; }
+
+/* ── 醫務所分區 tabs ── */
+.pharmacy-tab-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.pharmacy-tab-btn {
+  padding: 6px 16px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .15s;
+}
+.pharmacy-tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pharmacy-tab-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+@media (max-width: 1100px) {
+  .med-supply-table .mst-avg  { display: none; }
+  .med-supply-table .mst-base { display: none; }
+  .med-supply-table .mst-safe { display: none; }
+}
+@media (max-width: 860px) {
+  .di-meta-bar .form-group { min-width: 140px; }
+  .med-supply-table .mst-expiry { display: none; }
+}
+@media (max-width: 640px) {
+  .med-supply-table .mst-unit { display: none; }
+  .med-supply-table { table-layout: auto; }
+}
+@media (max-width: 600px) {
+  .di-batch-header, .di-batch-row { grid-template-columns: 1fr 1fr 30px; gap: 6px; }
+  .di-meta-bar { flex-direction: column; gap: 10px; }
+  .di-meta-bar .form-group { min-width: unset; flex: unset; width: 100%; }
+  .pharmacy-tab-btn { font-size: 12px; padding: 5px 12px; }
+}

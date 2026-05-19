@@ -43,6 +43,9 @@ const COL_APPLICATIONS  = collection(db, 'applications');
 const COL_VEHICLES      = collection(db, 'vehicles');
 const COL_UNIFORM_POINTS  = collection(db, 'uniformPoints');
 const COL_ACCOUNT_REQS    = collection(db, 'accountRequests');
+const COL_MED_SUPPLIES    = collection(db, 'medSupplies');
+const COL_MED_INV_LOGS    = collection(db, 'medInventoryLogs');
+const COL_MED_EQUIPS      = collection(db, 'medEquipments');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -50,7 +53,11 @@ let records       = [];
 let batches       = [];
 let recruiters    = [];
 let leads         = [];
-let adminSettings = { units: [], battalions: [], companies: [], medUnits: [] };
+let adminSettings = { units: [], battalions: [], companies: [], medUnits: [], pharmacies: [] };
+
+// 醫務所分區狀態
+let currentMedPharmacyId = ''; // 目前選中的醫務所（藥材清點頁）
+let medSupplyShowHidden  = false; // 是否顯示已隱藏藥材
 
 let currentTab     = 'civilian';
 let editingId      = null;
@@ -69,6 +76,20 @@ let viewingAppId    = null;
 let vehicles        = [];
 let editingVehicleId = null;
 
+let medSupplies      = [];
+let medInventoryLogs = [];
+let medEquipments    = [];
+
+// 車輛狀態設定（提前至頂部避免 TDZ）
+const VS = {
+  pending:  { label: '待送紙本', color: '#d97706', bg: '#fef3c7' },
+  applying: { label: '申請中',   color: '#2563eb', bg: '#dbeafe' },
+  issued:   { label: '已核發',   color: '#16a34a', bg: '#dcfce7' },
+};
+
+// 服裝點數單位（提前至頂部避免 TDZ）
+const UP_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
+
 // ── 台灣熱門汽機車廠牌（中英對照）────────────────────
 const CAR_BRANDS  = [
   'Toyota 豐田','Honda 本田','Nissan 日產','Mazda 馬自達','Ford 福特',
@@ -83,6 +104,16 @@ const MOTO_BRANDS = [
   '台鈴 Suzuki TW','Harley-Davidson 哈雷','BMW 寶馬',
 ];
 const OTHER_BRAND = '其他（手動輸入）';
+
+// 階級權重（數字越小階級越高）
+const RANK_WEIGHT = {
+  '少將':1,'上校':2,'中校':3,'少校':4,
+  '上尉':5,'中尉':6,'少尉':7,
+  '一等士官長':8,'二等士官長':9,'三等士官長':10,'士官長':11,
+  '上士':12,'中士':13,'下士':14,
+  '上等兵':15,'一等兵':16,'二等兵':17,'上兵':18,'列兵':19,
+};
+function rankWeight(rank) { return RANK_WEIGHT[rank] ?? 99; }
 
 function getBrandOptions(type) {
   if (!type) return '<option value="">— 請先選車種 —</option>';
@@ -128,38 +159,86 @@ let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points']) },
-  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','trainee-list','batch-sched','interview-query','recruiters','leads']) },
-  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','personnel','applications']) },
-  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','vehicles','uniform-points']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points','medical-supplies','medical-equipment','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points','medical-supplies','medical-equipment']) },
+  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
+  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','daily-inventory','personnel','applications']) },
+  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','daily-inventory','vehicles','uniform-points']) },
+  medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','daily-inventory','medical-supplies','medical-equipment']) },
+  gaoguan:   { label: '高勤官',       pages: new Set(['home','profile','daily-inventory','personnel','vehicles','uniform-points','medical-supplies','medical-equipment']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile']) },
 };
+const FEATURE_GROUPS = [
+  { group: '招募管理', icon: '📋', features: [
+    { id: 'trainee-list',    label: '訓員列表' },
+    { id: 'batch-sched',     label: '梯次期程' },
+    { id: 'interview-query', label: '約談紀錄查詢' },
+    { id: 'recruiters',      label: '招募員管理' },
+    { id: 'leads',           label: '問卷填答' },
+  ]},
+  { group: '人事管理', icon: '👤', features: [
+    { id: 'personnel',    label: '人員資訊管理' },
+    { id: 'applications', label: '入職申請' },
+  ]},
+  { group: '後勤管理', icon: '🚚', features: [
+    { id: 'vehicles',       label: '車輛資訊管理' },
+    { id: 'uniform-points', label: '服裝供售點數' },
+  ]},
+  { group: '醫療軍品管理', icon: '💊', features: [
+    { id: 'medical-supplies',   label: '藥材清點' },
+    { id: 'medical-equipment',  label: '衛材裝備清點' },
+  ]},
+  { group: '高勤業務', icon: '🎖️', features: [
+    { id: 'personnel',       label: '人員資訊管理' },
+    { id: 'vehicles',        label: '車輛資訊管理' },
+    { id: 'uniform-points',  label: '服裝供售點數' },
+    { id: 'medical-supplies',label: '藥材清點' },
+    { id: 'medical-equipment',label:'衛材裝備清點' },
+  ]},
+];
+
 let currentRole = 'member';
+let currentUserUnitScope = null; // null = 全部單位, ['衛生營第一連'] = 限定單位
+let roleConfig = {}; // loaded from Firestore, overrides ROLES pages
+
+// 依 unitScope 過濾資料列表（管理員/主管永遠看全部）
+function filterByUnitScope(list, field = 'unit') {
+  if (!currentUserUnitScope || !currentUserUnitScope.length) return list;
+  if (currentRole === 'admin' || currentRole === 'manager') return list;
+  return list.filter(item => currentUserUnitScope.includes(item[field]));
+}
+
+function getRolePages(roleId) {
+  if (roleConfig[roleId]) return new Set(roleConfig[roleId]);
+  return ROLES[roleId]?.pages || new Set(['home','profile']);
+}
 
 function applyRolePermissions(role) {
   currentRole = role;
+  const allowed = getRolePages(role);
+  allowed.add('home');
+  allowed.add('profile');
   // Role-restricted nav items
   document.querySelectorAll('li[data-roles]').forEach(li => {
     li.style.display = li.dataset.roles.split(',').includes(role) ? '' : 'none';
   });
   // Section labels
   const show = {
-    admin:     ['recruit','personnel','logistics','system'],
-    manager:   ['recruit','personnel','logistics'],
-    recruit:   ['recruit','logistics'],
-    personnel: ['personnel','logistics'],
+    admin:     ['recruit','personnel','logistics','medical','system'],
+    manager:   ['recruit','personnel','logistics','medical'],
+    recruit:   ['recruit'],
+    personnel: ['personnel'],
     logistics: ['logistics'],
+    medical:   ['medical'],
     member:    [],
   }[role] || [];
-  ['recruit','personnel','logistics','system'].forEach(s => {
+  ['recruit','personnel','logistics','medical','system'].forEach(s => {
     const el = document.getElementById(`nav-section-${s}`);
     if (el) el.style.display = show.includes(s) ? '' : 'none';
   });
   // Admin nav item
   document.getElementById('admin-nav-item').style.display = role === 'admin' ? '' : 'none';
   // Redirect if current page unauthorized
-  const allowed = ROLES[role]?.pages || ROLES.member.pages;
   const active  = document.querySelector('.page.active')?.id?.replace('page-', '');
   if (active && !allowed.has(active)) navigateTo('home');
 }
@@ -217,8 +296,17 @@ function showApp(user, userData) {
   authPage.style.display = 'none';
   mainHeader.style.display = '';
   mainLayout.style.display = '';
-  document.getElementById('header-email').textContent = userData.name || user.displayName || user.email || '';
+  const footerEl = document.getElementById('app-footer');
+  if (footerEl) footerEl.style.display = '';
+  // Use personnel record name + rank if linked
+  const me = personnel?.find?.(p => p.id === userData.personnelId || (p.email && p.email.toLowerCase() === (user.email||'').toLowerCase()));
+  const displayName = me
+    ? `${me.rank ? me.rank + ' ' : ''}${me.name}`.trim()
+    : (userData.name || user.email || '');
+  document.getElementById('header-email').textContent = displayName;
   const role = userData.role || (userData.admin || user.email === ADMIN_EMAIL ? 'admin' : 'member');
+  // 載入資料範圍（空陣列或未設定 = 全部）
+  currentUserUnitScope = (userData.unitScope && userData.unitScope.length) ? userData.unitScope : null;
   applyRolePermissions(role);
 }
 
@@ -258,7 +346,30 @@ onAuthStateChanged(auth, async user => {
       lastLogin:   new Date().toISOString(),
     });
 
-    if (approved) {
+    // 若管理員已預先建立人員資料（以 email 比對），自動帶入並核准
+    let autoApproved = false;
+    if (user.email) {
+      try {
+        const presSnap = await getDocs(query(COL_PERSONNEL, where('email', '==', user.email)));
+        if (!presSnap.empty) {
+          const pData = presSnap.docs[0].data();
+          const pId   = presSnap.docs[0].id;
+          await updateDoc(userRef, {
+            name:        pData.name  || user.displayName || '',
+            rank:        pData.rank  || '',
+            unit:        pData.unit  || '',
+            phone:       pData.phone || '',
+            personnelId: pId,
+            approved:    true,   // auto-approve if admin pre-created personnel
+          });
+          // link personnel doc → user uid
+          await updateDoc(doc(db, 'personnel', pId), { uid: user.uid });
+          autoApproved = true;
+        }
+      } catch(e) { console.warn('auto-populate failed', e); }
+    }
+
+    if (approved || autoApproved) {
       showApp(user, { name: user.displayName, admin: isAdmin, role: isAdmin ? 'admin' : 'member' });
       if (!appStarted) { appStarted = true; startApp(); }
     } else {
@@ -269,6 +380,17 @@ onAuthStateChanged(auth, async user => {
   } else {
     const userData = userSnap.data();
     await updateDoc(userRef, { lastLogin: new Date().toISOString() });
+    // 補連結：現有帳號但 personnelId 尚未設定
+    if (userData.approved && !userData.personnelId && user.email) {
+      try {
+        const presSnap = await getDocs(query(COL_PERSONNEL, where('email', '==', user.email)));
+        if (!presSnap.empty) {
+          const pId = presSnap.docs[0].id;
+          await updateDoc(userRef, { personnelId: pId });
+          await updateDoc(doc(db, 'personnel', pId), { uid: user.uid });
+        }
+      } catch(e) {}
+    }
     if (userData.approved) {
       showApp(user, userData);
       if (!appStarted) { appStarted = true; startApp(); }
@@ -382,12 +504,15 @@ window.approveUser = async function(uid) {
 
 // ── Loading ───────────────────────────────────────────
 const loaded = new Set();
+let _loadingTimer = null;
+function hideLoadingScreen() {
+  const ls = document.getElementById('loading-screen');
+  if (ls) ls.style.display = 'none';
+  if (_loadingTimer) { clearTimeout(_loadingTimer); _loadingTimer = null; }
+}
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 10) {
-    const ls = document.getElementById('loading-screen');
-    if (ls) ls.style.display = 'none';
-  }
+  if (loaded.size >= 13) hideLoadingScreen();
 }
 
 // ── Districts ─────────────────────────────────────────
@@ -530,8 +655,31 @@ function renderAdminPage() {
   makeList('admin-company-list',   adminSettings.companies,  'companies');
   makeList('admin-medunit-list',   adminSettings.medUnits,   'medUnits');
 
+  // ── 醫務所清單 ──
+  const pharmaEl = document.getElementById('admin-pharmacy-list');
+  if (pharmaEl) {
+    const pArr = adminSettings.pharmacies || [];
+    pharmaEl.innerHTML = pArr.length
+      ? pArr.map((p, i) => `
+          <li class="admin-list-item">
+            <span>🏥 ${p.name}</span>
+            <div class="admin-item-actions">
+              <button class="admin-order-btn" onclick="movePharmacy(${i},'up')"  ${i === 0 ? 'disabled' : ''}>▲</button>
+              <button class="admin-order-btn" onclick="movePharmacy(${i},'down')" ${i === pArr.length - 1 ? 'disabled' : ''}>▼</button>
+              <button class="btn-icon danger" onclick="removePharmacy('${p.id}')">✕</button>
+            </div>
+          </li>`).join('')
+      : '<li style="color:var(--text-muted);font-size:13px;padding:8px 0">尚無醫務所</li>';
+  }
+
   // ── 帳號 / 申請整合清單 ──
   renderAdminAccountsSection();
+
+  // ── 帳號角色＋單位範圍分配 ──
+  renderUserRoleAssignment();
+
+  // ── 角色業務設定 ──
+  renderRoleConfig();
 }
 
 // ── 整合帳號申請 + 已登入帳號 ─────────────────────────
@@ -790,6 +938,31 @@ document.getElementById('admin-company-add').addEventListener('click',
 document.getElementById('admin-medunit-add').addEventListener('click',
   () => addAdminItem('medUnits',   'admin-medunit-input'));
 
+// ── 醫務所 CRUD ───────────────────────────────────────
+document.getElementById('admin-pharmacy-add')?.addEventListener('click', async () => {
+  const input = document.getElementById('admin-pharmacy-input');
+  const name  = input?.value.trim();
+  if (!name) return;
+  const id    = 'pha_' + Date.now();
+  const arr   = [...(adminSettings.pharmacies || []), { id, name }];
+  await setDoc(DOC_ADMIN, { ...adminSettings, pharmacies: arr });
+  if (input) input.value = '';
+});
+
+window.removePharmacy = async function(id) {
+  if (!confirm('確定刪除此醫務所？相關藥材資料不受影響，但篩選可能失效。')) return;
+  const arr = (adminSettings.pharmacies || []).filter(p => p.id !== id);
+  await setDoc(DOC_ADMIN, { ...adminSettings, pharmacies: arr });
+};
+
+window.movePharmacy = async function(idx, dir) {
+  const arr = [...(adminSettings.pharmacies || [])];
+  const newIdx = dir === 'up' ? idx - 1 : idx + 1;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  await setDoc(DOC_ADMIN, { ...adminSettings, pharmacies: arr });
+};
+
 [
   ['admin-unit-input',      'units'],
   ['admin-battalion-input', 'battalions'],
@@ -832,8 +1005,11 @@ const PAGE_INIT = {
   'admin':           () => { renderAdminPage(); },
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
   'applications':    () => renderApplications(),
-  'vehicles':        () => renderVehiclesPage(),
-  'uniform-points':  () => renderUniformPointsPage(),
+  'vehicles':          () => renderVehiclesPage(),
+  'uniform-points':    () => renderUniformPointsPage(),
+  'medical-supplies':  () => renderMedicalSupplies(),
+  'medical-equipment': () => renderMedicalEquipment(),
+  'daily-inventory':   () => renderDailyInventory(),
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -856,11 +1032,15 @@ function navigateTo(page) {
   const sec = document.getElementById('page-' + page);
   if (sec) sec.classList.add('active');
   if (PAGE_INIT[page]) PAGE_INIT[page]();
+  // 頁尾機敏聲明：僅人員資訊管理頁顯示
+  const footer = document.getElementById('app-footer');
+  if (footer) footer.style.display = (page === 'personnel') ? '' : 'none';
 }
 
 // ── Tabs ──────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (btn.dataset.medtab) return; // handled by medtab listener
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
@@ -1166,7 +1346,7 @@ window.openInterview = function (recruitId) {
   document.getElementById('iv-date').value = new Date().toISOString().slice(0, 10);
   const sel = document.getElementById('iv-handler');
   sel.innerHTML = '<option value="">請選擇</option>' +
-    personnel.filter(p => p.isRecruiter).map(p => `<option>${p.rank} ${p.name}</option>`).join('');
+    recruiters.map(p => `<option>${p.rank} ${p.name}</option>`).join('');
   document.getElementById('interviewOverlay').classList.add('open');
 };
 
@@ -1210,6 +1390,7 @@ window.deleteInterview = async function (rId, idx) {
 // ── 梯次期程 ──────────────────────────────────────────
 const SCHED_FIELDS = [
   { key: 'enrollDate',    label: '接訓日（入營）' },
+  { key: 'carnivalDate',  label: '嘉年華' },
   { key: 'willDeadline',  label: '意願截止日' },
   { key: 'w8Supplement',  label: '八週補件截止' },
   { key: 'w8Enlist',      label: '八週起役日' },
@@ -1269,7 +1450,7 @@ function populateBUnitSelect(selectedVal) {
 document.getElementById('addBatchBtn').addEventListener('click', () => {
   editingBatchId = null;
   document.getElementById('batch-modal-title').textContent = '新增梯次';
-  ['b-name','b-enrollDate','b-willDeadline',
+  ['b-name','b-enrollDate','b-carnivalDate','b-willDeadline',
    'b-w8Supplement','b-w8Enlist','b-w12Supplement','b-w12Enlist']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('b-type').value = 'military';
@@ -1290,7 +1471,7 @@ document.getElementById('batchSaveBtn').addEventListener('click', async () => {
   const gv = id => document.getElementById(id)?.value || '';
   const data = {
     name, type: gv('b-type'), unit: document.getElementById('b-unit').value,
-    enrollDate: gv('b-enrollDate'), willDeadline: gv('b-willDeadline'),
+    enrollDate: gv('b-enrollDate'), carnivalDate: gv('b-carnivalDate'), willDeadline: gv('b-willDeadline'),
     w8Supplement: gv('b-w8Supplement'), w8Enlist: gv('b-w8Enlist'),
     w12Supplement: gv('b-w12Supplement'), w12Enlist: gv('b-w12Enlist'),
   };
@@ -1312,7 +1493,7 @@ window.openBatchEdit = function (id) {
   const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v || ''; };
   sv('b-name', b.name); sv('b-type', b.type);
   populateBUnitSelect(b.unit || '');
-  sv('b-enrollDate', b.enrollDate); sv('b-willDeadline', b.willDeadline);
+  sv('b-enrollDate', b.enrollDate); sv('b-carnivalDate', b.carnivalDate); sv('b-willDeadline', b.willDeadline);
   sv('b-w8Supplement', b.w8Supplement); sv('b-w8Enlist', b.w8Enlist);
   sv('b-w12Supplement', b.w12Supplement); sv('b-w12Enlist', b.w12Enlist);
   document.getElementById('batchModalOverlay').classList.add('open');
@@ -1374,9 +1555,9 @@ function renderInterviewQuery() {
 // ── 招募員管理 ────────────────────────────────────────
 function renderRecruiters() {
   const c    = document.getElementById('recruiter-list');
-  const recs = personnel.filter(p => p.isRecruiter);
+  const recs = recruiters; // 使用獨立 recruiters 集合
   if (!recs.length) {
-    c.innerHTML = `<div class="empty-state"><div class="icon">🪖</div><p>尚無招募員，點擊「＋ 新增招募員」新增人員並設定</p></div>`;
+    c.innerHTML = `<div class="empty-state"><div class="icon">🪖</div><p>尚無招募員，點擊「＋ 新增招募員」建立</p></div>`;
     return;
   }
 
@@ -1425,13 +1606,11 @@ function renderRecruiters() {
       <div class="recruiter-avatar">${p.name?.[0] || '?'}</div>
       <div class="recruiter-info">
         <div class="recruiter-name">${p.rank || ''} ${p.name}</div>
-        ${p.unit  ? `<div class="recruiter-meta">🏢 ${p.unit}</div>` : ''}
-        ${p.phone ? `<div class="recruiter-meta">📞 ${p.phone}</div>` : ''}
         ${expiryBadge}
       </div>
       <div class="recruit-actions" onclick="event.stopPropagation()">
-        <button class="btn-icon" onclick="openPersonnelEdit('${p.id}')">✏️</button>
-        <button class="btn-icon danger" onclick="unsetRecruiter('${p.id}')">✕</button>
+        <button class="btn-icon" onclick="openRecruiterEdit('${p.id}')">✏️</button>
+        <button class="btn-icon danger" onclick="deleteRecruiter('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -1439,9 +1618,18 @@ function renderRecruiters() {
   c.innerHTML = bannerHtml + cards;
 }
 
-document.getElementById('addRecruiterBtn').addEventListener('click', () => {
-  openPersonnelForm(null, true);
-});
+function openRecruiterModal(id = null) {
+  editingRcrId = id;
+  const r = id ? recruiters.find(x => x.id === id) : null;
+  document.getElementById('recruiter-modal-title').textContent = r ? '編輯招募員' : '新增招募員';
+  const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v ?? ''; };
+  sv('r-rank',       r?.rank);
+  sv('r-name',       r?.name);
+  sv('r-certExpiry', r?.certExpiry || '');
+  document.getElementById('recruiterModalOverlay').classList.add('open');
+}
+
+document.getElementById('addRecruiterBtn').addEventListener('click', () => openRecruiterModal(null));
 document.getElementById('recruiterModalClose').addEventListener('click',
   () => document.getElementById('recruiterModalOverlay').classList.remove('open'));
 document.getElementById('recruiterCancelBtn').addEventListener('click',
@@ -1454,7 +1642,11 @@ document.getElementById('recruiterSaveBtn').addEventListener('click', async () =
   const rank = document.getElementById('r-rank').value.trim();
   const name = document.getElementById('r-name').value.trim();
   if (!rank || !name) { alert('請填寫級職與姓名'); return; }
-  const data = { rank, name, phone: document.getElementById('r-phone').value.trim() };
+  const data = {
+    rank,
+    name,
+    certExpiry: document.getElementById('r-certExpiry').value || '',
+  };
   try {
     if (editingRcrId) {
       await updateDoc(doc(db, 'recruiters', editingRcrId), data);
@@ -1465,11 +1657,12 @@ document.getElementById('recruiterSaveBtn').addEventListener('click', async () =
   } catch (e) { console.error(e); alert('儲存失敗'); }
 });
 
-window.unsetRecruiter = async function (id) {
-  const p = personnel.find(x => x.id === id);
-  if (!p || !confirm(`確定要取消「${p.rank} ${p.name}」的招募員資格嗎？`)) return;
-  try { await updateDoc(doc(db, 'personnel', id), { isRecruiter: false }); }
-  catch (e) { console.error(e); alert('操作失敗'); }
+window.openRecruiterEdit = id => openRecruiterModal(id);
+
+window.deleteRecruiter = async function(id, name) {
+  if (!confirm(`確定要刪除招募員「${name}」？`)) return;
+  try { await deleteDoc(doc(db, 'recruiters', id)); }
+  catch (e) { console.error(e); alert('刪除失敗'); }
 };
 
 // ── Storage 使用量 ────────────────────────────────────
@@ -1801,46 +1994,78 @@ document.getElementById('prof-save-btn').addEventListener('click', async () => {
 // ── Start App (called after login) ────────────────────
 function startApp() {
   document.getElementById('loading-screen').style.display = '';
+  // 安全備援：最多等 10 秒，無論如何都關閉載入畫面
+  if (_loadingTimer) clearTimeout(_loadingTimer);
+  _loadingTimer = setTimeout(hideLoadingScreen, 10000);
+
+  onSnapshot(doc(db, 'settings', 'roleConfig'), snap => {
+    if (snap.exists()) {
+      roleConfig = snap.data();
+      if (currentRole !== 'member') applyRolePermissions(currentRole);
+    }
+  });
 
   onSnapshot(DOC_ADMIN, snap => {
-    const defaultSettings = { units: [], battalions: [], companies: [], medUnits: [] };
-    adminSettings = snap.exists() ? { ...defaultSettings, ...snap.data() } : defaultSettings;
-    // 若 medUnits 從未設定過，自動填入預設衛生營單位
-    if (!adminSettings.medUnits?.length) {
-      adminSettings.medUnits = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
-    }
-    renderAdminPage();
-    renderAdminSheetsSettings();
-    populateAdminDropdowns();
-    if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnelUnitFilters();
-    populatePersonnelUnit();
+    try {
+      const defaultSettings = { units: [], battalions: [], companies: [], medUnits: [], pharmacies: [] };
+      adminSettings = snap.exists() ? { ...defaultSettings, ...snap.data() } : defaultSettings;
+      // 若 medUnits 從未設定過，自動填入預設衛生營單位
+      if (!adminSettings.medUnits?.length) {
+        adminSettings.medUnits = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
+      }
+      // 若 pharmacies 從未設定過，自動填入預設醫務所
+      if (!adminSettings.pharmacies?.length) {
+        adminSettings.pharmacies = [
+          { id: 'pha_1', name: '成功北醫務所' },
+          { id: 'pha_2', name: '嘉義中坑醫務所' },
+        ];
+      }
+      // 若目前沒有選中醫務所，預設為第一個
+      if (!currentMedPharmacyId && adminSettings.pharmacies.length) {
+        currentMedPharmacyId = adminSettings.pharmacies[0].id;
+      }
+      renderAdminPage();
+      renderAdminSheetsSettings();
+      populateAdminDropdowns();
+      populatePharmacySelects();
+      renderPharmacyTabs();
+      if (document.getElementById('page-medical-supplies')?.classList.contains('active')) renderMedicalSupplies();
+      if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnelUnitFilters();
+      populatePersonnelUnit();
+    } catch(e) { console.error('admin snapshot error', e); }
     markLoaded('admin');
   }, () => markLoaded('admin'));
 
   onSnapshot(COL_RECRUITS, snap => {
-    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    records.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
-    if (document.getElementById('page-trainee-list').classList.contains('active')) renderList();
-    if (document.getElementById('page-interview-query').classList.contains('active')) renderInterviewQuery();
-    if (detailId && document.getElementById('detailOverlay').classList.contains('open')) {
-      const r = records.find(x => x.id === detailId);
-      if (r) renderDetail(r);
-    }
+    try {
+      records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      records.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
+      if (document.getElementById('page-trainee-list').classList.contains('active')) renderList();
+      if (document.getElementById('page-interview-query').classList.contains('active')) renderInterviewQuery();
+      if (detailId && document.getElementById('detailOverlay').classList.contains('open')) {
+        const r = records.find(x => x.id === detailId);
+        if (r) renderDetail(r);
+      }
+    } catch(e) { console.error('recruits snapshot error', e); }
     markLoaded('recruits');
   }, () => markLoaded('recruits'));
 
   onSnapshot(COL_BATCHES, snap => {
-    batches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    batches.sort((a, b) => (b.enrollDate || '').localeCompare(a.enrollDate || ''));
-    if (document.getElementById('page-batch-sched').classList.contains('active')) renderBatchSched();
-    const curBatch = document.getElementById('f-batch')?.value || '';
-    populateBatchDropdown(curBatch);
+    try {
+      batches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      batches.sort((a, b) => (b.enrollDate || '').localeCompare(a.enrollDate || ''));
+      if (document.getElementById('page-batch-sched').classList.contains('active')) renderBatchSched();
+      const curBatch = document.getElementById('f-batch')?.value || '';
+      populateBatchDropdown(curBatch);
+    } catch(e) { console.error('batches snapshot error', e); }
     markLoaded('batches');
   }, () => markLoaded('batches'));
 
   onSnapshot(COL_RECRUITERS, snap => {
-    recruiters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (document.getElementById('page-recruiters').classList.contains('active')) renderRecruiters();
+    try {
+      recruiters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (document.getElementById('page-recruiters').classList.contains('active')) renderRecruiters();
+    } catch(e) { console.error('recruiters snapshot error', e); }
     markLoaded('recruiters');
   }, () => markLoaded('recruiters'));
 
@@ -1849,78 +2074,335 @@ function startApp() {
   markLoaded('leads');
 
   onSnapshot(COL_PERSONNEL, snap => {
-    personnel = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnel();
-    if (document.getElementById('page-recruiters').classList.contains('active')) renderRecruiters();
+    try {
+      personnel = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (document.getElementById('page-personnel').classList.contains('active')) renderPersonnel();
+      if (document.getElementById('page-recruiters').classList.contains('active')) renderRecruiters();
+      if (document.getElementById('page-daily-inventory')?.classList.contains('active')) populateDiChargePerson();
+      // Refresh header name using actual personnel record
+      if (currentUser) {
+        const me = registeredUsers?.find?.(u => u.id === currentUser.uid);
+        const linkedPers = personnel.find(p => p.id === (me?.personnelId) || p.id === currentUser.uid || (p.email && p.email.toLowerCase() === (currentUser.email||'').toLowerCase()));
+        if (linkedPers) {
+          const nameEl = document.getElementById('header-email');
+          if (nameEl) nameEl.textContent = `${linkedPers.rank ? linkedPers.rank + ' ' : ''}${linkedPers.name}`.trim();
+        }
+      }
+    } catch(e) { console.error('personnel snapshot error', e); }
     markLoaded('personnel');
   }, () => markLoaded('personnel'));
 
   onSnapshot(COL_USERS, snap => {
     registeredUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // 角色管理列表（仍直接渲染，與 accounts 分開）
-    const roleEl = document.getElementById('admin-role-list');
-    if (roleEl) {
-      const approved = registeredUsers.filter(u => u.approved);
-      roleEl.innerHTML = !approved.length
-        ? '<li style="color:var(--text-muted);font-size:13px;padding:8px 0">尚無已核准用戶</li>'
-        : approved.map(u => {
-            const curRole = u.role || (u.admin ? 'admin' : 'member');
-            const opts = Object.entries(ROLES)
-              .map(([k, v]) => `<option value="${k}"${curRole === k ? ' selected' : ''}>${v.label}</option>`)
-              .join('');
-            return `
-            <li class="admin-list-item">
-              <div>
-                <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
-                <div style="font-size:12px;color:var(--text-muted)">${u.email}</div>
-              </div>
-              <div class="admin-item-actions">
-                <select class="role-select" onchange="changeUserRole('${u.id}', this.value)">${opts}</select>
-              </div>
-            </li>`;
-          }).join('');
-    }
+    // 角色＋單位範圍管理（合併渲染）
+    renderUserRoleAssignment();
 
     // 重新渲染整合帳號區塊
     if (document.getElementById('page-admin').classList.contains('active')) renderAdminAccountsSection();
+
+    if (currentUser) {
+      const me = registeredUsers.find(u => u.id === currentUser.uid);
+      if (me) {
+        const linkedPers = personnel?.find?.(p => p.id === me.personnelId || p.id === currentUser.uid || (p.email && p.email.toLowerCase() === (me.email||currentUser.email||'').toLowerCase()));
+        const nameEl = document.getElementById('header-email');
+        if (nameEl) {
+          const displayName = linkedPers
+            ? `${linkedPers.rank ? linkedPers.rank + ' ' : ''}${linkedPers.name}`.trim()
+            : (me.name || currentUser.email || '');
+          nameEl.textContent = displayName;
+        }
+      }
+    }
   }, () => {});
 
   onSnapshot(COL_APPLICATIONS, snap => {
-    applications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    applications.sort((a, b) => (b.submittedAt?.seconds || 0) - (a.submittedAt?.seconds || 0));
-    if (document.getElementById('page-applications').classList.contains('active')) renderApplications();
+    try {
+      applications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      applications.sort((a, b) => (b.submittedAt?.seconds || 0) - (a.submittedAt?.seconds || 0));
+      if (document.getElementById('page-applications').classList.contains('active')) renderApplications();
+    } catch(e) { console.error('applications snapshot error', e); }
     markLoaded('applications');
   }, () => markLoaded('applications'));
 
   onSnapshot(COL_VEHICLES, snap => {
-    vehicles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    vehicles.sort((a, b) => (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW'));
-    if (document.getElementById('page-vehicles').classList.contains('active')) renderVehiclesPage();
-    if (document.getElementById('page-profile').classList.contains('active')) renderMyVehicles();
+    try {
+      vehicles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      vehicles.sort((a, b) => {
+        const pa = personnel?.find?.(p => p.name === a.ownerName || p.id === a.personnelId);
+        const pb = personnel?.find?.(p => p.name === b.ownerName || p.id === b.personnelId);
+        const wa = rankWeight(pa?.rank || a.rank || '');
+        const wb = rankWeight(pb?.rank || b.rank || '');
+        if (wa !== wb) return wa - wb;
+        return (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW');
+      });
+      if (document.getElementById('page-vehicles').classList.contains('active')) renderVehiclesPage();
+      if (document.getElementById('page-profile').classList.contains('active')) renderMyVehicles();
+    } catch(e) { console.error('vehicles snapshot error', e); }
     markLoaded('vehicles');
   }, () => markLoaded('vehicles'));
 
   onSnapshot(COL_UNIFORM_POINTS, snap => {
-    uniformPoints = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    uniformPoints.sort((a, b) => (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW'));
-    if (document.getElementById('page-uniform-points').classList.contains('active')) renderUniformPointsPage();
-    if (document.getElementById('page-profile').classList.contains('active')) renderMyUniformPoints();
+    try {
+      uniformPoints = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      uniformPoints.sort((a, b) => {
+        const pa = personnel?.find?.(p => p.name === a.ownerName || p.id === a.personnelId);
+        const pb = personnel?.find?.(p => p.name === b.ownerName || p.id === b.personnelId);
+        const wa = rankWeight(pa?.rank || a.rank || '');
+        const wb = rankWeight(pb?.rank || b.rank || '');
+        if (wa !== wb) return wa - wb;
+        return (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW');
+      });
+      if (document.getElementById('page-uniform-points').classList.contains('active')) renderUniformPointsPage();
+      if (document.getElementById('page-profile').classList.contains('active')) renderMyUniformPoints();
+    } catch(e) { console.error('uniformPoints snapshot error', e); }
     markLoaded('uniformPoints');
   }, () => markLoaded('uniformPoints'));
 
   onSnapshot(COL_ACCOUNT_REQS, snap => {
-    accountRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    accountRequests.sort((a, b) => (b.requestedAt?.seconds || 0) - (a.requestedAt?.seconds || 0));
-    if (document.getElementById('page-admin').classList.contains('active')) renderAdminPage();
+    try {
+      accountRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      accountRequests.sort((a, b) => (b.requestedAt?.seconds || 0) - (a.requestedAt?.seconds || 0));
+      if (document.getElementById('page-admin').classList.contains('active')) renderAdminPage();
+    } catch(e) { console.error('accountRequests snapshot error', e); }
     markLoaded('accountRequests');
   }, () => markLoaded('accountRequests'));
+
+  onSnapshot(COL_MED_SUPPLIES, snap => {
+    try {
+      medSupplies = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      medSupplies.sort((a, b) => (a.name||'').localeCompare(b.name||'', 'zh-TW'));
+      if (document.getElementById('page-medical-supplies')?.classList.contains('active')) renderMedicalSupplies();
+      if (document.getElementById('page-daily-inventory')?.classList.contains('active')) renderDailyInventory();
+    } catch(e) { console.error('medSupplies snapshot error', e); }
+    markLoaded('medSupplies');
+  }, () => markLoaded('medSupplies'));
+
+  onSnapshot(COL_MED_INV_LOGS, snap => {
+    try {
+      medInventoryLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      medInventoryLogs.sort((a, b) => (b.date||'').localeCompare(a.date||''));
+      if (document.getElementById('page-medical-supplies')?.classList.contains('active')) renderMedicalSupplies();
+    } catch(e) { console.error('medInventoryLogs snapshot error', e); }
+    markLoaded('medInventoryLogs');
+  }, () => markLoaded('medInventoryLogs'));
+
+  onSnapshot(COL_MED_EQUIPS, snap => {
+    try {
+      medEquipments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      medEquipments.sort((a, b) => (a.name||'').localeCompare(b.name||'', 'zh-TW'));
+      if (document.getElementById('page-medical-equipment')?.classList.contains('active')) renderMedicalEquipment();
+    } catch(e) { console.error('medEquipments snapshot error', e); }
+    markLoaded('medEquipments');
+  }, () => markLoaded('medEquipments'));
+
+  onSnapshot(COL_PERSONNEL_AUDIT, snap => {
+    try {
+      personnelAuditLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      personnelAuditLogs.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0));
+      if (document.getElementById('personnel-pane-audit')?.style.display !== 'none') renderPersonnelAudit();
+    } catch(e) { console.error('personnelAudit snapshot error', e); }
+  }, () => {});
 }
 
 window.changeUserRole = async function(uid, role) {
   try { await updateDoc(doc(db, 'users', uid), { role }); }
   catch(e) { console.error(e); alert('角色更新失敗'); }
 };
+
+// ── 帳號角色＋資料範圍管理 ─────────────────────────────
+function renderUserRoleAssignment() {
+  const roleEl = document.getElementById('admin-role-list');
+  if (!roleEl) return;
+
+  const approved = registeredUsers.filter(u => u.approved || u.admin);
+  if (!approved.length) {
+    roleEl.innerHTML = '<li style="color:var(--text-muted);font-size:13px;padding:8px 0">尚無已核准用戶</li>';
+    return;
+  }
+
+  const units = getVehicleUnits(); // ['衛生營營部','衛生營第一連','衛生營第二連']
+
+  roleEl.innerHTML = approved.map(u => {
+    const uid     = u.id.replace(/'/g, "\\'");
+    const curRole = u.role || (u.admin ? 'admin' : 'member');
+    const roleOpts = Object.entries(ROLES)
+      .map(([k, v]) => `<option value="${k}"${curRole===k?' selected':''}>${v.label}</option>`)
+      .join('');
+    const userUnits = u.unitScope || [];
+    const allActive = !userUnits.length;
+
+    const unitPills = units.map(unit => {
+      const shortName = unit.replace(/^衛生營/, '').trim() || unit;
+      const active    = userUnits.includes(unit);
+      return `<label class="unit-scope-pill${active ? ' active' : ''}">
+        <input type="checkbox" value="${unit}" ${active ? 'checked' : ''}
+          onchange="updateUserUnitScope('${uid}', this)">
+        ${shortName}
+      </label>`;
+    }).join('');
+
+    return `<li class="admin-list-item user-role-row" data-uid="${u.id}">
+      <div class="user-role-info">
+        <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${u.email}</div>
+      </div>
+      <div class="user-role-controls">
+        <div class="user-role-section">
+          <div class="user-role-lbl">業務</div>
+          <select class="role-select" onchange="changeUserRole('${uid}', this.value)">${roleOpts}</select>
+        </div>
+        <div class="user-role-section">
+          <div class="user-role-lbl">資料範圍</div>
+          <div class="unit-scope-pills">
+            <label class="unit-scope-pill${allActive ? ' active all-pill' : ' all-pill'}"
+              onclick="setUserAllUnits('${uid}', this); return false;">全部</label>
+            ${unitPills}
+          </div>
+        </div>
+      </div>
+    </li>`;
+  }).join('');
+}
+
+window.updateUserUnitScope = async function(uid, checkbox) {
+  const row       = checkbox.closest('.user-role-row');
+  const checked   = [...row.querySelectorAll('.unit-scope-pills input:checked')].map(cb => cb.value);
+  const allPill   = row.querySelector('.all-pill');
+  // 更新 UI
+  checkbox.closest('.unit-scope-pill').classList.toggle('active', checkbox.checked);
+  if (allPill) allPill.classList.toggle('active', !checked.length);
+  try { await updateDoc(doc(db, 'users', uid), { unitScope: checked }); }
+  catch(e) { console.error(e); }
+};
+
+window.setUserAllUnits = async function(uid, allPill) {
+  const row = allPill.closest('.user-role-row');
+  // 取消全部勾選
+  row.querySelectorAll('.unit-scope-pills input').forEach(cb => { cb.checked = false; });
+  row.querySelectorAll('.unit-scope-pill').forEach(p => p.classList.remove('active'));
+  allPill.classList.add('active');
+  try { await updateDoc(doc(db, 'users', uid), { unitScope: [] }); }
+  catch(e) { console.error(e); }
+};
+
+// ── 角色業務設定 ─────────────────────────────────────
+let selectedRoleConfigId = 'manager';
+
+function renderRoleConfig() {
+  const sidebar  = document.getElementById('role-config-sidebar');
+  const panel    = document.getElementById('role-config-panel');
+  if (!sidebar || !panel) return;
+
+  const configurableRoles = Object.entries(ROLES).filter(([k]) => k !== 'admin' && k !== 'member');
+
+  sidebar.innerHTML = configurableRoles.map(([k, v]) => {
+    const pages  = getRolePages(k);
+    const count  = FEATURE_GROUPS.flatMap(g => g.features).filter(f => pages.has(f.id)).length;
+    const total  = FEATURE_GROUPS.flatMap(g => g.features).length;
+    return `<div class="role-config-item${k === selectedRoleConfigId ? ' active' : ''}" onclick="selectRoleConfig('${k}')">
+      <div>
+        <div class="role-config-item-label">${v.label}</div>
+        <div class="role-config-item-count">${count} / ${total} 功能</div>
+      </div>
+      <div class="role-config-item-bar">
+        <div class="role-config-item-bar-fill" style="width:${Math.round(count/total*100)}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  renderRoleConfigPanel(selectedRoleConfigId);
+}
+
+function renderRoleConfigPanel(roleId) {
+  selectedRoleConfigId = roleId;
+  const panel = document.getElementById('role-config-panel');
+  if (!panel) return;
+  const v = ROLES[roleId];
+  if (!v) return;
+  const pages = getRolePages(roleId);
+
+  panel.innerHTML = `
+    <div class="role-config-panel-header">
+      <div>
+        <div style="font-weight:700;font-size:16px">${v.label}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">勾選此角色可存取的功能頁面</div>
+      </div>
+      <button class="btn btn-primary btn-sm" id="saveRoleConfigBtn">💾 儲存</button>
+    </div>
+    <div class="role-perm-groups">
+      ${FEATURE_GROUPS.map(g => `
+        <div class="role-perm-group">
+          <div class="role-perm-group-title">
+            <label class="role-perm-group-check">
+              <input type="checkbox" class="role-group-all"
+                data-group="${g.group}"
+                ${g.features.every(f => pages.has(f.id)) ? 'checked' : ''}
+                onchange="toggleRoleGroup(this)">
+              ${g.icon} ${g.group}
+            </label>
+          </div>
+          <div class="role-perm-features">
+            ${g.features.map(f => `
+              <label class="role-perm-feature">
+                <input type="checkbox" class="role-feature-cb" data-feature="${f.id}" ${pages.has(f.id) ? 'checked' : ''} onchange="syncGroupCheckbox(this)">
+                ${f.label}
+              </label>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+
+  document.getElementById('saveRoleConfigBtn').addEventListener('click', () => saveRoleConfigForRole(roleId));
+
+  // re-highlight sidebar
+  document.querySelectorAll('.role-config-item').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${roleId}'`));
+  });
+}
+
+window.selectRoleConfig = function(roleId) {
+  selectedRoleConfigId = roleId;
+  renderRoleConfigPanel(roleId);
+  renderRoleConfig(); // refresh sidebar counts
+};
+
+window.toggleRoleGroup = function(cb) {
+  const group   = cb.dataset.group;
+  const checked = cb.checked;
+  const grp     = FEATURE_GROUPS.find(g => g.group === group);
+  if (!grp) return;
+  grp.features.forEach(f => {
+    const el = document.querySelector(`.role-feature-cb[data-feature="${f.id}"]`);
+    if (el) el.checked = checked;
+  });
+};
+
+window.syncGroupCheckbox = function(cb) {
+  const featureId = cb.dataset.feature;
+  const grp = FEATURE_GROUPS.find(g => g.features.some(f => f.id === featureId));
+  if (!grp) return;
+  const allChecked = grp.features.every(f => {
+    const el = document.querySelector(`.role-feature-cb[data-feature="${f.id}"]`);
+    return el?.checked;
+  });
+  const groupCb = document.querySelector(`.role-group-all[data-group="${grp.group}"]`);
+  if (groupCb) groupCb.checked = allChecked;
+};
+
+async function saveRoleConfigForRole(roleId) {
+  const cbs   = document.querySelectorAll('.role-feature-cb');
+  const pages = ['home','profile'];
+  cbs.forEach(cb => { if (cb.checked) pages.push(cb.dataset.feature); });
+  try {
+    const ref = doc(db, 'settings', 'roleConfig');
+    await setDoc(ref, { [roleId]: pages }, { merge: true });
+    roleConfig[roleId] = pages;
+    renderRoleConfig();
+    const btn = document.getElementById('saveRoleConfigBtn');
+    if (btn) { btn.textContent = '✓ 已儲存'; btn.disabled = true; setTimeout(() => { btn.textContent = '💾 儲存'; btn.disabled = false; }, 1500); }
+  } catch(e) { console.error(e); alert('儲存失敗'); }
+}
 
 // ══════════════════════════════════════════════════════
 // ── 人員資訊管理 ─────────────────────────────────────
@@ -1963,9 +2445,9 @@ function renderPersonnelUnitFilters() {
 
 function renderPersonnel() {
   const q      = document.getElementById('personnelSearch')?.value.trim().toLowerCase() || '';
-  const sortBy = document.getElementById('personnelSortBy')?.value || 'unit';
+  const sortBy = document.getElementById('personnelSortBy')?.value || 'rank';
 
-  let filtered = personnel.filter(p => {
+  let filtered = filterByUnitScope(personnel).filter(p => {
     if (personnelUnitFilter.length > 0 && !personnelUnitFilter.includes(p.unit)) return false;
     if (q && !(p.name + p.phone + p.idNumber + p.rank + p.unit).toLowerCase().includes(q)) return false;
     return true;
@@ -1977,7 +2459,11 @@ function renderPersonnel() {
       if (uc !== 0) return uc;
       return (a.name || '').localeCompare(b.name || '', 'zh-TW');
     }
-    if (sortBy === 'rank') return (a.rank || '').localeCompare(b.rank || '', 'zh-TW');
+    if (sortBy === 'rank') {
+      const wr = rankWeight(a.rank) - rankWeight(b.rank);
+      if (wr !== 0) return wr;
+      return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+    }
     return (a.name || '').localeCompare(b.name || '', 'zh-TW');
   });
 
@@ -2140,9 +2626,115 @@ document.getElementById('personnelSaveBtn').addEventListener('click', async () =
   finally { btn.disabled = false; }
 });
 
+// ── 稽核紀錄 ──────────────────────────────────────────
+const COL_PERSONNEL_AUDIT = collection(db, 'personnelAuditLogs');
+let personnelAuditLogs = [];
+
+async function writeAuditLog(action, targetName) {
+  try {
+    // 取得用戶 IP（使用公開 API）
+    let ip = '—';
+    try {
+      const r = await fetch('https://api.ipify.org?format=json');
+      const j = await r.json();
+      ip = j.ip || '—';
+    } catch {}
+
+    const me = registeredUsers.find(u => u.id === currentUser?.uid);
+    const me2 = personnel?.find?.(p => p.id === me?.personnelId);
+    const accountLabel = (me2?.rank ? me2.rank + ' ' : '') + (me2?.name || me?.email || currentUser?.email || '—');
+
+    await addDoc(COL_PERSONNEL_AUDIT, {
+      action,
+      targetName,
+      account:   accountLabel,
+      accountId: currentUser?.uid || '',
+      ip,
+      ts: serverTimestamp(),
+    });
+  } catch(e) { console.warn('Audit log failed:', e); }
+}
+
+function renderPersonnelAudit() {
+  const tbody = document.getElementById('personnelAuditBody');
+  const empty = document.getElementById('personnelAuditEmpty');
+  const countEl = document.getElementById('personnel-audit-count');
+  if (!tbody) return;
+  if (!personnelAuditLogs.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = '';
+    if (countEl) countEl.textContent = '共 0 筆紀錄';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  if (countEl) countEl.textContent = `共 ${personnelAuditLogs.length} 筆紀錄`;
+  const actionColor = { '查看': '#3b82f6', '編輯': '#f59e0b', '新增': '#10b981', '刪除': '#ef4444' };
+  tbody.innerHTML = personnelAuditLogs.map(log => {
+    const ts = log.ts?.toDate?.() || new Date();
+    const timeStr = ts.toLocaleString('zh-TW', { hour12: false });
+    const color = actionColor[log.action] || '#6b7280';
+    return `<tr>
+      <td style="font-size:12px;color:var(--text-muted)">${timeStr}</td>
+      <td style="font-size:13px">${log.account || '—'}</td>
+      <td><span style="background:${color}20;color:${color};font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px">${log.action}</span></td>
+      <td>${log.targetName || '—'}</td>
+      <td style="font-family:monospace;font-size:12px;color:var(--text-muted)">${log.ip || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('personnelAuditClearBtn')?.addEventListener('click', async () => {
+  if (!confirm('確定清除所有操作紀錄？此動作不可復原。')) return;
+  try {
+    const snap = await getDocs(COL_PERSONNEL_AUDIT);
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  } catch(e) { alert('清除失敗：' + e.message); }
+});
+
+// 人員分頁 tab 切換
+document.querySelectorAll('[data-personnel-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-personnel-tab]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.personnelTab;
+    document.getElementById('personnel-pane-list').style.display  = tab === 'list'  ? '' : 'none';
+    document.getElementById('personnel-pane-audit').style.display = tab === 'audit' ? '' : 'none';
+    if (tab === 'audit') renderPersonnelAudit();
+  });
+});
+
 window.openPersonnelEdit = function (id) {
+  const p = personnel.find(x => x.id === id);
+  const name = p ? `${p.rank || ''} ${p.name}`.trim() : id;
+  // 二次確認警語
+  const confirmed = confirm(
+`【一般公務機密】
+
+您即將存取人事機敏資訊，
+系統將完整記錄帳號、時間及操作紀錄。
+
+限權責人員依職務需求使用，
+禁止未經授權查詢、修改、翻攝或外流資料。
+
+確定繼續？`
+  );
+  if (!confirmed) return;
+  writeAuditLog('編輯', name);
   closePersonnelDetail();
   openPersonnelForm(id);
+};
+
+// 從已登入帳號列表為尚未建立人員記錄的使用者預填並開啟人員表單
+window.createPersonnelForUser = function(uid, name, email) {
+  // 先切到人員管理頁
+  navigateTo('personnel');
+  setTimeout(() => {
+    openPersonnelForm(null);
+    const sv = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+    sv('pf-name', name);
+    // 使用者 doc id 與未來的 personnel doc id 對齊（存在 editingPersonnelId）
+    editingPersonnelId = uid;
+  }, 200);
 };
 
 // ── 重複人員處理 ──────────────────────────────────────
@@ -2480,11 +3072,6 @@ document.getElementById('personnelImportOverlay').addEventListener('click', e =>
 // ══════════════════════════════════════════════════════
 
 // ── Status config ─────────────────────────────────────
-const VS = {
-  pending:  { label: '待送紙本', color: '#d97706', bg: '#fef3c7' },
-  applying: { label: '申請中',   color: '#2563eb', bg: '#dbeafe' },
-  issued:   { label: '已核發',   color: '#16a34a', bg: '#dcfce7' },
-};
 function vsBadge(status) {
   const s = VS[status] || VS.pending;
   return `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;color:${s.color};background:${s.bg}">${s.label}</span>`;
@@ -2824,11 +3411,19 @@ function renderVehiclesPage() {
   const status = document.getElementById('vehicleStatusFilter')?.value || '';
   const unit   = document.getElementById('vehicleUnitFilter')?.value   || '';
 
-  let list = vehicles;
+  let list = filterByUnitScope(vehicles);
   if (q)      list = list.filter(v => (v.ownerName||'').toLowerCase().includes(q) || (v.plate||'').toLowerCase().includes(q));
   if (type)   list = list.filter(v => v.type === type);
   if (status) list = list.filter(v => (v.status || 'pending') === status);
   if (unit)   list = list.filter(v => v.unit === unit);
+
+  // 依階級權重排序（高到低），同階再依姓名
+  list = [...list].sort((a, b) => {
+    const getR = v => { const p = personnel.find(x => x.id === v.personnelId) || personnel.find(x => x.name === v.ownerName); return p?.rank || v.rank || ''; };
+    const wa = rankWeight(getR(a)), wb = rankWeight(getR(b));
+    if (wa !== wb) return wa - wb;
+    return (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW');
+  });
 
   const unitSel = document.getElementById('vehicleUnitFilter');
   if (unitSel) {
@@ -2860,9 +3455,8 @@ function renderVehiclesPage() {
     return `
     <tr>
       <td class="col-seq">${i + 1}</td>
-      <td class="col-name">
-        ${(() => { const p = personnel.find(x => x.id === v.personnelId); const rank = p?.rank || v.rank || ''; return rank ? `<span style="font-size:11px;color:var(--text-muted);margin-right:4px">${rank}</span>` : ''; })()}${v.ownerName || '—'}
-      </td>
+      <td class="col-rank">${(() => { const p = personnel.find(x => x.id === v.personnelId) || personnel.find(x => x.name === v.ownerName); return p?.rank || v.rank || '—'; })()}</td>
+      <td class="col-name">${v.ownerName || '—'}</td>
       <td class="col-unit"><span class="unit-tag">${v.unit || '—'}</span></td>
       <td>${v.type === '汽車' ? '🚗' : '🏍'} ${v.type || '—'}</td>
       <td style="font-family:monospace;font-weight:700;letter-spacing:1px">${v.plate || '—'}</td>
@@ -2871,7 +3465,8 @@ function renderVehiclesPage() {
       <td>${vsBadge(st)}</td>
       <td class="col-actions" style="white-space:nowrap">
         ${nextBtn}
-        <button class="btn-icon danger" style="margin-left:4px" onclick="deleteVehicle('${v.id}','${v.plate}')">🗑</button>
+        <button class="btn-icon" style="margin-left:4px" onclick="openVehicleModal('${v.id}')">✏️</button>
+        <button class="btn-icon danger" style="margin-left:2px" onclick="deleteVehicle('${v.id}','${v.plate}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -2921,8 +3516,6 @@ document.getElementById('vehicleExportBtn')?.addEventListener('click', () => {
 // ══════════════════════════════════════════════════════
 // ── 服裝供售點數 ──────────────────────────────────────
 // ══════════════════════════════════════════════════════
-
-const UP_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
 
 // ── Helpers ───────────────────────────────────────────
 function getRecordYearMonth(r) {
@@ -2985,7 +3578,7 @@ function renderUniformPointsPage() {
 
   // ── Filter by month ──
   const q = (document.getElementById('upSearch')?.value || '').toLowerCase();
-  let list = uniformPoints.filter(r => getRecordYearMonth(r) === upSelectedMonth);
+  let list = filterByUnitScope(uniformPoints).filter(r => getRecordYearMonth(r) === upSelectedMonth);
   if (upUnitFilter) list = list.filter(r => r.unit === upUnitFilter);
   if (q)            list = list.filter(r => (r.ownerName || '').toLowerCase().includes(q));
 
@@ -2997,6 +3590,16 @@ function renderUniformPointsPage() {
     const totalUsed      = totalQuota - totalRemaining;
     statsEl.textContent = `${fmtYearMonth(upSelectedMonth)} ／ 已申報 ${list.length} 人 ／ 配額 ${totalQuota} 點 ／ 已使用 ${totalUsed} 點 ／ 剩餘 ${totalRemaining} 點`;
   }
+
+  // ── Sort by rank weight ──
+  list = [...list].sort((a, b) => {
+    const pa = personnel?.find?.(p => p.name === a.ownerName || p.id === a.personnelId);
+    const pb = personnel?.find?.(p => p.name === b.ownerName || p.id === b.personnelId);
+    const wa = rankWeight(pa?.rank || a.rank || '');
+    const wb = rankWeight(pb?.rank || b.rank || '');
+    if (wa !== wb) return wa - wb;
+    return (a.ownerName || '').localeCompare(b.ownerName || '', 'zh-TW');
+  });
 
   // ── Submitted table ──
   const tbody   = document.getElementById('upTableBody');
@@ -3670,4 +4273,902 @@ document.getElementById('appExportBtn')?.addEventListener('click', () => {
   a2.href   = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a2.download = `入職申請_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.csv`;
   a2.click();
+});
+
+// ── 醫務所 helpers ─────────────────────────────────────
+
+/** 將 pharmacies 同步到所有用到醫務所的 <select> */
+function populatePharmacySelects() {
+  const pArr = adminSettings.pharmacies || [];
+  const opts = pArr.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+  // 藥品 modal
+  const msPharmacy = document.getElementById('ms-pharmacy');
+  if (msPharmacy) {
+    const cur = msPharmacy.value;
+    msPharmacy.innerHTML = '<option value="">— 請選擇 —</option>' + opts;
+    if (pArr.find(p => p.id === cur)) msPharmacy.value = cur;
+  }
+
+  // 每日清點 醫務所選單
+  const diPharmacy = document.getElementById('di-pharmacy');
+  if (diPharmacy) {
+    const cur = diPharmacy.value;
+    diPharmacy.innerHTML = '<option value="">— 請選擇 —</option>' + opts;
+    if (pArr.find(p => p.id === cur)) diPharmacy.value = cur;
+    else if (pArr.length) diPharmacy.value = pArr[0].id;
+  }
+}
+
+/** 渲染藥材清點頁頂端的醫務所 tab 切換列 */
+function renderPharmacyTabs() {
+  const bar = document.getElementById('med-pharmacy-tabs');
+  if (!bar) return;
+  const pArr = adminSettings.pharmacies || [];
+  if (!pArr.length) { bar.innerHTML = ''; return; }
+
+  // 確保 currentMedPharmacyId 有效
+  if (!pArr.find(p => p.id === currentMedPharmacyId)) {
+    currentMedPharmacyId = pArr[0].id;
+  }
+
+  bar.innerHTML = pArr.map(p => `
+    <button class="pharmacy-tab-btn ${p.id === currentMedPharmacyId ? 'active' : ''}"
+            onclick="switchPharmacyTab('${p.id}')">
+      🏥 ${p.name}
+    </button>`).join('');
+}
+
+window.switchPharmacyTab = function(id) {
+  currentMedPharmacyId = id;
+  renderPharmacyTabs();
+  renderMedicalSupplies();
+};
+
+// ── 藥材清點 ───────────────────────────────────────────
+
+function renderMedicalSupplies() {
+  const q      = (document.getElementById('medSupplySearch')?.value || '').toLowerCase();
+  const cat    = document.getElementById('medSupplyCategoryFilter')?.value || '';
+  const status = document.getElementById('medSupplyStatusFilter')?.value  || '';
+
+  // 先按醫務所篩選，再按 sortOrder 排序
+  let list = filterByUnitScope(medSupplies)
+    .filter(s => !currentMedPharmacyId || s.pharmacyId === currentMedPharmacyId)
+    .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || (a.name||'').localeCompare(b.name||'', 'zh-TW'));
+  const pharmaList = list.filter(s => !s.hidden); // 醫務所範圍內的完整清單（供 stats 使用，不含隱藏）
+
+  // 同步「顯示隱藏」按鈕外觀
+  const showHiddenBtn = document.getElementById('medSupplyShowHiddenBtn');
+  if (showHiddenBtn) {
+    showHiddenBtn.classList.toggle('active', medSupplyShowHidden);
+    showHiddenBtn.textContent = medSupplyShowHidden ? '👁 隱藏中' : '👁 顯示隱藏';
+  }
+
+  // 隱藏篩選
+  if (!medSupplyShowHidden) list = list.filter(s => !s.hidden);
+
+  if (q)      list = list.filter(s => (s.name||'').toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q));
+  if (cat)    list = list.filter(s => s.category === cat);
+  if (status) list = list.filter(s => (s.status || 'normal') === status);
+
+  // 緊湊型 stats bar
+  const statsEl = document.getElementById('medSupplyStats');
+  if (statsEl) {
+    const total   = pharmaList.length;
+    const lowCnt  = pharmaList.filter(s => getMedSupplyStatus(s) === 'low').length;
+    const expCnt  = pharmaList.filter(s => getMedSupplyStatus(s) === 'expired').length;
+    statsEl.innerHTML = `<div class="med-stats-compact">
+      <span class="msc-item">📦 總品項 <strong>${total}</strong></span>
+      <span class="msc-sep">|</span>
+      <span class="msc-item ${lowCnt ? 'warn' : ''}">⚠️ 庫存不足 <strong>${lowCnt}</strong></span>
+      <span class="msc-sep">|</span>
+      <span class="msc-item ${expCnt ? 'danger' : ''}">❌ 已過期 <strong>${expCnt}</strong></span>
+    </div>`;
+  }
+
+  const tbody  = document.getElementById('medSupplyTableBody');
+  const empty  = document.getElementById('medSupplyEmpty');
+  if (!tbody) return;
+  if (!list.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  // 找到目前醫務所最新的庫存紀錄
+  const latestLog = medInventoryLogs.find(l =>
+    !currentMedPharmacyId || l.pharmacyId === currentMedPharmacyId
+  );
+  const todayYM = new Date().toISOString().slice(0, 7);
+
+  // 計算近 90 天日消耗量
+  // 取過去 90 天內（按日期字串）的清點紀錄，計算每次間隔消耗，求平均日消耗
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const recentLogs = medInventoryLogs
+    .filter(l => (!currentMedPharmacyId || l.pharmacyId === currentMedPharmacyId) && l.date >= cutoffStr)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // 建立各藥品的消耗量 map：{supplyId → avgDailyConsumption}
+  const avgDailyMap = {};
+  list.forEach(s => {
+    if (recentLogs.length < 2) { avgDailyMap[s.id] = null; return; }
+    // 取各筆紀錄中此藥品的總量
+    const points = recentLogs
+      .map(log => {
+        const item = log.items?.find(it => it.supplyId === s.id);
+        if (!item) return null;
+        const total = (item.batches || []).reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+        return { date: log.date, total };
+      })
+      .filter(Boolean);
+    if (points.length < 2) { avgDailyMap[s.id] = null; return; }
+    // 相鄰兩點差值 = 消耗（正為消耗，負為補充忽略）
+    let totalConsumed = 0;
+    for (let i = 1; i < points.length; i++) {
+      const diff = points[i - 1].total - points[i].total;
+      if (diff > 0) totalConsumed += diff;
+    }
+    const days = Math.max(1, Math.ceil(
+      (new Date(points[points.length - 1].date) - new Date(points[0].date)) / 86400000
+    ));
+    avgDailyMap[s.id] = totalConsumed / days;
+  });
+
+  tbody.innerHTML = list.map((s, i) => {
+    // 從最新紀錄取出此藥品的批次資料
+    const logItem  = latestLog?.items?.find(it => it.supplyId === s.id);
+    const batchArr = logItem?.batches || [];
+    const totalQty = batchArr.reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+
+    // 找最近到期的批次
+    const validExpiries = batchArr.map(b => b.expiry).filter(Boolean).sort();
+    const nearestExpiry = validExpiries[0] || '';
+
+    // 狀態
+    const st = getMedSupplyStatus(s);
+    const statusBadge =
+      st === 'expired' ? `<span class="mst-badge danger">已過期</span>` :
+      st === 'low'     ? `<span class="mst-badge warn">效期偏短</span>` :
+      logItem          ? `<span class="mst-badge ok">正常</span>` :
+                         `<span class="mst-badge grey">未清點</span>`;
+
+    // 效期顯示（若最近到期已過期，標紅）
+    let expiryHtml = '—';
+    if (nearestExpiry) {
+      const isExpired = nearestExpiry < todayYM;
+      const isSoon    = !isExpired && nearestExpiry <= addMonths(todayYM, 3);
+      expiryHtml = `<span style="color:${isExpired ? 'var(--red)' : isSoon ? 'var(--yellow)' : 'inherit'};font-weight:${isExpired||isSoon?'700':'400'}">
+        ${nearestExpiry.replace('-','/')}
+      </span>`;
+    }
+
+    const isHidden = !!s.hidden;
+    return `
+    <tr data-supply-id="${s.id}" draggable="true" class="med-supply-row${isHidden ? ' mst-row-hidden' : ''}">
+      <td class="col-seq mst-col-drag">
+        <span class="drag-handle" title="拖曳可排序">⠿</span>
+      </td>
+      <td class="mst-name"><strong>${s.name || '—'}</strong>${isHidden ? ' <span class="mst-hidden-tag">已隱藏</span>' : ''}</td>
+      <td class="mst-cat"><span class="mst-cat-tag">${s.category || '—'}</span></td>
+      <td class="mst-unit">${s.unit || '—'}</td>
+      <td class="mst-qty"><strong style="font-size:15px">${logItem ? totalQty : '—'}</strong></td>
+      <td class="mst-expiry">${expiryHtml}</td>
+      <td class="mst-avg">${avgDailyMap[s.id] != null ? avgDailyMap[s.id].toFixed(2) : '<span style="color:var(--text-muted);font-size:11px">—</span>'}</td>
+      <td class="mst-base">${avgDailyMap[s.id] != null ? Math.ceil(avgDailyMap[s.id] * 15) : '<span style="color:var(--text-muted);font-size:11px">—</span>'}</td>
+      <td class="mst-safe">${(() => {
+        const avg = avgDailyMap[s.id];
+        if (avg == null) return '<span style="color:var(--text-muted);font-size:11px">—</span>';
+        const safe = Math.ceil(avg * 10);
+        const cur  = logItem ? batchArr.reduce((sum, b) => sum + (Number(b.qty) || 0), 0) : null;
+        const low  = cur != null && cur <= safe;
+        return `<span style="${low ? 'color:var(--red);font-weight:700' : ''}">${safe}${low && cur != null ? ` ⚠️` : ''}</span>`;
+      })()}</td>
+      <td class="mst-status">${statusBadge}</td>
+      <td class="col-actions">
+        <button class="btn-icon" onclick="editMedSupply('${s.id}')">✏️</button>
+        <button class="btn-icon${isHidden ? ' active' : ''}" title="${isHidden ? '取消隱藏' : '隱藏此藥品'}" onclick="toggleMedSupplyHidden('${s.id}',${isHidden})">${isHidden ? '🙈' : '👁'}</button>
+        <button class="btn-icon danger" onclick="deleteMedSupply('${s.id}','${(s.name||'').replace(/'/g,"\\'")}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // 啟動拖曳排序
+  initMedSupplyDragSort(tbody);
+}
+
+// ── 藥材清單 拖曳排序 ─────────────────────────────────
+function initMedSupplyDragSort(tbody) {
+  let dragSrc  = null;
+  let lastOver = null;
+
+  tbody.querySelectorAll('.med-supply-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrc = row;
+      e.dataTransfer.effectAllowed = 'move';
+      // 延遲加 class，讓瀏覽器先截圖拖曳影像
+      setTimeout(() => row.classList.add('dragging'), 0);
+    });
+
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      if (lastOver) { lastOver.classList.remove('drag-over'); lastOver = null; }
+      if (dragSrc) saveMedDragOrder();
+      dragSrc = null;
+    });
+
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!dragSrc || dragSrc === row) return;
+      e.dataTransfer.dropEffect = 'move';
+      if (lastOver && lastOver !== row) lastOver.classList.remove('drag-over');
+      lastOver = row;
+      row.classList.add('drag-over');
+      // 依滑鼠位置決定插入前或後
+      const rect = row.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        tbody.insertBefore(dragSrc, row);
+      } else {
+        tbody.insertBefore(dragSrc, row.nextSibling);
+      }
+    });
+
+    row.addEventListener('drop', e => e.preventDefault());
+  });
+
+  // 讓 tbody 本身也接受 drop（避免無法放置到末尾時卡住）
+  tbody.addEventListener('dragover', e => e.preventDefault());
+  tbody.addEventListener('drop',     e => e.preventDefault());
+
+  async function saveMedDragOrder() {
+    const rows = [...tbody.querySelectorAll('.med-supply-row')];
+    await Promise.all(rows.map((r, idx) =>
+      updateDoc(doc(db, 'medSupplies', r.dataset.supplyId), { sortOrder: idx + 1 })
+        .catch(err => console.error('排序儲存失敗', err))
+    ));
+  }
+}
+
+document.getElementById('medSupplySearch')?.addEventListener('input', renderMedicalSupplies);
+document.getElementById('medSupplyCategoryFilter')?.addEventListener('change', renderMedicalSupplies);
+document.getElementById('medSupplyStatusFilter')?.addEventListener('change', renderMedicalSupplies);
+document.getElementById('medSupplyShowHiddenBtn')?.addEventListener('click', () => {
+  medSupplyShowHidden = !medSupplyShowHidden;
+  renderMedicalSupplies();
+});
+// ── 藥材品項 CRUD ─────────────────────────────────────
+let editingMedSupplyId = null;
+
+function openMedSupplyModal(id = null) {
+  editingMedSupplyId = id;
+  const s = id ? medSupplies.find(x => x.id === id) : null;
+  document.getElementById('med-supply-modal-title').textContent = s ? '編輯藥材品項' : '新增藥材品項';
+  populatePharmacySelects(); // 確保選單是最新的
+  const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v ?? ''; };
+  sv('ms-name',     s?.name);
+  sv('ms-category', s?.category);
+  sv('ms-unit',     s?.unit);
+  // 醫務所：編輯時帶入原值，新增時帶入目前選中的醫務所分頁
+  const msPharmacy = document.getElementById('ms-pharmacy');
+  if (msPharmacy) msPharmacy.value = s?.pharmacyId || currentMedPharmacyId || '';
+  document.getElementById('medSupplyModalOverlay').classList.add('open');
+}
+
+function closeMedSupplyModal() {
+  document.getElementById('medSupplyModalOverlay').classList.remove('open');
+}
+
+function getMedSupplyStatus(s) {
+  // With simplified catalog (no qty/expiry stored), derive from latest log
+  const latest = medInventoryLogs[0];
+  if (!latest) return 'normal';
+  const logItem = (latest.items || []).find(i => i.supplyId === s.id);
+  if (!logItem) return 'normal';
+  const todayYM = new Date().toISOString().slice(0, 7);
+  const batches = logItem.batches || [];
+  if (batches.some(b => b.expiry && b.expiry < todayYM)) return 'expired';
+  if (batches.some(b => b.expiry && b.expiry <= addMonths(todayYM, 3))) return 'low';
+  return 'normal';
+}
+
+document.getElementById('addMedSupplyBtn')?.addEventListener('click', () => openMedSupplyModal(null));
+document.getElementById('medSupplyModalClose')?.addEventListener('click',  closeMedSupplyModal);
+document.getElementById('medSupplyCancelBtn')?.addEventListener('click',   closeMedSupplyModal);
+document.getElementById('medSupplyModalOverlay')?.addEventListener('click', e => {
+  if (e.target.id === 'medSupplyModalOverlay') closeMedSupplyModal();
+});
+
+document.getElementById('medSupplySaveBtn')?.addEventListener('click', async () => {
+  const name = document.getElementById('ms-name')?.value.trim();
+  if (!name) { alert('請輸入藥品名稱'); return; }
+
+  const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const pharmacyId = gv('ms-pharmacy');
+  if (!pharmacyId) { alert('請選擇所屬醫務所'); return; }
+
+  const data = {
+    name,
+    pharmacyId,
+    category: gv('ms-category'),
+    unit:     gv('ms-unit'),
+  };
+
+  try {
+    if (editingMedSupplyId) {
+      await updateDoc(doc(db, 'medSupplies', editingMedSupplyId), data);
+    } else {
+      const maxOrder = medSupplies.reduce((m, s) => Math.max(m, s.sortOrder ?? 0), 0);
+      await addDoc(COL_MED_SUPPLIES, { ...data, sortOrder: maxOrder + 1, createdAt: serverTimestamp() });
+    }
+    closeMedSupplyModal();
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+});
+
+window.editMedSupply = id => openMedSupplyModal(id);
+
+window.saveMedSupplyOrder = async function(id, val) {
+  const n = parseInt(val, 10);
+  if (isNaN(n) || n < 1) return;
+  try { await updateDoc(doc(db, 'medSupplies', id), { sortOrder: n }); }
+  catch(e) { console.error('排序儲存失敗', e); }
+};
+
+window.deleteMedSupply = async function(id, name) {
+  if (!confirm(`確定要刪除「${name}」？`)) return;
+  try { await deleteDoc(doc(db, 'medSupplies', id)); }
+  catch(e) { alert('刪除失敗'); }
+};
+
+window.toggleMedSupplyHidden = async function(id, currentlyHidden) {
+  try {
+    await updateDoc(doc(db, 'medSupplies', id), { hidden: !currentlyHidden });
+  } catch(e) { console.error('隱藏狀態儲存失敗', e); alert('操作失敗'); }
+};
+
+// ── 衛材裝備清點 ───────────────────────────────────────
+
+function renderMedicalEquipment() {
+  const q      = (document.getElementById('medEquipSearch')?.value || '').toLowerCase();
+  const cat    = document.getElementById('medEquipCategoryFilter')?.value || '';
+  const status = document.getElementById('medEquipStatusFilter')?.value  || '';
+
+  let list = filterByUnitScope(medEquipments);
+  if (q)      list = list.filter(e => (e.name||'').toLowerCase().includes(q) || (e.code||'').toLowerCase().includes(q));
+  if (cat)    list = list.filter(e => e.category === cat);
+  if (status) list = list.filter(e => (e.status || 'normal') === status);
+
+  const statsEl = document.getElementById('medEquipStats');
+  if (statsEl) {
+    const total       = medEquipments.length;
+    const maintenance = medEquipments.filter(e => e.status === 'maintenance').length;
+    const scrapped    = medEquipments.filter(e => e.status === 'scrapped').length;
+    statsEl.innerHTML = `<div class="med-stats-bar">
+      <div class="med-stat-card">
+        <div class="val">${total}</div>
+        <div class="lbl">總品項</div>
+      </div>
+      <div class="med-stat-card yellow">
+        <div class="val" style="color:var(--yellow)">${maintenance}</div>
+        <div class="lbl">維修中</div>
+      </div>
+      <div class="med-stat-card red">
+        <div class="val" style="color:var(--red)">${scrapped}</div>
+        <div class="lbl">已報廢</div>
+      </div>
+    </div>`;
+  }
+
+  const tbody = document.getElementById('medEquipTableBody');
+  const empty = document.getElementById('medEquipEmpty');
+  if (!tbody) return;
+  if (!list.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  const statusBadge = s => {
+    if (s === 'scrapped')    return `<span class="tag" style="background:var(--red-bg);color:var(--red)">已報廢</span>`;
+    if (s === 'maintenance') return `<span class="tag" style="background:var(--yellow-bg);color:var(--yellow)">維修中</span>`;
+    return `<span class="tag" style="background:var(--green-bg);color:var(--green)">堪用</span>`;
+  };
+
+  tbody.innerHTML = list.map((e, i) => `
+    <tr>
+      <td class="col-seq">${i + 1}</td>
+      <td><strong>${e.name || '—'}</strong>${e.code ? `<div style="font-size:11px;color:var(--text-muted)">${e.code}</div>` : ''}</td>
+      <td>${e.category || '—'}</td>
+      <td>${e.spec || '—'}</td>
+      <td style="font-weight:700">${e.qty ?? '—'}</td>
+      <td>${e.custodian || '—'}</td>
+      <td>${e.lastChecked ? formatDate(e.lastChecked) : '—'}</td>
+      <td>${statusBadge(e.status || 'normal')}</td>
+      <td class="col-actions" style="white-space:nowrap">
+        <button class="btn-icon" onclick="editMedEquip('${e.id}')">✏️</button>
+        <button class="btn-icon danger" onclick="deleteMedEquip('${e.id}','${(e.name||'').replace(/'/g,"\\'")}')">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+document.getElementById('medEquipSearch')?.addEventListener('input', renderMedicalEquipment);
+document.getElementById('medEquipCategoryFilter')?.addEventListener('change', renderMedicalEquipment);
+document.getElementById('medEquipStatusFilter')?.addEventListener('change', renderMedicalEquipment);
+
+// ── 衛材裝備 CRUD ──────────────────────────────────────
+let editingMedEquipId = null;
+
+function openMedEquipModal(id = null) {
+  editingMedEquipId = id;
+  const e = id ? medEquipments.find(x => x.id === id) : null;
+  document.getElementById('med-equip-modal-title').textContent = e ? '編輯裝備品項' : '新增裝備品項';
+  const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v ?? ''; };
+  sv('me-name',         e?.name);
+  sv('me-code',         e?.code);
+  sv('me-category',     e?.category);
+  sv('me-spec',         e?.spec);
+  sv('me-qty',          e?.qty ?? '');
+  sv('me-custodian',    e?.custodian);
+  sv('me-last-checked', e?.lastChecked || '');
+  sv('me-status',       e?.status || 'normal');
+  sv('me-note',         e?.note);
+  document.getElementById('medEquipModalOverlay').classList.add('open');
+}
+
+function closeMedEquipModal() {
+  document.getElementById('medEquipModalOverlay').classList.remove('open');
+}
+
+document.getElementById('addMedEquipBtn')?.addEventListener('click', () => openMedEquipModal(null));
+document.getElementById('medEquipModalClose')?.addEventListener('click', closeMedEquipModal);
+document.getElementById('medEquipCancelBtn')?.addEventListener('click', closeMedEquipModal);
+document.getElementById('medEquipModalOverlay')?.addEventListener('click', e => {
+  if (e.target.id === 'medEquipModalOverlay') closeMedEquipModal();
+});
+
+document.getElementById('medEquipSaveBtn')?.addEventListener('click', async () => {
+  const name = document.getElementById('me-name')?.value.trim();
+  if (!name) { alert('請輸入裝備名稱'); return; }
+
+  const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const qtyRaw = document.getElementById('me-qty')?.value;
+  const data = {
+    name,
+    code:        gv('me-code'),
+    category:    gv('me-category'),
+    spec:        gv('me-spec'),
+    qty:         qtyRaw !== '' ? Number(qtyRaw) : null,
+    custodian:   gv('me-custodian'),
+    lastChecked: gv('me-last-checked'),
+    status:      gv('me-status') || 'normal',
+    note:        gv('me-note'),
+  };
+
+  try {
+    if (editingMedEquipId) {
+      await updateDoc(doc(db, 'medEquipments', editingMedEquipId), data);
+    } else {
+      await addDoc(COL_MED_EQUIPS, { ...data, createdAt: serverTimestamp() });
+    }
+    closeMedEquipModal();
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+});
+
+window.editMedEquip = id => openMedEquipModal(id);
+
+window.deleteMedEquip = async function(id, name) {
+  if (!confirm(`確定要刪除「${name}」？此操作無法復原。`)) return;
+  try { await deleteDoc(doc(db, 'medEquipments', id)); }
+  catch(e) { alert('刪除失敗：' + e.message); }
+};
+
+// ── 每日清點 helpers ───────────────────────────────────
+
+/** 填充 本日車長人員 下拉選單（以單位 optgroup 分組） */
+function populateDiChargePerson() {
+  const sel = document.getElementById('di-charge-person');
+  if (!sel) return;
+  const cur = sel.value;
+
+  // 按單位分組 personnel
+  const unitMap = {};
+  (personnel || []).forEach(p => {
+    const u = p.unit || '其他';
+    if (!unitMap[u]) unitMap[u] = [];
+    unitMap[u].push(p);
+  });
+
+  sel.innerHTML = '<option value="">— 請選擇 —</option>' +
+    Object.entries(unitMap).map(([unit, people]) => {
+      const opts = people
+        .sort((a, b) => rankWeight(a.rank) - rankWeight(b.rank))
+        .map(p => `<option value="${p.id}">${p.rank ? p.rank + ' ' : ''}${p.name}</option>`)
+        .join('');
+      return `<optgroup label="${unit}">${opts}</optgroup>`;
+    }).join('');
+
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+// ── 每日清點 ───────────────────────────────────────────
+function renderDailyInventory() {
+  const diDate = document.getElementById('di-date');
+  if (diDate && !diDate.value) diDate.value = new Date().toISOString().slice(0, 10);
+
+  const diRec = document.getElementById('di-recorder');
+  if (diRec && !diRec.value && currentUser) {
+    const me = registeredUsers.find(u => u.id === currentUser.uid);
+    const linkedPers = personnel?.find?.(p => p.id === me?.personnelId || (p.email && p.email.toLowerCase() === (me?.email||'').toLowerCase()));
+    const recName = linkedPers
+      ? `${linkedPers.rank ? linkedPers.rank + ' ' : ''}${linkedPers.name}`.trim()
+      : (me?.name || '');
+    diRec.value = recName;
+  }
+
+  // 同步醫務所選單 + 本日車長人員
+  populatePharmacySelects();
+  populateDiChargePerson();
+
+  const container = document.getElementById('di-drug-list');
+  const empty     = document.getElementById('di-empty');
+  if (!container) return;
+
+  // 按所選醫務所篩選藥品
+  const selectedPharmaId = document.getElementById('di-pharmacy')?.value || '';
+  const list = filterByUnitScope(medSupplies).filter(s =>
+    !selectedPharmaId || s.pharmacyId === selectedPharmaId
+  );
+  if (!list.length) {
+    container.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  container.innerHTML = list.map(s => `
+    <div class="di-drug-card" data-supply-id="${s.id}" data-name="${(s.name||'').replace(/"/g,'&quot;')}" data-unit="${s.unit||''}">
+      <div class="di-drug-card-header">
+        <div>
+          <span class="di-drug-name">${s.name || '—'}</span>
+          ${s.category ? `<span class="di-drug-cat">${s.category}</span>` : ''}
+        </div>
+        <span class="di-drug-unit">${s.unit || ''}</span>
+      </div>
+      <div class="di-batch-header">
+        <span>效期（年/月）</span>
+        <span>數量</span>
+        <span></span>
+      </div>
+      <div class="di-batch-rows">
+        <div class="di-batch-row">
+          <input type="month" class="di-batch-expiry" placeholder="效期">
+          <input type="number" class="di-batch-qty" min="0" placeholder="數量">
+          <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除此批次">×</button>
+        </div>
+      </div>
+      <button type="button" class="di-add-batch-btn" onclick="addDiBatchRow(this)">＋ 新增批次</button>
+    </div>
+  `).join('');
+}
+
+function addMonths(ym, n) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+window.addDiBatchRow = function(btn) {
+  const rows = btn.previousElementSibling; // .di-batch-rows
+  const row  = document.createElement('div');
+  row.className = 'di-batch-row';
+  row.innerHTML = `
+    <input type="month" class="di-batch-expiry" placeholder="效期">
+    <input type="number" class="di-batch-qty" min="0" placeholder="數量">
+    <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
+  rows.appendChild(row);
+};
+
+window.removeDiBatchRow = function(btn) {
+  const rows = btn.closest('.di-batch-rows');
+  if (rows.querySelectorAll('.di-batch-row').length <= 1) {
+    // Keep at least one row, just clear it
+    btn.closest('.di-batch-row').querySelectorAll('input').forEach(i => i.value = '');
+    return;
+  }
+  btn.closest('.di-batch-row').remove();
+};
+
+document.getElementById('di-load-prev-btn')?.addEventListener('click', async () => {
+  if (!medInventoryLogs.length) { alert('尚無清點紀錄可帶入'); return; }
+  // 優先找同醫務所的最新紀錄
+  const pharmaId = document.getElementById('di-pharmacy')?.value || '';
+  const latest = pharmaId
+    ? (medInventoryLogs.find(l => l.pharmacyId === pharmaId) || medInventoryLogs[0])
+    : medInventoryLogs[0];
+  if (!confirm(`帶入 ${latest.date}（${latest.pharmacyName || ''}${latest.recorderName || latest.recorder}）的清點數據？`)) return;
+
+  document.querySelectorAll('.di-drug-card').forEach(card => {
+    const sid = card.dataset.supplyId;
+    const logItem = (latest.items || []).find(i => i.supplyId === sid);
+    if (!logItem) return;
+
+    const rowsContainer = card.querySelector('.di-batch-rows');
+    rowsContainer.innerHTML = ''; // clear
+
+    const batches = logItem.batches || (logItem.counted != null ? [{ qty: logItem.counted, expiry: logItem.expiry || '' }] : []);
+    if (!batches.length) batches.push({ qty: '', expiry: '' });
+
+    batches.forEach(b => {
+      const row = document.createElement('div');
+      row.className = 'di-batch-row';
+      row.innerHTML = `
+        <input type="month" class="di-batch-expiry" value="${b.expiry || ''}" placeholder="效期">
+        <input type="number" class="di-batch-qty" value="${b.qty ?? ''}" min="0" placeholder="數量">
+        <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
+      rowsContainer.appendChild(row);
+    });
+  });
+});
+
+// ── 清點紀錄 ───────────────────────────────────────────
+function renderInventoryLogs() {
+  const container = document.getElementById('med-inv-log-list');
+  const empty     = document.getElementById('med-inv-log-empty');
+  if (!container) return;
+
+  if (!medInventoryLogs.length) {
+    container.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  container.innerHTML = medInventoryLogs.map(log => {
+    const diffItems = (log.items || []).filter(i => i.diff !== 0);
+    const itemRows  = (log.items || []).map(i => {
+      const diffStyle = i.diff === 0 ? 'color:var(--green)' : i.diff > 0 ? 'color:var(--yellow);font-weight:700' : 'color:var(--red);font-weight:700';
+      return `<tr>
+        <td>${i.name}</td>
+        <td>${i.expiry ? i.expiry.replace('-','/') : '—'}</td>
+        <td style="text-align:right">${i.expected}</td>
+        <td style="text-align:right">${i.counted}</td>
+        <td style="text-align:right;${diffStyle}">${i.diff===0?'0':i.diff>0?'+'+i.diff:i.diff} ${i.unit}</td>
+        <td>${i.note||'—'}</td>
+      </tr>`;
+    }).join('');
+
+    const sigHtml = log.signature
+      ? `<div class="inv-log-sig-wrap"><img class="inv-log-sig-img" src="${log.signature}" alt="簽名"></div>`
+      : '';
+
+    const pharmaLabel = log.pharmacyName ? `<span style="margin-right:10px;background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600">🏥 ${log.pharmacyName}</span>` : '';
+    const chargeLabel = log.chargeName   ? `<span style="margin-left:10px;font-size:12px;color:var(--text-muted)">🚗 ${log.chargeName}</span>` : '';
+
+    return `<div class="inv-log-card">
+      <div class="inv-log-card-header">
+        <div>
+          ${pharmaLabel}
+          <span style="font-weight:700;font-size:15px">📅 ${log.date}</span>
+          <span style="margin-left:10px;font-size:13px;color:var(--text-muted)">👤 ${log.recorderName || log.recorder || '—'}</span>
+          ${chargeLabel}
+          ${diffItems.length ? `<span style="margin-left:10px;background:var(--yellow-bg);color:var(--yellow);font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px">⚠️ ${diffItems.length} 項差異</span>` : `<span style="margin-left:10px;background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px">✅ 無差異</span>`}
+        </div>
+        <button class="btn-icon danger" onclick="deleteInventoryLog('${log.id}')">🗑</button>
+      </div>
+      <div class="table-wrap" style="margin-top:10px">
+        <table class="data-table" style="font-size:12px">
+          <thead><tr><th>藥品</th><th>效期</th><th style="text-align:right">帳面</th><th style="text-align:right">實點</th><th style="text-align:right">差異</th><th>備註</th></tr></thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+      </div>
+      ${sigHtml}
+    </div>`;
+  }).join('');
+}
+
+window.deleteInventoryLog = async function(id) {
+  if (!confirm('確定刪除此清點紀錄？')) return;
+  try { await deleteDoc(doc(db, 'medInventoryLogs', id)); }
+  catch(e) { alert('刪除失敗'); }
+};
+
+// ── 藥材清點 tabs ──────────────────────────────────────
+document.querySelectorAll('[data-medtab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-medtab]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.medtab;
+    document.getElementById('medsup-pane-catalog').style.display = tab === 'catalog' ? '' : 'none';
+    document.getElementById('medsup-pane-logs').style.display    = tab === 'logs'    ? '' : 'none';
+    if (tab === 'logs') renderInventoryLogs();
+  });
+});
+
+// di-pharmacy 變更時重新載入藥品清單
+document.getElementById('di-pharmacy')?.addEventListener('change', () => {
+  // 清空現有清點資料再重繪
+  const container = document.getElementById('di-drug-list');
+  if (container) container.innerHTML = '';
+  renderDailyInventory();
+});
+
+// ── 每日清點 submit ────────────────────────────────────
+document.getElementById('di-submit-btn')?.addEventListener('click', () => {
+  const date         = document.getElementById('di-date')?.value;
+  const recorder     = document.getElementById('di-recorder')?.value.trim();
+  const pharmacyId   = document.getElementById('di-pharmacy')?.value || '';
+  const chargeSelEl  = document.getElementById('di-charge-person');
+  const chargeId     = chargeSelEl?.value || '';
+  const chargeName   = chargeSelEl?.options[chargeSelEl.selectedIndex]?.text || '';
+
+  if (!date)       { alert('請選擇清點日期'); return; }
+  if (!recorder)   { alert('請填入清點人姓名'); return; }
+  if (!pharmacyId) { alert('請選擇醫務所'); return; }
+
+  const pharmacyName = (adminSettings.pharmacies || []).find(p => p.id === pharmacyId)?.name || '';
+
+  const items = [];
+  document.querySelectorAll('.di-drug-card').forEach(card => {
+    const batches = [];
+    card.querySelectorAll('.di-batch-row').forEach(row => {
+      const expiry = row.querySelector('.di-batch-expiry')?.value || '';
+      const qty    = row.querySelector('.di-batch-qty')?.value;
+      if (qty !== '' && qty !== null) {
+        batches.push({ expiry, qty: Number(qty) });
+      }
+    });
+    if (batches.length > 0) {
+      items.push({
+        supplyId: card.dataset.supplyId,
+        name:     card.dataset.name,
+        unit:     card.dataset.unit,
+        batches,
+      });
+    }
+  });
+
+  if (!items.length) { alert('請至少填寫一項藥材數量'); return; }
+
+  // Compare with latest log for same pharmacy
+  const latest = medInventoryLogs.find(l => !pharmacyId || l.pharmacyId === pharmacyId);
+  const diffs  = [];
+  items.forEach(item => {
+    const totalNow = item.batches.reduce((s, b) => s + b.qty, 0);
+    const prevItem = latest?.items?.find(i => i.supplyId === item.supplyId);
+    const prevBatches = prevItem?.batches || (prevItem ? [{ qty: prevItem.counted ?? 0 }] : []);
+    const totalPrev = prevBatches.reduce((s, b) => s + (b.qty ?? 0), 0);
+    if (prevItem && totalNow !== totalPrev) {
+      diffs.push({ name: item.name, unit: item.unit, prev: totalPrev, now: totalNow, diff: totalNow - totalPrev });
+    }
+  });
+
+  const summaryEl = document.getElementById('di-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `<div style="margin-bottom:10px;font-size:13px">
+      🏥 <strong>${pharmacyName || pharmacyId}</strong>&ensp;
+      📅 <strong>${date}</strong>&ensp;👤 <strong>${recorder}</strong>&ensp;
+      ${chargeId ? `🚗 <strong>${chargeName}</strong>&ensp;` : ''}
+      <span style="color:var(--text-muted)">共 ${items.length} 種藥材，${items.reduce((s,i)=>s+i.batches.length,0)} 批次</span>
+    </div>` +
+    (diffs.length
+      ? `<div style="background:var(--yellow-bg);border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:4px">
+          ⚠️ <strong>${diffs.length}</strong> 項與上次紀錄不同：<br>
+          ${diffs.map(d=>`<span style="color:${d.diff<0?'var(--red)':'var(--yellow)'}">• ${d.name}（${d.prev}→${d.now}，${d.diff>0?'+':''}${d.diff} ${d.unit}）</span>`).join('<br>')}
+        </div>`
+      : (latest ? `<div style="background:var(--green-bg);border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:12px">✅ 與上次紀錄一致，無差異</div>` : ''));
+  }
+
+  // Clear canvas
+  const canvas = document.getElementById('sig-canvas');
+  if (canvas) { const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height); }
+
+  // Stash payload (include pharmacyId + chargeId)
+  const overlay = document.getElementById('diSignModalOverlay');
+  overlay.dataset.payload = JSON.stringify({
+    date, recorder, pharmacyId, pharmacyName, chargeId, chargeName, items
+  });
+  overlay.classList.add('open');
+});
+
+document.getElementById('diSignModalClose')?.addEventListener('click',  () => document.getElementById('diSignModalOverlay').classList.remove('open'));
+document.getElementById('diSignCancelBtn')?.addEventListener('click',   () => document.getElementById('diSignModalOverlay').classList.remove('open'));
+
+document.getElementById('diSignConfirmBtn')?.addEventListener('click', async () => {
+  const overlay   = document.getElementById('diSignModalOverlay');
+  const sigData   = window.getSigDataURL?.();
+  if (!sigData)   { alert('請先在框內簽名'); return; }
+
+  const { date, recorder, pharmacyId, pharmacyName, chargeId, chargeName, items } = JSON.parse(overlay.dataset.payload || '{}');
+  if (!date || !items) return;
+
+  try {
+    await addDoc(COL_MED_INV_LOGS, {
+      date, recorder,
+      recorderName:  recorder,
+      recorderId:    currentUser?.uid || '',
+      pharmacyId:    pharmacyId  || '',
+      pharmacyName:  pharmacyName || '',
+      chargeId:      chargeId    || '',
+      chargeName:    chargeName  || '',
+      signature:     sigData,   // base64 PNG
+      items,
+      createdAt: serverTimestamp(),
+    });
+    overlay.classList.remove('open');
+    // Reset form
+    document.getElementById('di-date').value = '';
+    document.getElementById('di-recorder').value = '';
+    renderDailyInventory();
+    alert(`✅ 清點完成！${pharmacyName ? pharmacyName + '・' : ''}${date}・清點人：${recorder}`);
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+});
+
+// ── Canvas 手寫簽名 ─────────────────────────────────────
+(function initSigCanvas() {
+  let drawing = false;
+  let hasDrawn = false;
+
+  function getCanvas() { return document.getElementById('sig-canvas'); }
+  function getCtx()    { const c = getCanvas(); return c ? c.getContext('2d') : null; }
+
+  function getPos(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    const canvas = getCanvas(); if (!canvas) return;
+    const ctx = getCtx();
+    drawing = true;
+    const pos = getPos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.lineWidth   = 2.5;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.strokeStyle = '#1e293b';
+  }
+  function draw(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const canvas = getCanvas(); if (!canvas) return;
+    const ctx = getCtx();
+    const pos = getPos(e, canvas);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    hasDrawn = true;
+  }
+  function endDraw(e) { e.preventDefault(); drawing = false; }
+
+  document.addEventListener('mousedown',  e => { if (e.target.id === 'sig-canvas') startDraw(e); });
+  document.addEventListener('mousemove',  e => { if (drawing) draw(e); });
+  document.addEventListener('mouseup',    e => { if (drawing) endDraw(e); });
+  document.addEventListener('touchstart', e => { if (e.target.id === 'sig-canvas') startDraw(e); }, { passive: false });
+  document.addEventListener('touchmove',  e => { if (drawing) draw(e); },  { passive: false });
+  document.addEventListener('touchend',   e => { if (drawing) endDraw(e); }, { passive: false });
+
+  document.getElementById('sig-clear-btn')?.addEventListener('click', () => {
+    const canvas = getCanvas(); if (!canvas) return;
+    getCtx().clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawn = false;
+  });
+
+  // Export method
+  window.getSigDataURL = function() {
+    const canvas = getCanvas();
+    if (!canvas || !hasDrawn) return null;
+    return canvas.toDataURL('image/png');
+  };
+})();
+
+// ── 角色權限管理分頁切換 ──────────────────────────────
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.role-mgmt-tab');
+  if (!tab) return;
+  const card = tab.closest('.admin-card');
+  if (!card) return;
+  card.querySelectorAll('.role-mgmt-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  const target = tab.dataset.tab;
+  card.querySelectorAll('.role-mgmt-pane').forEach(p => { p.style.display = 'none'; });
+  const pane = document.getElementById(`role-pane-${target}`);
+  if (pane) pane.style.display = '';
 });
