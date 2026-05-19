@@ -2415,6 +2415,11 @@ main {
   .di-meta-bar .form-group { min-width: unset; flex: unset; width: 100%; }
   .pharmacy-tab-btn { font-size: 12px; padding: 5px 12px; }
 }
+/* iPhone：簽名欄加高，方便手寫 */
+@media (max-width: 480px) {
+  .sig-canvas-wrap canvas { height: 200px; }
+}
+
 /* iPhone：效期上排全寬，數量＋× 下排並列（flexbox，避免 iOS grid spanning 計算偏差） */
 @media (max-width: 480px) {
   .di-drug-card { padding: 12px 10px; overflow: hidden; }
