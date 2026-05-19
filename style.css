@@ -1760,7 +1760,7 @@ main {
 
 /* 手機版表格：隱藏次要欄位、強制最小寬度觸發橫向捲動 */
 @media (max-width: 700px) {
-  .col-id, .col-age, .col-gender, .col-account { display: none; }
+  .col-id, .col-age, .col-gender { display: none; }
   .col-phone { width: auto; }
   .pd-grid { grid-template-columns: 1fr; }
   .personnel-table { min-width: 460px; }
