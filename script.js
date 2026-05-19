@@ -2704,11 +2704,13 @@ document.getElementById('vehicleBatchSave').addEventListener('click', async () =
     const brand = brandSel?.value === OTHER_BRAND
       ? (brandCust?.value.trim() || '')
       : (brandSel?.value || '');
+    const pers  = personnel.find(p => p.id === person);
 
     toSave.push({
       personnelId: person,
       uid:         pOpt?.dataset.uid  || '',
       ownerName:   pOpt?.dataset.name || '',
+      rank:        pers?.rank || '',
       unit,
       type, plate, brand,
       color:       colorEl?.value.trim() || '',
@@ -2764,10 +2766,12 @@ document.getElementById('vehicleSaveBtn').addEventListener('click', async () => 
   if (!pSel.value)    { alert('請選擇人員');   return; }
   if (!type || !plate){ alert('請填寫車種和車牌'); return; }
 
+  const pers = personnel.find(p => p.id === pSel.value);
   const data = {
     personnelId: pSel.value,
     uid:         pOpt?.dataset.uid  || '',
     ownerName:   pOpt?.dataset.name || '',
+    rank:        pers?.rank || '',
     unit:        unitSel.value,
     type, plate, brand,
     color: document.getElementById('v-color').value.trim(),
@@ -2856,7 +2860,9 @@ function renderVehiclesPage() {
     return `
     <tr>
       <td class="col-seq">${i + 1}</td>
-      <td class="col-name">${v.ownerName || '—'}</td>
+      <td class="col-name">
+        ${(() => { const p = personnel.find(x => x.id === v.personnelId); const rank = p?.rank || v.rank || ''; return rank ? `<span style="font-size:11px;color:var(--text-muted);margin-right:4px">${rank}</span>` : ''; })()}${v.ownerName || '—'}
+      </td>
       <td class="col-unit"><span class="unit-tag">${v.unit || '—'}</span></td>
       <td>${v.type === '汽車' ? '🚗' : '🏍'} ${v.type || '—'}</td>
       <td style="font-family:monospace;font-weight:700;letter-spacing:1px">${v.plate || '—'}</td>
