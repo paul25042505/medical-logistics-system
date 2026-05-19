@@ -92,12 +92,9 @@ function getBrandOptions(type) {
     `<option value="${OTHER_BRAND}">${OTHER_BRAND}</option>`;
 }
 
-// 車輛單位 = 營級 + 連級（與招募單位分開）
+// 車輛單位 = 人員資訊管理的單位（adminSettings.units）
 function getVehicleUnits() {
-  return [
-    ...(adminSettings.battalions || []),
-    ...(adminSettings.companies  || []),
-  ];
+  return adminSettings.units || [];
 }
 
 function populateVehicleUnitSel(selId, selectedUnit = '') {
