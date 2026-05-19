@@ -2512,6 +2512,11 @@ function renderPersonnel() {
       <td class="col-age">${age || '—'}</td>
       <td class="col-phone">${p.phone || '—'}</td>
       <td class="col-id pii-mask">${idMasked}</td>
+      <td class="col-account">${
+        p.uid
+          ? `<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:4px;white-space:nowrap">已綁定</span>`
+          : `<span style="font-size:11px;background:#f1f5f9;color:#94a3b8;padding:2px 7px;border-radius:4px;white-space:nowrap">未綁定</span>`
+      }</td>
       <td class="col-actions" onclick="event.stopPropagation()">
         <button class="btn-icon" onclick="openPersonnelEdit('${p.id}')">✏️</button>
         <button class="btn-icon danger" onclick="deletePersonnel('${p.id}')">🗑️</button>
