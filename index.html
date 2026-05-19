@@ -1301,17 +1301,17 @@
               </select>
             </div>
             <div class="form-group">
-              <label>車牌號碼 <span class="required">*</span></label>
-              <input type="text" id="v-plate" placeholder="ABC-1234" maxlength="10" style="text-transform:uppercase">
-            </div>
-            <div class="form-group">
               <label>廠牌</label>
               <div style="display:flex;gap:6px">
                 <select id="v-brand-select" style="flex:1">
-                  <option value="">— 請選擇 —</option>
+                  <option value="">— 請先選車種 —</option>
                 </select>
                 <input type="text" id="v-brand-custom" placeholder="手動輸入廠牌" style="display:none;flex:1">
               </div>
+            </div>
+            <div class="form-group">
+              <label>車牌號碼 <span class="required">*</span></label>
+              <input type="text" id="v-plate" placeholder="ABC-1234" maxlength="10" style="text-transform:uppercase">
             </div>
             <div class="form-group">
               <label>顏色</label>
@@ -1343,8 +1343,8 @@
                 <th style="padding:7px 5px;text-align:left;min-width:110px">單位 *</th>
                 <th style="padding:7px 5px;text-align:left;min-width:120px">人員 *</th>
                 <th style="padding:7px 5px;text-align:left;min-width:90px">車種 *</th>
-                <th style="padding:7px 5px;text-align:left;min-width:110px">車牌 *</th>
                 <th style="padding:7px 5px;text-align:left;min-width:130px">廠牌</th>
+                <th style="padding:7px 5px;text-align:left;min-width:110px">車牌 *</th>
                 <th style="padding:7px 5px;text-align:left;min-width:80px">顏色</th>
                 <th style="padding:7px 5px;width:32px"></th>
               </tr>

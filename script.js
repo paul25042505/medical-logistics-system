@@ -69,25 +69,41 @@ let viewingAppId    = null;
 let vehicles        = [];
 let editingVehicleId = null;
 
-// ── 台灣熱門汽機車廠牌 ────────────────────────────────
-const CAR_BRANDS  = ['Toyota','Honda','Nissan','Mazda','Ford','Mitsubishi',
-  'Hyundai','Kia','Volkswagen','BMW','Mercedes-Benz','Lexus','Subaru',
-  'Suzuki','Isuzu','Tesla','Volvo','Audi','LUXGEN 納智捷'];
-const MOTO_BRANDS = ['Yamaha','Honda','光陽 Kymco','三陽 SYM','Suzuki',
-  'Kawasaki','PGO','Aeon Motor','台鈴 Suzuki TW','Harley-Davidson','BMW'];
+// ── 台灣熱門汽機車廠牌（中英對照）────────────────────
+const CAR_BRANDS  = [
+  'Toyota 豐田','Honda 本田','Nissan 日產','Mazda 馬自達','Ford 福特',
+  'Mitsubishi 三菱','Hyundai 現代','Kia 起亞','Volkswagen 福斯',
+  'BMW 寶馬','Mercedes-Benz 賓士','Lexus 凌志','Subaru 速霸陸',
+  'Suzuki 鈴木','Isuzu 五十鈴','Tesla 特斯拉','Volvo 富豪',
+  'Audi 奧迪','LUXGEN 納智捷',
+];
+const MOTO_BRANDS = [
+  'Yamaha 山葉','Honda 本田','光陽 Kymco','三陽 SYM',
+  'Suzuki 鈴木','Kawasaki 川崎','PGO','Aeon Motor 宏佳騰',
+  '台鈴 Suzuki TW','Harley-Davidson 哈雷','BMW 寶馬',
+];
 const OTHER_BRAND = '其他（手動輸入）';
 
 function getBrandOptions(type) {
+  if (!type) return '<option value="">— 請先選車種 —</option>';
   const list = type === '機車' ? MOTO_BRANDS : CAR_BRANDS;
   return '<option value="">— 請選擇廠牌 —</option>' +
     list.map(b => `<option value="${b}">${b}</option>`).join('') +
     `<option value="${OTHER_BRAND}">${OTHER_BRAND}</option>`;
 }
 
+// 車輛單位 = 營級 + 連級（與招募單位分開）
+function getVehicleUnits() {
+  return [
+    ...(adminSettings.battalions || []),
+    ...(adminSettings.companies  || []),
+  ];
+}
+
 function populateVehicleUnitSel(selId, selectedUnit = '') {
   const sel = document.getElementById(selId);
   if (!sel) return;
-  const units = adminSettings.units || [];
+  const units = getVehicleUnits();
   sel.innerHTML = '<option value="">— 請先選單位 —</option>' +
     units.map(u => `<option value="${u}"${u === selectedUnit ? ' selected' : ''}>${u}</option>`).join('');
 }
@@ -2492,10 +2508,11 @@ window.openVehicleModal = function(id = null) {
   document.getElementById('v-plate').value = v?.plate || '';
   document.getElementById('v-color').value = v?.color || '';
 
-  // 廠牌下拉
+  // 廠牌下拉（未選車種時 disabled）
   const brandSel    = document.getElementById('v-brand-select');
   const brandCustom = document.getElementById('v-brand-custom');
   brandSel.innerHTML = getBrandOptions(type);
+  brandSel.disabled  = !type;
   const savedBrand = v?.brand || '';
   const allBrands  = [...CAR_BRANDS, ...MOTO_BRANDS];
   if (savedBrand && !allBrands.includes(savedBrand)) {
@@ -2508,9 +2525,10 @@ window.openVehicleModal = function(id = null) {
     brandCustom.value         = '';
   }
 
-  // 車種切換 → 更新廠牌選項
+  // 車種切換 → 更新廠牌選項並啟用
   document.getElementById('v-type').onchange = function() {
     brandSel.innerHTML = getBrandOptions(this.value);
+    brandSel.disabled  = !this.value;
     brandSel.value = ''; brandCustom.value = ''; brandCustom.style.display = 'none';
   };
   brandSel.onchange = function() {
@@ -2530,7 +2548,7 @@ function makeBatchRow() {
   const tr = document.createElement('tr');
   tr.style.borderBottom = '1px solid var(--border)';
 
-  const units   = adminSettings.units || [];
+  const units    = getVehicleUnits();
   const unitOpts = '<option value="">— 選單位 —</option>' +
     units.map(u => `<option value="${u}">${u}</option>`).join('');
 
@@ -2553,15 +2571,15 @@ function makeBatchRow() {
       </select>
     </td>
     <td style="padding:4px 4px">
-      <input class="br-plate" type="text" maxlength="10" placeholder="ABC-1234"
-             style="width:100%;font-size:12px;padding:4px;text-transform:uppercase">
-    </td>
-    <td style="padding:4px 4px">
       <select class="br-brand" style="width:100%;font-size:12px;padding:4px">
         ${getBrandOptions('')}
       </select>
       <input class="br-brand-custom" type="text" placeholder="手動輸入"
              style="display:none;width:100%;font-size:12px;padding:4px;margin-top:3px">
+    </td>
+    <td style="padding:4px 4px">
+      <input class="br-plate" type="text" maxlength="10" placeholder="ABC-1234"
+             style="width:100%;font-size:12px;padding:4px;text-transform:uppercase">
     </td>
     <td style="padding:4px 4px">
       <input class="br-color" type="text" placeholder="顏色"
@@ -2586,7 +2604,7 @@ function makeBatchRow() {
     updateBatchCount();
   });
 
-  // 車種 → 廠牌
+  // 車種 → 廠牌（立即更新選項）
   const typeSel     = tr.querySelector('.br-type');
   const brandSel    = tr.querySelector('.br-brand');
   const brandCustom = tr.querySelector('.br-brand-custom');
@@ -2595,6 +2613,9 @@ function makeBatchRow() {
     brandSel.value = ''; brandCustom.value = ''; brandCustom.style.display = 'none';
     updateBatchCount();
   });
+  // 預設先禁用廠牌（未選車種前）
+  brandSel.disabled = true;
+  typeSel.addEventListener('change', () => { brandSel.disabled = !typeSel.value; });
   brandSel.addEventListener('change', () => {
     brandCustom.style.display = brandSel.value === OTHER_BRAND ? '' : 'none';
     if (brandSel.value !== OTHER_BRAND) brandCustom.value = '';
