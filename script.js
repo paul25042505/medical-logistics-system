@@ -50,7 +50,7 @@ let records       = [];
 let batches       = [];
 let recruiters    = [];
 let leads         = [];
-let adminSettings = { units: [], battalions: [], companies: [] };
+let adminSettings = { units: [], battalions: [], companies: [], medUnits: [] };
 
 let currentTab     = 'civilian';
 let editingId      = null;
@@ -92,9 +92,9 @@ function getBrandOptions(type) {
     `<option value="${OTHER_BRAND}">${OTHER_BRAND}</option>`;
 }
 
-// 車輛單位 = 人員資訊管理的單位（adminSettings.units）
+// 車輛/人員管理單位 = 衛生營單位（adminSettings.medUnits）
 function getVehicleUnits() {
-  return adminSettings.units || [];
+  return adminSettings.medUnits?.length ? adminSettings.medUnits : ['衛生營營部','衛生營第一連','衛生營第二連'];
 }
 
 function populateVehicleUnitSel(selId, selectedUnit = '') {
@@ -201,7 +201,11 @@ function showAuthScreen(screen) {
     const unitSel = document.getElementById('reg-unit');
     if (unitSel && unitSel.options.length <= 1) {
       getDoc(doc(db, 'settings', 'admin')).then(snap => {
-        const units = snap.exists() ? (snap.data().units || []) : [];
+        // 申請表用衛生營單位（medUnits），若無則用預設值
+        const data  = snap.exists() ? snap.data() : {};
+        const units = data.medUnits?.length
+          ? data.medUnits
+          : ['衛生營營部', '衛生營第一連', '衛生營第二連'];
         unitSel.innerHTML = '<option value="">— 請選擇單位 —</option>' +
           units.map(u => `<option value="${u}">${u}</option>`).join('');
       }).catch(() => {});
@@ -524,6 +528,7 @@ function renderAdminPage() {
   makeList('admin-unit-list',      adminSettings.units,      'units');
   makeList('admin-battalion-list', adminSettings.battalions, 'battalions');
   makeList('admin-company-list',   adminSettings.companies,  'companies');
+  makeList('admin-medunit-list',   adminSettings.medUnits,   'medUnits');
 
   // ── 帳號 / 申請整合清單 ──
   renderAdminAccountsSection();
@@ -777,18 +782,22 @@ window.removeAdminItem = async function (key, idx) {
 };
 
 document.getElementById('admin-unit-add').addEventListener('click',
-  () => addAdminItem('units', 'admin-unit-input'));
+  () => addAdminItem('units',      'admin-unit-input'));
 document.getElementById('admin-battalion-add').addEventListener('click',
   () => addAdminItem('battalions', 'admin-battalion-input'));
 document.getElementById('admin-company-add').addEventListener('click',
-  () => addAdminItem('companies', 'admin-company-input'));
+  () => addAdminItem('companies',  'admin-company-input'));
+document.getElementById('admin-medunit-add').addEventListener('click',
+  () => addAdminItem('medUnits',   'admin-medunit-input'));
 
-['admin-unit-input','admin-battalion-input','admin-company-input'].forEach(id => {
+[
+  ['admin-unit-input',      'units'],
+  ['admin-battalion-input', 'battalions'],
+  ['admin-company-input',   'companies'],
+  ['admin-medunit-input',   'medUnits'],
+].forEach(([id, key]) => {
   document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    if (id === 'admin-unit-input')      addAdminItem('units',      id);
-    else if (id === 'admin-battalion-input') addAdminItem('battalions', id);
-    else addAdminItem('companies', id);
+    if (e.key === 'Enter') addAdminItem(key, id);
   });
 });
 
@@ -1794,7 +1803,12 @@ function startApp() {
   document.getElementById('loading-screen').style.display = '';
 
   onSnapshot(DOC_ADMIN, snap => {
-    adminSettings = snap.exists() ? snap.data() : { units: [], battalions: [], companies: [] };
+    const defaultSettings = { units: [], battalions: [], companies: [], medUnits: [] };
+    adminSettings = snap.exists() ? { ...defaultSettings, ...snap.data() } : defaultSettings;
+    // 若 medUnits 從未設定過，自動填入預設衛生營單位
+    if (!adminSettings.medUnits?.length) {
+      adminSettings.medUnits = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
+    }
     renderAdminPage();
     renderAdminSheetsSettings();
     populateAdminDropdowns();
@@ -1915,15 +1929,14 @@ window.changeUserRole = async function(uid, role) {
 function populatePersonnelUnit() {
   const sel = document.getElementById('pf-unit');
   if (!sel) return;
-  const cur = sel.value;
+  const cur   = sel.value;
+  const units = getVehicleUnits(); // 與車輛管理共用 medUnits
   sel.innerHTML = '<option value="">請選擇</option>' +
-    PERSONNEL_UNITS.map(u => `<option${u === cur ? ' selected' : ''}>${u}</option>`).join('');
+    units.map(u => `<option${u === cur ? ' selected' : ''}>${u}</option>`).join('');
 }
 
-const PERSONNEL_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連'];
-
 function renderPersonnelUnitFilters() {
-  const units  = PERSONNEL_UNITS;
+  const units = getVehicleUnits();
   const chips  = document.getElementById('personnelUnitChips');
   if (!chips) return;
   const allActive = personnelUnitFilter.length === 0;

@@ -425,10 +425,14 @@
       <!-- 後台管理 -->
       <section id="page-admin" class="page">
         <h2 class="page-title">⚙️ 後台管理</h2>
+
+        <!-- ── 招募管理 ── -->
+        <div class="admin-section-label">📋 招募管理</div>
         <div class="admin-grid">
 
           <div class="admin-card">
-            <div class="admin-card-title">🏢 單位管理</div>
+            <div class="admin-card-title">🏢 來源單位管理</div>
+            <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">招募問卷使用的來源部隊單位</p>
             <div class="admin-input-row">
               <input type="text" id="admin-unit-input" placeholder="新增單位名稱">
               <button class="btn btn-primary btn-sm" id="admin-unit-add">新增</button>
@@ -438,6 +442,7 @@
 
           <div class="admin-card">
             <div class="admin-card-title">🪖 營級管理</div>
+            <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">招募問卷使用的營級選項</p>
             <div class="admin-input-row">
               <input type="text" id="admin-battalion-input" placeholder="新增營級名稱">
               <button class="btn btn-primary btn-sm" id="admin-battalion-add">新增</button>
@@ -447,6 +452,7 @@
 
           <div class="admin-card">
             <div class="admin-card-title">🏴 連級管理</div>
+            <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">招募問卷使用的連級選項</p>
             <div class="admin-input-row">
               <input type="text" id="admin-company-input" placeholder="新增連級名稱">
               <button class="btn btn-primary btn-sm" id="admin-company-add">新增</button>
@@ -472,6 +478,22 @@
               <button class="btn btn-secondary btn-sm" id="admin-sheets-test">🔗 測試連線</button>
               <span id="admin-sheets-status" style="font-size:12px;color:var(--text-muted)"></span>
             </div>
+          </div>
+
+        </div>
+
+        <!-- ── 人事管理 ── -->
+        <div class="admin-section-label" style="margin-top:28px">👤 人事管理</div>
+        <div class="admin-grid">
+
+          <div class="admin-card">
+            <div class="admin-card-title">🏥 衛生營單位管理</div>
+            <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">人員資訊管理、車輛管理、服裝點數使用的單位</p>
+            <div class="admin-input-row">
+              <input type="text" id="admin-medunit-input" placeholder="例：衛生營營部">
+              <button class="btn btn-primary btn-sm" id="admin-medunit-add">新增</button>
+            </div>
+            <ul class="admin-list" id="admin-medunit-list"></ul>
           </div>
 
           <div class="admin-card admin-card-full">

@@ -914,10 +914,21 @@ main {
 }
 
 /* ── Admin page ── */
+.admin-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  padding: 6px 2px 8px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 16px;
+}
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
+  margin-bottom: 8px;
 }
 .admin-card {
   background: var(--white);
