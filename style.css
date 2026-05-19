@@ -2417,7 +2417,7 @@ main {
 }
 /* iPhone：效期上排全寬，數量＋× 下排並列 */
 @media (max-width: 480px) {
-  .di-drug-card { padding: 12px 10px; }
+  .di-drug-card { padding: 12px 10px; overflow: hidden; }
 
   /* 標題行：效期佔左側，數量靠右對齊 × 按鈕欄 */
   .di-batch-header {
@@ -2435,10 +2435,15 @@ main {
     grid-template-rows: auto auto;
     gap: 6px;
     align-items: center;
+    overflow: hidden;
   }
   .di-batch-row .di-batch-expiry {
-    grid-column: 1 / -1;   /* 效期：跨兩欄，全寬 */
+    grid-column: 1 / -1;
     grid-row: 1;
+    /* 消除 iOS Safari month input 原生 chrome 溢出 */
+    -webkit-appearance: none;
+    appearance: none;
+    max-width: 100%;
   }
   .di-batch-row .di-batch-qty {
     grid-column: 1;
@@ -2454,6 +2459,7 @@ main {
   .di-batch-row input {
     height: 44px;
     min-width: 0;
+    max-width: 100%;
     box-sizing: border-box;
     padding: 0 8px;
     font-size: 13px;
