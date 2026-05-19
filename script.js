@@ -69,6 +69,41 @@ let viewingAppId    = null;
 let vehicles        = [];
 let editingVehicleId = null;
 
+// ── 台灣熱門汽機車廠牌 ────────────────────────────────
+const CAR_BRANDS  = ['Toyota','Honda','Nissan','Mazda','Ford','Mitsubishi',
+  'Hyundai','Kia','Volkswagen','BMW','Mercedes-Benz','Lexus','Subaru',
+  'Suzuki','Isuzu','Tesla','Volvo','Audi','LUXGEN 納智捷'];
+const MOTO_BRANDS = ['Yamaha','Honda','光陽 Kymco','三陽 SYM','Suzuki',
+  'Kawasaki','PGO','Aeon Motor','台鈴 Suzuki TW','Harley-Davidson','BMW'];
+const OTHER_BRAND = '其他（手動輸入）';
+
+function getBrandOptions(type) {
+  const list = type === '機車' ? MOTO_BRANDS : CAR_BRANDS;
+  return '<option value="">— 請選擇廠牌 —</option>' +
+    list.map(b => `<option value="${b}">${b}</option>`).join('') +
+    `<option value="${OTHER_BRAND}">${OTHER_BRAND}</option>`;
+}
+
+function populateVehicleUnitSel(selId, selectedUnit = '') {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const units = adminSettings.units || [];
+  sel.innerHTML = '<option value="">— 請先選單位 —</option>' +
+    units.map(u => `<option value="${u}"${u === selectedUnit ? ' selected' : ''}>${u}</option>`).join('');
+}
+
+function populateVehiclePersonnelSel(selId, unit, selectedId = '') {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const filtered = unit
+    ? personnel.filter(p => p.unit === unit).sort((a, b) => (a.name||'').localeCompare(b.name||'','zh-TW'))
+    : [];
+  sel.innerHTML = filtered.length
+    ? '<option value="">請選擇人員</option>' +
+      filtered.map(p => `<option value="${p.id}" data-uid="${p.uid||''}" data-name="${p.name||''}" data-unit="${p.unit||''}"${p.id === selectedId ? ' selected' : ''}>${p.name}</option>`).join('')
+    : '<option value="">此單位無人員</option>';
+}
+
 let uniformPoints     = [];
 let editingUpId       = null;
 let upUnitFilter      = '';
@@ -2436,50 +2471,274 @@ window.openVehicleModal = function(id = null) {
   const v = id ? vehicles.find(x => x.id === id) : null;
   document.getElementById('vehicle-modal-title').textContent = v ? '編輯車輛' : '新增車輛';
 
-  // 人員下拉（從 personnel 清單帶入）
-  const pSel = document.getElementById('v-personnel');
-  const sorted = [...personnel].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
-  pSel.innerHTML = '<option value="">請選擇人員</option>' +
-    sorted.map(p => `<option value="${p.id}" data-uid="${p.uid || ''}" data-name="${p.name || ''}" data-unit="${p.unit || ''}">${p.name}${p.unit ? '（' + p.unit + '）' : ''}</option>`).join('');
+  // 單位下拉
+  const initUnit = v?.unit || '';
+  populateVehicleUnitSel('v-unit', initUnit);
 
-  // 編輯時預選人員
-  if (v?.personnelId) pSel.value = v.personnelId;
-  else if (v?.ownerName) {
+  // 人員下拉（依單位篩選）
+  populateVehiclePersonnelSel('v-personnel', initUnit, v?.personnelId || '');
+  if (!v?.personnelId && v?.ownerName) {
     const match = personnel.find(p => p.name === v.ownerName);
-    if (match) pSel.value = match.id;
+    if (match) document.getElementById('v-personnel').value = match.id;
   }
 
-  document.getElementById('v-type').value  = v?.type  || '';
+  // 單位切換 → 更新人員
+  const unitSel = document.getElementById('v-unit');
+  unitSel.onchange = () => populateVehiclePersonnelSel('v-personnel', unitSel.value);
+
+  // 車種 / 廠牌
+  const type = v?.type || '';
+  document.getElementById('v-type').value  = type;
   document.getElementById('v-plate').value = v?.plate || '';
-  document.getElementById('v-brand').value = v?.brand || '';
   document.getElementById('v-color').value = v?.color || '';
+
+  // 廠牌下拉
+  const brandSel    = document.getElementById('v-brand-select');
+  const brandCustom = document.getElementById('v-brand-custom');
+  brandSel.innerHTML = getBrandOptions(type);
+  const savedBrand = v?.brand || '';
+  const allBrands  = [...CAR_BRANDS, ...MOTO_BRANDS];
+  if (savedBrand && !allBrands.includes(savedBrand)) {
+    brandSel.value        = OTHER_BRAND;
+    brandCustom.value     = savedBrand;
+    brandCustom.style.display = '';
+  } else {
+    brandSel.value            = savedBrand;
+    brandCustom.style.display = 'none';
+    brandCustom.value         = '';
+  }
+
+  // 車種切換 → 更新廠牌選項
+  document.getElementById('v-type').onchange = function() {
+    brandSel.innerHTML = getBrandOptions(this.value);
+    brandSel.value = ''; brandCustom.value = ''; brandCustom.style.display = 'none';
+  };
+  brandSel.onchange = function() {
+    brandCustom.style.display = this.value === OTHER_BRAND ? '' : 'none';
+    if (this.value !== OTHER_BRAND) brandCustom.value = '';
+  };
+
   document.getElementById('vehicleModalOverlay').classList.add('open');
 };
 
 function closeVehicleModal() {
   document.getElementById('vehicleModalOverlay').classList.remove('open');
 }
+
+// ── 批次輸入 ──────────────────────────────────────────
+function makeBatchRow() {
+  const tr = document.createElement('tr');
+  tr.style.borderBottom = '1px solid var(--border)';
+
+  const units   = adminSettings.units || [];
+  const unitOpts = '<option value="">— 選單位 —</option>' +
+    units.map(u => `<option value="${u}">${u}</option>`).join('');
+
+  tr.innerHTML = `
+    <td style="padding:4px 4px">
+      <select class="br-unit" style="width:100%;font-size:12px;padding:4px">
+        ${unitOpts}
+      </select>
+    </td>
+    <td style="padding:4px 4px">
+      <select class="br-person" style="width:100%;font-size:12px;padding:4px">
+        <option value="">請先選單位</option>
+      </select>
+    </td>
+    <td style="padding:4px 4px">
+      <select class="br-type" style="width:100%;font-size:12px;padding:4px">
+        <option value="">選車種</option>
+        <option value="汽車">🚗 汽車</option>
+        <option value="機車">🏍 機車</option>
+      </select>
+    </td>
+    <td style="padding:4px 4px">
+      <input class="br-plate" type="text" maxlength="10" placeholder="ABC-1234"
+             style="width:100%;font-size:12px;padding:4px;text-transform:uppercase">
+    </td>
+    <td style="padding:4px 4px">
+      <select class="br-brand" style="width:100%;font-size:12px;padding:4px">
+        ${getBrandOptions('')}
+      </select>
+      <input class="br-brand-custom" type="text" placeholder="手動輸入"
+             style="display:none;width:100%;font-size:12px;padding:4px;margin-top:3px">
+    </td>
+    <td style="padding:4px 4px">
+      <input class="br-color" type="text" placeholder="顏色"
+             style="width:100%;font-size:12px;padding:4px">
+    </td>
+    <td style="padding:4px 2px;text-align:center">
+      <button class="btn-icon danger br-del" title="刪除此行">✕</button>
+    </td>`;
+
+  // 單位 → 人員
+  const unitSel   = tr.querySelector('.br-unit');
+  const personSel = tr.querySelector('.br-person');
+  unitSel.addEventListener('change', () => {
+    const unit = unitSel.value;
+    const filtered = unit
+      ? personnel.filter(p => p.unit === unit).sort((a,b) => (a.name||'').localeCompare(b.name||'','zh-TW'))
+      : [];
+    personSel.innerHTML = filtered.length
+      ? '<option value="">請選擇人員</option>' +
+        filtered.map(p => `<option value="${p.id}" data-uid="${p.uid||''}" data-name="${p.name||''}" data-unit="${p.unit||''}">${p.name}</option>`).join('')
+      : '<option value="">此單位無人員</option>';
+    updateBatchCount();
+  });
+
+  // 車種 → 廠牌
+  const typeSel     = tr.querySelector('.br-type');
+  const brandSel    = tr.querySelector('.br-brand');
+  const brandCustom = tr.querySelector('.br-brand-custom');
+  typeSel.addEventListener('change', () => {
+    brandSel.innerHTML = getBrandOptions(typeSel.value);
+    brandSel.value = ''; brandCustom.value = ''; brandCustom.style.display = 'none';
+    updateBatchCount();
+  });
+  brandSel.addEventListener('change', () => {
+    brandCustom.style.display = brandSel.value === OTHER_BRAND ? '' : 'none';
+    if (brandSel.value !== OTHER_BRAND) brandCustom.value = '';
+  });
+
+  tr.querySelector('.br-del').addEventListener('click', () => {
+    tr.remove(); updateBatchCount();
+  });
+
+  tr.querySelectorAll('input,select').forEach(el =>
+    el.addEventListener('input', updateBatchCount)
+  );
+
+  return tr;
+}
+
+function updateBatchCount() {
+  const rows  = document.querySelectorAll('#vehicleBatchBody tr');
+  const valid = [...rows].filter(r => {
+    const unit   = r.querySelector('.br-unit')?.value;
+    const person = r.querySelector('.br-person')?.value;
+    const type   = r.querySelector('.br-type')?.value;
+    const plate  = r.querySelector('.br-plate')?.value.trim();
+    return unit && person && type && plate;
+  }).length;
+  document.getElementById('vehicleBatchCount').textContent = valid;
+}
+
+function openVehicleBatch() {
+  const tbody = document.getElementById('vehicleBatchBody');
+  tbody.innerHTML = '';
+  tbody.appendChild(makeBatchRow());
+  tbody.appendChild(makeBatchRow());
+  tbody.appendChild(makeBatchRow());
+  updateBatchCount();
+  document.getElementById('vehicleBatchOverlay').classList.add('open');
+}
+
+function closeVehicleBatch() {
+  document.getElementById('vehicleBatchOverlay').classList.remove('open');
+  document.getElementById('vehicleBatchStatus').textContent = '';
+}
+
+document.getElementById('vehicleBatchBtn').addEventListener('click', openVehicleBatch);
+document.getElementById('vehicleBatchClose').addEventListener('click',  closeVehicleBatch);
+document.getElementById('vehicleBatchCancel').addEventListener('click', closeVehicleBatch);
+document.getElementById('vehicleBatchOverlay').addEventListener('click', e => {
+  if (e.target.id === 'vehicleBatchOverlay') closeVehicleBatch();
+});
+document.getElementById('vehicleBatchAddRow').addEventListener('click', () => {
+  document.getElementById('vehicleBatchBody').appendChild(makeBatchRow());
+  updateBatchCount();
+});
+
+document.getElementById('vehicleBatchSave').addEventListener('click', async () => {
+  const rows   = [...document.querySelectorAll('#vehicleBatchBody tr')];
+  const statusEl = document.getElementById('vehicleBatchStatus');
+  const toSave = [];
+
+  for (const r of rows) {
+    const unitSel   = r.querySelector('.br-unit');
+    const personSel = r.querySelector('.br-person');
+    const typeSel   = r.querySelector('.br-type');
+    const plateEl   = r.querySelector('.br-plate');
+    const brandSel  = r.querySelector('.br-brand');
+    const brandCust = r.querySelector('.br-brand-custom');
+    const colorEl   = r.querySelector('.br-color');
+
+    const unit   = unitSel?.value;
+    const person = personSel?.value;
+    const type   = typeSel?.value;
+    const plate  = plateEl?.value.trim().toUpperCase();
+    if (!unit || !person || !type || !plate) continue;  // 跳過未填完的行
+
+    const pOpt  = personSel.options[personSel.selectedIndex];
+    const brand = brandSel?.value === OTHER_BRAND
+      ? (brandCust?.value.trim() || '')
+      : (brandSel?.value || '');
+
+    toSave.push({
+      personnelId: person,
+      uid:         pOpt?.dataset.uid  || '',
+      ownerName:   pOpt?.dataset.name || '',
+      unit,
+      type, plate, brand,
+      color:       colorEl?.value.trim() || '',
+      status:      'pending',
+      createdAt:   serverTimestamp(),
+    });
+  }
+
+  if (!toSave.length) { alert('請至少填寫一筆完整資料（單位、人員、車種、車牌必填）'); return; }
+
+  const btn = document.getElementById('vehicleBatchSave');
+  btn.disabled = true;
+  statusEl.textContent = `儲存中…（0 / ${toSave.length}）`;
+
+  let done = 0;
+  const errors = [];
+  for (const data of toSave) {
+    try {
+      await addDoc(COL_VEHICLES, data);
+      done++;
+      statusEl.textContent = `儲存中…（${done} / ${toSave.length}）`;
+    } catch(e) {
+      errors.push(data.ownerName || data.plate);
+    }
+  }
+
+  btn.disabled = false;
+  if (errors.length) {
+    statusEl.textContent = `完成 ${done} 筆，失敗 ${errors.length} 筆：${errors.join('、')}`;
+  } else {
+    statusEl.textContent = `✓ 成功儲存 ${done} 筆`;
+    setTimeout(closeVehicleBatch, 1200);
+  }
+});
 document.getElementById('vehicleModalClose').addEventListener('click',  closeVehicleModal);
 document.getElementById('vehicleCancelBtn').addEventListener('click',   closeVehicleModal);
 document.getElementById('vehicleModalOverlay').addEventListener('click', e => { if (e.target.id === 'vehicleModalOverlay') closeVehicleModal(); });
 
 // ── Save vehicle ──────────────────────────────────────
 document.getElementById('vehicleSaveBtn').addEventListener('click', async () => {
-  const pSel  = document.getElementById('v-personnel');
-  const pOpt  = pSel.options[pSel.selectedIndex];
-  const type  = document.getElementById('v-type').value;
-  const plate = document.getElementById('v-plate').value.trim().toUpperCase();
+  const unitSel = document.getElementById('v-unit');
+  const pSel    = document.getElementById('v-personnel');
+  const pOpt    = pSel.options[pSel.selectedIndex];
+  const type    = document.getElementById('v-type').value;
+  const plate   = document.getElementById('v-plate').value.trim().toUpperCase();
+  const brandSel    = document.getElementById('v-brand-select');
+  const brandCustom = document.getElementById('v-brand-custom');
+  const brand = brandSel.value === OTHER_BRAND
+    ? brandCustom.value.trim()
+    : brandSel.value;
 
-  if (!pSel.value)  { alert('請選擇人員'); return; }
-  if (!type || !plate) { alert('請填寫車種和車牌'); return; }
+  if (!unitSel.value) { alert('請先選擇單位'); return; }
+  if (!pSel.value)    { alert('請選擇人員');   return; }
+  if (!type || !plate){ alert('請填寫車種和車牌'); return; }
 
   const data = {
     personnelId: pSel.value,
     uid:         pOpt?.dataset.uid  || '',
     ownerName:   pOpt?.dataset.name || '',
-    unit:        pOpt?.dataset.unit || '',
-    type, plate,
-    brand: document.getElementById('v-brand').value.trim(),
+    unit:        unitSel.value,
+    type, plate, brand,
     color: document.getElementById('v-color').value.trim(),
   };
 

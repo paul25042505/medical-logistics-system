@@ -551,6 +551,7 @@
           <h2 class="page-title">🚗 車輛資訊管理</h2>
           <div style="display:flex;gap:8px">
             <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 新增車輛</button>
+            <button class="btn btn-secondary btn-sm" id="vehicleBatchBtn">📋 批次輸入</button>
             <button class="btn btn-secondary btn-sm" id="vehicleExportBtn">⬇ 匯出 CSV</button>
           </div>
         </div>
@@ -1279,10 +1280,16 @@
       <div class="modal-body">
         <div class="form-section">
           <div class="form-grid">
-            <div class="form-group full">
+            <div class="form-group">
+              <label>單位 <span class="required">*</span></label>
+              <select id="v-unit">
+                <option value="">— 請先選單位 —</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label>人員 <span class="required">*</span></label>
               <select id="v-personnel">
-                <option value="">請選擇人員</option>
+                <option value="">請先選單位</option>
               </select>
             </div>
             <div class="form-group">
@@ -1299,11 +1306,16 @@
             </div>
             <div class="form-group">
               <label>廠牌</label>
-              <input type="text" id="v-brand" placeholder="Toyota、Yamaha…">
+              <div style="display:flex;gap:6px">
+                <select id="v-brand-select" style="flex:1">
+                  <option value="">— 請選擇 —</option>
+                </select>
+                <input type="text" id="v-brand-custom" placeholder="手動輸入廠牌" style="display:none;flex:1">
+              </div>
             </div>
             <div class="form-group">
               <label>顏色</label>
-              <input type="text" id="v-color" placeholder="白、黑、紅…">
+              <input type="text" id="v-color" placeholder="白、黑、銀、紅…">
             </div>
           </div>
         </div>
@@ -1311,6 +1323,41 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="vehicleCancelBtn">取消</button>
         <button class="btn btn-primary" id="vehicleSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 車輛批次輸入 ══ -->
+  <div class="modal-overlay" id="vehicleBatchOverlay">
+    <div class="modal" style="max-width:900px;width:96vw">
+      <div class="modal-header">
+        <h3>📋 批次新增車輛</h3>
+        <button class="modal-close" id="vehicleBatchClose">✕</button>
+      </div>
+      <div class="modal-body" style="padding-bottom:0">
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">每行填一筆，填好後按「全部儲存」。</p>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px" id="vehicleBatchTable">
+            <thead>
+              <tr style="background:var(--bg-secondary)">
+                <th style="padding:7px 5px;text-align:left;min-width:110px">單位 *</th>
+                <th style="padding:7px 5px;text-align:left;min-width:120px">人員 *</th>
+                <th style="padding:7px 5px;text-align:left;min-width:90px">車種 *</th>
+                <th style="padding:7px 5px;text-align:left;min-width:110px">車牌 *</th>
+                <th style="padding:7px 5px;text-align:left;min-width:130px">廠牌</th>
+                <th style="padding:7px 5px;text-align:left;min-width:80px">顏色</th>
+                <th style="padding:7px 5px;width:32px"></th>
+              </tr>
+            </thead>
+            <tbody id="vehicleBatchBody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="vehicleBatchAddRow" style="margin:10px 0 4px">＋ 新增一行</button>
+      </div>
+      <div class="modal-footer">
+        <span id="vehicleBatchStatus" style="font-size:13px;color:var(--text-muted);margin-right:auto"></span>
+        <button class="btn btn-secondary" id="vehicleBatchCancel">取消</button>
+        <button class="btn btn-primary" id="vehicleBatchSave">全部儲存（<span id="vehicleBatchCount">0</span> 筆）</button>
       </div>
     </div>
   </div>
