@@ -2373,6 +2373,59 @@ main {
 .med-stat-card.red   { border-color: var(--red);    }
 .med-stat-card.yellow { border-color: #fcd34d; }
 
+/* ── 衛材裝備 卡片列表 ── */
+.me-card-list { display: flex; flex-direction: column; gap: 10px; }
+.me-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: box-shadow 0.15s;
+}
+.me-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.me-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.me-card-name { font-weight: 700; font-size: 15px; color: var(--text); }
+.me-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.me-card-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.me-card-actions { display: flex; gap: 6px; }
+.me-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.me-field { display: flex; flex-direction: column; gap: 3px; }
+.me-field-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.me-field-value { font-size: 13px; color: var(--text); }
+.me-field.full { grid-column: 1 / -1; }
+
 /* ── 醫務所分區 tabs ── */
 .pharmacy-tab-bar {
   display: flex;

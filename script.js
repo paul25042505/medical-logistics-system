@@ -4777,10 +4777,10 @@ function renderMedicalEquipment() {
     </div>`;
   }
 
-  const tbody = document.getElementById('medEquipTableBody');
-  const empty = document.getElementById('medEquipEmpty');
-  if (!tbody) return;
-  if (!list.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  const listEl = document.getElementById('medEquipList');
+  const empty  = document.getElementById('medEquipEmpty');
+  if (!listEl) return;
+  if (!list.length) { listEl.innerHTML = ''; empty.style.display = ''; return; }
   empty.style.display = 'none';
 
   const statusBadge = s => {
@@ -4789,21 +4789,52 @@ function renderMedicalEquipment() {
     return `<span class="tag" style="background:var(--green-bg);color:var(--green)">堪用</span>`;
   };
 
-  tbody.innerHTML = list.map((e, i) => `
-    <tr>
-      <td class="col-seq">${i + 1}</td>
-      <td><strong>${e.name || '—'}</strong>${e.code ? `<div style="font-size:11px;color:var(--text-muted)">${e.code}</div>` : ''}</td>
-      <td>${e.category || '—'}</td>
-      <td>${e.spec || '—'}</td>
-      <td style="font-weight:700">${e.qty ?? '—'}</td>
-      <td>${e.custodian || '—'}</td>
-      <td>${e.lastChecked ? formatDate(e.lastChecked) : '—'}</td>
-      <td>${statusBadge(e.status || 'normal')}</td>
-      <td class="col-actions" style="white-space:nowrap">
-        <button class="btn-icon" onclick="editMedEquip('${e.id}')">✏️</button>
-        <button class="btn-icon danger" onclick="deleteMedEquip('${e.id}','${(e.name||'').replace(/'/g,"\\'")}')">🗑</button>
-      </td>
-    </tr>`).join('');
+  const batteryDisplay = d => {
+    if (!d) return '<span style="color:var(--text-muted)">未設定</span>';
+    const diff = Math.ceil((new Date(d) - new Date()) / 86400000);
+    const color = diff < 30 ? 'var(--red)' : diff < 90 ? 'var(--yellow)' : 'var(--text)';
+    return `<span style="color:${color}">${formatDate(d)}${diff < 90 && diff >= 0 ? `（剩 ${diff} 天）` : diff < 0 ? '（已過期）' : ''}</span>`;
+  };
+
+  listEl.innerHTML = list.map(e => `
+    <div class="me-card">
+      <div class="me-card-header">
+        <div>
+          <div class="me-card-name">${e.name || '—'}</div>
+          <div class="me-card-sub">
+            ${e.code ? `<span>#${e.code}</span><span>·</span>` : ''}
+            ${e.category ? `<span>${e.category}</span>` : ''}
+            ${e.spec ? `<span>·</span><span>${e.spec}</span>` : ''}
+          </div>
+        </div>
+        <div class="me-card-header-right">
+          ${statusBadge(e.status || 'normal')}
+          <div class="me-card-actions">
+            <button class="btn-icon" onclick="editMedEquip('${e.id}')">✏️</button>
+            <button class="btn-icon danger" onclick="deleteMedEquip('${e.id}','${(e.name||'').replace(/'/g,"\\'")}')">🗑</button>
+          </div>
+        </div>
+      </div>
+      <div class="me-fields">
+        <div class="me-field">
+          <div class="me-field-label">電池1效期</div>
+          <div class="me-field-value">${batteryDisplay(e.battery1)}</div>
+        </div>
+        <div class="me-field">
+          <div class="me-field-label">電池2效期</div>
+          <div class="me-field-value">${batteryDisplay(e.battery2)}</div>
+        </div>
+        <div class="me-field">
+          <div class="me-field-label">最後清點日</div>
+          <div class="me-field-value">${e.lastChecked ? formatDate(e.lastChecked) : '<span style="color:var(--text-muted)">未清點</span>'}</div>
+        </div>
+        <div class="me-field">
+          <div class="me-field-label">保管人</div>
+          <div class="me-field-value">${e.custodian || '—'}</div>
+        </div>
+        ${e.note ? `<div class="me-field full"><div class="me-field-label">備註</div><div class="me-field-value">${e.note}</div></div>` : ''}
+      </div>
+    </div>`).join('');
 }
 
 document.getElementById('medEquipSearch')?.addEventListener('input', renderMedicalEquipment);
@@ -4824,6 +4855,8 @@ function openMedEquipModal(id = null) {
   sv('me-spec',         e?.spec);
   sv('me-qty',          e?.qty ?? '');
   sv('me-custodian',    e?.custodian);
+  sv('me-battery1',     e?.battery1 || '');
+  sv('me-battery2',     e?.battery2 || '');
   sv('me-last-checked', e?.lastChecked || '');
   sv('me-status',       e?.status || 'normal');
   sv('me-note',         e?.note);
@@ -4854,6 +4887,8 @@ document.getElementById('medEquipSaveBtn')?.addEventListener('click', async () =
     spec:        gv('me-spec'),
     qty:         qtyRaw !== '' ? Number(qtyRaw) : null,
     custodian:   gv('me-custodian'),
+    battery1:    gv('me-battery1'),
+    battery2:    gv('me-battery2'),
     lastChecked: gv('me-last-checked'),
     status:      gv('me-status') || 'normal',
     note:        gv('me-note'),

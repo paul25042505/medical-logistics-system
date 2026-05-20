@@ -638,25 +638,8 @@
             </select>
           </div>
         </div>
-        <div id="medEquipStats" style="font-size:13px;color:var(--text-muted);margin-bottom:12px"></div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="col-seq">序</th>
-                <th>裝備名稱</th>
-                <th>類別</th>
-                <th>規格型號</th>
-                <th>數量</th>
-                <th>保管人</th>
-                <th>最後清點日</th>
-                <th>狀態</th>
-                <th class="col-actions">操作</th>
-              </tr>
-            </thead>
-            <tbody id="medEquipTableBody"></tbody>
-          </table>
-        </div>
+        <div id="medEquipStats" style="margin-bottom:12px"></div>
+        <div id="medEquipList" class="me-card-list"></div>
         <div id="medEquipEmpty" class="empty-state" style="display:none">
           <div class="icon">🩺</div>
           <p>尚無裝備資料，請點擊「＋ 新增品項」開始建立</p>
@@ -1918,6 +1901,14 @@
           <div class="form-group">
             <label>保管人</label>
             <input type="text" id="me-custodian" placeholder="姓名">
+          </div>
+          <div class="form-group">
+            <label>電池1效期</label>
+            <input type="date" id="me-battery1">
+          </div>
+          <div class="form-group">
+            <label>電池2效期</label>
+            <input type="date" id="me-battery2">
           </div>
           <div class="form-group">
             <label>最後清點日</label>
