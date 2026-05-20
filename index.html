@@ -1910,10 +1910,14 @@
             <input type="date" id="me-battery2">
           </div>
           <div class="form-group">
-            <label>最後清點日</label>
-            <input type="date" id="me-last-checked">
+            <label>貼片1效期</label>
+            <input type="date" id="me-pad1">
           </div>
           <div class="form-group">
+            <label>貼片2效期</label>
+            <input type="date" id="me-pad2">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
             <label>狀態</label>
             <select id="me-status">
               <option value="normal">堪用</option>
@@ -1922,8 +1926,12 @@
             </select>
           </div>
           <div class="form-group" style="grid-column:1/-1">
-            <label>保管人</label>
-            <input type="text" id="me-custodian" placeholder="姓名">
+            <label>校正記錄</label>
+            <div id="me-calibrations-list" style="background:var(--bg);border-radius:8px;padding:8px 10px;min-height:36px;font-size:13px"></div>
+            <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+              <input type="date" id="me-calib-date" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              <button type="button" id="me-add-calib-btn" class="btn btn-secondary btn-sm" style="white-space:nowrap">＋ 新增校正</button>
+            </div>
           </div>
           <div class="form-group" style="grid-column:1/-1">
             <label>備註</label>

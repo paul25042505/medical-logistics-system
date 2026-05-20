@@ -4892,7 +4892,6 @@ function renderMedicalEquipment() {
           <div class="me-card-header">
             <div>
               <div class="me-card-name">#${e.code || '—'}</div>
-              ${e.custodian ? `<div class="me-card-sub">保管人：${e.custodian}</div>` : ''}
             </div>
             <div class="me-card-header-right">
               ${statusBadge(e.status || 'normal')}
@@ -4903,18 +4902,11 @@ function renderMedicalEquipment() {
             </div>
           </div>
           <div class="me-fields">
-            <div class="me-field">
-              <div class="me-field-label">電池1效期</div>
-              <div class="me-field-value">${batteryDisplay(e.battery1)}</div>
-            </div>
-            <div class="me-field">
-              <div class="me-field-label">電池2效期</div>
-              <div class="me-field-value">${batteryDisplay(e.battery2)}</div>
-            </div>
-            <div class="me-field">
-              <div class="me-field-label">最後清點日</div>
-              <div class="me-field-value">${e.lastChecked ? formatDate(e.lastChecked) : '<span style="color:var(--text-muted)">未清點</span>'}</div>
-            </div>
+            ${e.battery1 ? `<div class="me-field"><div class="me-field-label">電池1效期</div><div class="me-field-value">${batteryDisplay(e.battery1)}</div></div>` : ''}
+            ${e.battery2 ? `<div class="me-field"><div class="me-field-label">電池2效期</div><div class="me-field-value">${batteryDisplay(e.battery2)}</div></div>` : ''}
+            ${e.pad1 ? `<div class="me-field"><div class="me-field-label">貼片1效期</div><div class="me-field-value">${batteryDisplay(e.pad1)}</div></div>` : ''}
+            ${e.pad2 ? `<div class="me-field"><div class="me-field-label">貼片2效期</div><div class="me-field-value">${batteryDisplay(e.pad2)}</div></div>` : ''}
+            ${(e.calibrations||[]).length ? `<div class="me-field"><div class="me-field-label">最近校正</div><div class="me-field-value">${formatDate(e.calibrations[0]?.date)}</div></div>` : ''}
             ${e.note ? `<div class="me-field"><div class="me-field-label">備註</div><div class="me-field-value">${e.note}</div></div>` : ''}
           </div>
         </div>`).join('')}
@@ -4928,20 +4920,46 @@ document.getElementById('medEquipStatusFilter')?.addEventListener('change', rend
 // ── 衛材裝備 CRUD ──────────────────────────────────────
 let editingMedEquipId = null;
 
+let tempCalibrations = [];
+
+function renderMeCalibrations() {
+  const el = document.getElementById('me-calibrations-list');
+  if (!el) return;
+  if (!tempCalibrations.length) {
+    el.innerHTML = `<span style="color:#94a3b8;font-size:12px">尚無校正記錄</span>`;
+    return;
+  }
+  el.innerHTML = tempCalibrations.map(c =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">📅 ${c.date}</span>
+      <button type="button" onclick="removeCalibration('${c.date}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0 4px">✕</button>
+    </div>`
+  ).join('');
+}
+
+window.removeCalibration = (date) => {
+  tempCalibrations = tempCalibrations.filter(c => c.date !== date);
+  renderMeCalibrations();
+};
+
 function openMedEquipModal(id = null) {
   editingMedEquipId = id;
   const e = id ? medEquipments.find(x => x.id === id) : null;
   document.getElementById('med-equip-modal-title').textContent = e ? '編輯裝備' : '新增裝備';
   populateEquipTypeDropdowns();
   const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v ?? ''; };
-  sv('me-type-select',  e?.typeId || '');
-  sv('me-code',         e?.code);
-  sv('me-battery1',     e?.battery1 || '');
-  sv('me-battery2',     e?.battery2 || '');
-  sv('me-last-checked', e?.lastChecked || '');
-  sv('me-status',       e?.status || 'normal');
-  sv('me-custodian',    e?.custodian);
-  sv('me-note',         e?.note);
+  sv('me-type-select', e?.typeId || '');
+  sv('me-code',        e?.code);
+  sv('me-battery1',    e?.battery1 || '');
+  sv('me-battery2',    e?.battery2 || '');
+  sv('me-pad1',        e?.pad1 || '');
+  sv('me-pad2',        e?.pad2 || '');
+  sv('me-status',      e?.status || 'normal');
+  sv('me-note',        e?.note);
+  const dateEl = document.getElementById('me-calib-date');
+  if (dateEl) dateEl.value = '';
+  tempCalibrations = [...(e?.calibrations || [])].sort((a, b) => b.date.localeCompare(a.date));
+  renderMeCalibrations();
   document.getElementById('medEquipModalOverlay').classList.add('open');
 }
 
@@ -4956,6 +4974,18 @@ document.getElementById('medEquipModalOverlay')?.addEventListener('click', e => 
   if (e.target.id === 'medEquipModalOverlay') closeMedEquipModal();
 });
 
+document.getElementById('me-add-calib-btn')?.addEventListener('click', () => {
+  const dateEl = document.getElementById('me-calib-date');
+  const date = dateEl?.value;
+  if (!date) { alert('請選擇校正日期'); return; }
+  if (!tempCalibrations.find(c => c.date === date)) {
+    tempCalibrations.unshift({ date });
+    tempCalibrations.sort((a, b) => b.date.localeCompare(a.date));
+    renderMeCalibrations();
+  }
+  if (dateEl) dateEl.value = '';
+});
+
 document.getElementById('medEquipSaveBtn')?.addEventListener('click', async () => {
   const typeId = document.getElementById('me-type-select')?.value;
   const code   = document.getElementById('me-code')?.value.trim();
@@ -4968,12 +4998,13 @@ document.getElementById('medEquipSaveBtn')?.addEventListener('click', async () =
     typeName:     typeObj?.name || '',
     typeCategory: typeObj?.category || '',
     code,
-    battery1:    gv('me-battery1'),
-    battery2:    gv('me-battery2'),
-    lastChecked: gv('me-last-checked'),
-    status:      gv('me-status') || 'normal',
-    custodian:   gv('me-custodian'),
-    note:        gv('me-note'),
+    battery1:     gv('me-battery1'),
+    battery2:     gv('me-battery2'),
+    pad1:         gv('me-pad1'),
+    pad2:         gv('me-pad2'),
+    status:       gv('me-status') || 'normal',
+    note:         gv('me-note'),
+    calibrations: tempCalibrations,
   };
   try {
     if (editingMedEquipId) {
