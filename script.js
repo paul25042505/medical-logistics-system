@@ -801,8 +801,8 @@ function renderAdminAccountsSection() {
     );
 
     return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:0">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0">
-        <div style="min-width:0;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="flex:1;min-width:0;overflow:hidden">
           <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name || u.displayName || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email || '—'}</div>
           ${linkedPers ? `<div style="font-size:11px;color:#16a34a;margin-top:2px">🔗 ${linkedPers.rank||''} ${linkedPers.name}</div>` : ''}
