@@ -306,8 +306,6 @@ function showApp(user, userData) {
   authPage.style.display = 'none';
   mainHeader.style.display = '';
   mainLayout.style.display = '';
-  const footerEl = document.getElementById('app-footer');
-  if (footerEl) footerEl.style.display = '';
   // Use personnel record name + rank if linked
   const me = personnel?.find?.(p => p.id === userData.personnelId || (p.email && p.email.toLowerCase() === (user.email||'').toLowerCase()));
   const displayName = me
@@ -1091,9 +1089,6 @@ function navigateTo(page) {
   const sec = document.getElementById('page-' + page);
   if (sec) sec.classList.add('active');
   if (PAGE_INIT[page]) PAGE_INIT[page]();
-  // 頁尾機敏聲明：僅人員資訊管理頁顯示
-  const footer = document.getElementById('app-footer');
-  if (footer) footer.style.display = (page === 'personnel') ? '' : 'none';
 }
 
 // ── Tabs ──────────────────────────────────────────────

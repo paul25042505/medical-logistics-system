@@ -22,15 +22,6 @@
 }
 
 /* ── 頁尾機敏聲明 ── */
-.classified-footer {
-  background: #1e293b;
-  color: rgba(255,255,255,.55);
-  font-size: 11px;
-  text-align: center;
-  padding: 10px 20px;
-  letter-spacing: .3px;
-  flex-shrink: 0;
-}
 
 /* ── 人員管理浮水印 ── */
 #page-personnel { position: relative; }
