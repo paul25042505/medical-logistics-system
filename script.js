@@ -800,28 +800,25 @@ function renderAdminAccountsSection() {
       (p.email && p.email.toLowerCase() === (u.email || '').toLowerCase())
     );
 
-    // 已核准但尚未連結 → 顯示連結選單
-    const linkSection = (u.approved || u.admin) && !linkedPers ? `
+    return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0">
+        <div style="min-width:0;overflow:hidden">
+          <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name || u.displayName || '—'}</div>
+          <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email || '—'}</div>
+          ${linkedPers ? `<div style="font-size:11px;color:#16a34a;margin-top:2px">🔗 ${linkedPers.rank||''} ${linkedPers.name}</div>` : ''}
+        </div>
+        <div class="admin-item-actions" style="flex-shrink:0">${statusHtml}</div>
+      </div>
+      ${(u.approved || u.admin) && !linkedPers ? `
       <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <select id="link-sel-${u.id}" style="flex:1;min-width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+        <select id="link-sel-${u.id}" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
           <option value="">— 選擇要連結的人員 —</option>
           ${[...personnel].sort((a,b)=>(a.name||'').localeCompare(b.name||'','zh-TW'))
             .map(p=>`<option value="${p.id}">${p.rank ? p.rank+' ' : ''}${p.name}${p.unit ? '　'+p.unit : ''}</option>`)
             .join('')}
         </select>
         <button class="btn btn-sm btn-primary" onclick="linkUserToPersonnel('${u.id}')">連結人員</button>
-      </div>` : linkedPers ? `
-      <div style="font-size:11px;color:#16a34a;margin-top:4px">🔗 已連結：${linkedPers.rank||''} ${linkedPers.name}</div>` : '';
-
-    return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:0">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div>
-          <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
-          <div style="font-size:12px;color:var(--text-muted)">${u.email || '—'}</div>
-        </div>
-        <div class="admin-item-actions">${statusHtml}</div>
-      </div>
-      ${linkSection}
+      </div>` : ''}
     </div>`;
   }
 
