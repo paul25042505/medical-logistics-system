@@ -150,11 +150,11 @@ function populateVehiclePersonnelSel(selId, unit, selectedId = '') {
   const sel = document.getElementById(selId);
   if (!sel) return;
   const filtered = unit
-    ? personnel.filter(p => p.unit === unit).sort((a, b) => (a.name||'').localeCompare(b.name||'','zh-TW'))
+    ? personnel.filter(p => p.unit === unit).sort((a, b) => rankWeight(a.rank) - rankWeight(b.rank) || (a.name||'').localeCompare(b.name||'','zh-TW'))
     : [];
   sel.innerHTML = filtered.length
     ? '<option value="">請選擇人員</option>' +
-      filtered.map(p => `<option value="${p.id}" data-uid="${p.uid||''}" data-name="${p.name||''}" data-unit="${p.unit||''}"${p.id === selectedId ? ' selected' : ''}>${p.name}</option>`).join('')
+      filtered.map(p => `<option value="${p.id}" data-uid="${p.uid||''}" data-name="${p.name||''}" data-unit="${p.unit||''}"${p.id === selectedId ? ' selected' : ''}>${p.rank ? p.rank + ' ' : ''}${p.name}</option>`).join('')
     : '<option value="">此單位無人員</option>';
 }
 
@@ -3328,11 +3328,11 @@ function makeBatchRow() {
   unitSel.addEventListener('change', () => {
     const unit = unitSel.value;
     const filtered = unit
-      ? personnel.filter(p => p.unit === unit).sort((a,b) => (a.name||'').localeCompare(b.name||'','zh-TW'))
+      ? personnel.filter(p => p.unit === unit).sort((a,b) => rankWeight(a.rank) - rankWeight(b.rank) || (a.name||'').localeCompare(b.name||'','zh-TW'))
       : [];
     personSel.innerHTML = filtered.length
       ? '<option value="">請選擇人員</option>' +
-        filtered.map(p => `<option value="${p.id}" data-uid="${p.uid||''}" data-name="${p.name||''}" data-unit="${p.unit||''}">${p.name}</option>`).join('')
+        filtered.map(p => `<option value="${p.id}" data-uid="${p.uid||''}" data-name="${p.name||''}" data-unit="${p.unit||''}">${p.rank ? p.rank + ' ' : ''}${p.name}</option>`).join('')
       : '<option value="">此單位無人員</option>';
     updateBatchCount();
   });
@@ -3818,9 +3818,9 @@ window.openUniformPointsModal = function(id = null) {
 
   // Populate personnel dropdown
   const pSel = document.getElementById('up-personnel');
-  const sorted = [...personnel].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
+  const sorted = [...personnel].sort((a, b) => rankWeight(a.rank) - rankWeight(b.rank) || (a.name || '').localeCompare(b.name || '', 'zh-TW'));
   pSel.innerHTML = '<option value="">請選擇人員</option>' +
-    sorted.map(p => `<option value="${p.id}" data-name="${p.name}" data-unit="${p.unit || ''}">${p.name}${p.unit ? '（' + p.unit + '）' : ''}</option>`).join('');
+    sorted.map(p => `<option value="${p.id}" data-name="${p.name}" data-unit="${p.unit || ''}">${p.rank ? p.rank + ' ' : ''}${p.name}${p.unit ? '（' + p.unit + '）' : ''}</option>`).join('');
 
   // Submitted-at display row (only when editing)
   const subRow = document.getElementById('up-submitted-row');
