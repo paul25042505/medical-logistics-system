@@ -800,14 +800,14 @@ function renderAdminAccountsSection() {
       (p.email && p.email.toLowerCase() === (u.email || '').toLowerCase())
     );
 
-    return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:0">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="flex:1;min-width:0;overflow:hidden">
-          <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name || u.displayName || '—'}</div>
-          <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email || '—'}</div>
+    return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:4px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${u.name || u.displayName || '—'}</div>
+          <div style="font-size:12px;color:var(--text-muted);word-break:break-all">${u.email || '—'}</div>
           ${linkedPers ? `<div style="font-size:11px;color:#16a34a;margin-top:2px">🔗 ${linkedPers.rank||''} ${linkedPers.name}</div>` : ''}
         </div>
-        <div class="admin-item-actions" style="flex-shrink:0">${statusHtml}</div>
+        <div class="admin-item-actions" style="flex-shrink:0;padding-top:1px">${statusHtml}</div>
       </div>
       ${(u.approved || u.admin) && !linkedPers ? `
       <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
