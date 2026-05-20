@@ -125,6 +125,8 @@
         <div class="nav-section-label" id="nav-section-personnel" style="margin-top:12px">人事管理</div>
         <li data-roles="admin,manager,personnel"><a href="#" class="nav-link" data-page="personnel">📋 人員資訊管理</a></li>
         <li data-roles="admin,manager,personnel"><a href="#" class="nav-link" data-page="applications">📥 入職申請</a></li>
+        <div class="nav-section-label" id="nav-section-training" style="margin-top:12px">訓練管理</div>
+        <li data-roles="admin,manager,personnel"><a href="#" class="nav-link" data-page="fitness-test">🏃 年度體測管理</a></li>
         <div class="nav-section-label" id="nav-section-logistics" style="margin-top:12px">後勤管理</div>
         <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="vehicles">🚗 車輛資訊管理</a></li>
         <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="uniform-points">👕 服裝供售點數</a></li>
@@ -433,7 +435,44 @@
             </div>
           </div>
 
+          <!-- 年度體測 -->
+          <div class="profile-card" id="fitness-test-profile-card">
+            <div class="profile-card-header">
+              <span class="profile-card-icon">🏃</span>
+              <span class="profile-card-title">年度體測</span>
+              <button class="btn btn-secondary btn-sm" id="ft-prof-edit-btn" style="margin-left:auto">設定 / 編輯</button>
+            </div>
+            <div id="ft-prof-view" style="margin-top:14px">
+              <div class="prof-empty-hint">尚未設定體測計畫，點擊「設定 / 編輯」開始建立。</div>
+            </div>
+            <div id="ft-prof-form" style="display:none;margin-top:14px">
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:600;margin-bottom:4px;display:block">體測日期</label>
+                <input type="date" id="ft-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+              </div>
+              <div id="ft-items-form"></div>
+              <div style="display:flex;gap:8px;margin-top:14px">
+                <button class="btn btn-secondary" id="ft-prof-cancel-btn">取消</button>
+                <button class="btn btn-primary" id="ft-prof-save-btn">儲存體測計畫</button>
+              </div>
+            </div>
+          </div>
+
         </div>
+      </section>
+
+      <!-- 年度體測管理（管理員） -->
+      <section id="page-fitness-test" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">🏃 年度體測管理</h2>
+        </div>
+        <div class="tab-bar" style="margin-bottom:16px">
+          <button class="tab-btn active" data-ft-tab="all">全部</button>
+          <button class="tab-btn" data-ft-tab="upcoming">待體測</button>
+          <button class="tab-btn" data-ft-tab="reported">已回報</button>
+          <button class="tab-btn" data-ft-tab="unset">未設定</button>
+        </div>
+        <div id="ft-admin-list"></div>
       </section>
 
       <!-- 每日清點 -->
