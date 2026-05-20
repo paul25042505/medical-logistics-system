@@ -2456,16 +2456,23 @@ main {
     width: 36px;
   }
 
-  /* 統一輸入框高度 */
-  .di-batch-row input {
-    height: 44px;
-    box-sizing: border-box;
-    padding: 0 8px;
+  /* 標題字體放大 */
+  .di-batch-header {
     font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* 統一輸入框高度與字體 */
+  .di-batch-row input {
+    height: 48px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    font-size: 16px;
   }
   .di-batch-remove {
-    height: 44px;
+    height: 48px;
     border-radius: 8px;
     align-self: center;
+    font-size: 18px;
   }
 }

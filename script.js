@@ -4991,7 +4991,7 @@ function renderDailyInventory() {
       <div class="di-batch-rows">
         <div class="di-batch-row">
           <input type="month" class="di-batch-expiry" placeholder="效期">
-          <input type="number" class="di-batch-qty" min="0" placeholder="數量">
+          <input type="number" class="di-batch-qty" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="數量">
           <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除此批次">×</button>
         </div>
       </div>
@@ -5012,7 +5012,7 @@ window.addDiBatchRow = function(btn) {
   row.className = 'di-batch-row';
   row.innerHTML = `
     <input type="month" class="di-batch-expiry" placeholder="效期">
-    <input type="number" class="di-batch-qty" min="0" placeholder="數量">
+    <input type="number" class="di-batch-qty" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="數量">
     <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
   rows.appendChild(row);
 };
@@ -5052,7 +5052,7 @@ document.getElementById('di-load-prev-btn')?.addEventListener('click', async () 
       row.className = 'di-batch-row';
       row.innerHTML = `
         <input type="month" class="di-batch-expiry" value="${b.expiry || ''}" placeholder="效期">
-        <input type="number" class="di-batch-qty" value="${b.qty ?? ''}" min="0" placeholder="數量">
+        <input type="number" class="di-batch-qty" value="${b.qty ?? ''}" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="數量">
         <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
       rowsContainer.appendChild(row);
     });
