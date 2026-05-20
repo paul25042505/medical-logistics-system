@@ -1071,7 +1071,7 @@ const PAGE_INIT = {
   'medical-supplies':  () => renderMedicalSupplies(),
   'medical-equipment': () => { renderMedicalEquipment(); populateEquipTypeDropdowns(); },
   'daily-inventory':   () => renderDailyInventory(),
-  'fitness-test':      () => renderFitnessAdminPage(),
+  'fitness-test':      () => { populateFtUnitFilter(); renderFitnessAdminPage(); },
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -2157,6 +2157,7 @@ function startApp() {
         populateDiChargeUnit();
         populateDiChargePerson();
       }
+      if (document.getElementById('page-fitness-test')?.classList.contains('active')) { populateFtUnitFilter(); renderFitnessAdminPage(); }
       // Refresh header name using actual personnel record
       if (currentUser) {
         const me = registeredUsers?.find?.(u => u.id === currentUser.uid);
@@ -5693,8 +5694,6 @@ function populateFtUnitFilter() {
 function renderFitnessAdminPage() {
   const container = document.getElementById('ft-admin-list');
   if (!container) return;
-
-  populateFtUnitFilter();
 
   const today     = new Date(); today.setHours(0,0,0,0);
   const unitFilter = document.getElementById('ftUnitFilter')?.value || '';
