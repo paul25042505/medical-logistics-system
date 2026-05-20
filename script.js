@@ -5366,16 +5366,35 @@ function renderInventoryLogs() {
   if (empty) empty.style.display = 'none';
 
   container.innerHTML = medInventoryLogs.map(log => {
-    const diffItems = (log.items || []).filter(i => i.diff !== 0);
-    const itemRows  = (log.items || []).map(i => {
-      const diffStyle = i.diff === 0 ? 'color:var(--green)' : i.diff > 0 ? 'color:var(--yellow);font-weight:700' : 'color:var(--red);font-weight:700';
+    // Find the previous log for the same pharmacy (for 帳面 comparison)
+    const sortedLogs = [...medInventoryLogs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    const logIdx = sortedLogs.findIndex(l => l.id === log.id);
+    const prevLog = sortedLogs.slice(logIdx + 1).find(l => l.pharmacyId === log.pharmacyId);
+
+    const getTotal = (item) => (item?.batches || []).reduce((s, b) => s + (b.qty ?? 0), 0)
+                               + (item?.batches ? 0 : (item?.counted ?? 0));
+
+    const itemsWithDiff = (log.items || []).map(i => {
+      const counted  = getTotal(i);
+      const prevItem = prevLog?.items?.find(pi => pi.supplyId === i.supplyId);
+      const expected = prevItem != null ? getTotal(prevItem) : null;
+      const diff     = expected != null ? counted - expected : null;
+      const expiries = (i.batches || []).filter(b => b.expiry).map(b => b.expiry.replace(/-/g, '/')).join(' / ') || '—';
+      return { ...i, counted, expected, diff, expiries };
+    });
+
+    const diffItems = itemsWithDiff.filter(i => i.diff !== null && i.diff !== 0);
+
+    const itemRows = itemsWithDiff.map(i => {
+      const diffStyle = i.diff === null ? '' : i.diff === 0 ? 'color:var(--green)' : i.diff > 0 ? 'color:var(--yellow);font-weight:700' : 'color:var(--red);font-weight:700';
+      const diffText  = i.diff === null ? '—' : i.diff === 0 ? '0' : (i.diff > 0 ? '+' + i.diff : String(i.diff));
       return `<tr>
         <td>${i.name}</td>
-        <td>${i.expiry ? i.expiry.replace('-','/') : '—'}</td>
-        <td style="text-align:right">${i.expected}</td>
+        <td>${i.expiries}</td>
+        <td style="text-align:right">${i.expected != null ? i.expected : '—'}</td>
         <td style="text-align:right">${i.counted}</td>
-        <td style="text-align:right;${diffStyle}">${i.diff===0?'0':i.diff>0?'+'+i.diff:i.diff} ${i.unit}</td>
-        <td>${i.note||'—'}</td>
+        <td style="text-align:right;${diffStyle}">${diffText}${i.diff !== null && i.diff !== 0 ? ' ' + (i.unit || '') : ''}</td>
+        <td>${i.note || '—'}</td>
       </tr>`;
     }).join('');
 
