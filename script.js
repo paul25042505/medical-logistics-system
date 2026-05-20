@@ -5679,14 +5679,35 @@ document.getElementById('page-fitness-test')?.addEventListener('click', e => {
   renderFitnessAdminPage();
 });
 
+document.getElementById('ftUnitFilter')?.addEventListener('change', renderFitnessAdminPage);
+
+function populateFtUnitFilter() {
+  const sel = document.getElementById('ftUnitFilter');
+  if (!sel) return;
+  const units = [...new Set(filterByUnitScope(personnel).map(p => p.unit).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">全部單位</option>` + units.map(u => `<option value="${u}">${u}</option>`).join('');
+  sel.value = cur;
+}
+
 function renderFitnessAdminPage() {
   const container = document.getElementById('ft-admin-list');
   if (!container) return;
 
-  const today = new Date(); today.setHours(0,0,0,0);
+  populateFtUnitFilter();
+
+  const today     = new Date(); today.setHours(0,0,0,0);
+  const unitFilter = document.getElementById('ftUnitFilter')?.value || '';
 
   // 把 personnel 和 fitnessTests 合併
-  const allPersonnel = filterByUnitScope(personnel);
+  let allPersonnel = filterByUnitScope(personnel);
+  if (unitFilter) allPersonnel = allPersonnel.filter(p => p.unit === unitFilter);
+
+  // 依階級權重排序（高到低），同階再依姓名
+  allPersonnel = [...allPersonnel].sort((a, b) =>
+    rankWeight(a.rank) - rankWeight(b.rank) || (a.name||'').localeCompare(b.name||'', 'zh-TW')
+  );
+
   const rows = allPersonnel.map(p => {
     const test = fitnessTests.find(t => t.personnelId === p.id || t.personnelId === p.uid);
     return { p, test };
