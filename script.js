@@ -5538,13 +5538,18 @@ function renderFitnessAdminPage() {
   }
 
   container.innerHTML = filtered.map(({ p, test }) => {
+    const editBtn = `<button class="btn btn-sm btn-secondary" onclick="openFtEdit('${p.id}')">✏️ 編輯</button>`;
+
     if (!test) return `
       <div class="ft-admin-row">
         <div class="ft-admin-info">
           <span class="ft-admin-name">${p.rank||''} ${p.name}</span>
           <span class="unit-tag">${p.unit||'—'}</span>
         </div>
-        <span class="ft-badge" style="background:#f1f5f9;color:#94a3b8">未設定</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="ft-badge" style="background:#f1f5f9;color:#94a3b8">未設定</span>
+          ${editBtn}
+        </div>
       </div>`;
 
     const tDate = new Date(test.testDate + 'T00:00:00');
@@ -5570,7 +5575,108 @@ function renderFitnessAdminPage() {
         <span class="ft-admin-date">📅 ${test.testDate}</span>
         <div class="ft-admin-items">${itemsHtml}</div>
       </div>
-      ${statusBadge}
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${statusBadge}
+        ${editBtn}
+      </div>
     </div>`;
   }).join('');
 }
+
+// ── 承辦人編輯體測 Modal ──────────────────────────────
+let ftEditPersonnelId = null;
+
+window.openFtEdit = function(personnelId) {
+  ftEditPersonnelId = personnelId;
+  const p    = personnel.find(x => x.id === personnelId);
+  const test = fitnessTests.find(t => t.personnelId === personnelId);
+
+  document.getElementById('ft-edit-title').textContent =
+    `編輯體測計畫 — ${p?.rank||''} ${p?.name||''}`;
+  document.getElementById('ft-admin-date').value = test?.testDate || '';
+
+  // 項目選單
+  document.getElementById('ft-admin-items-form').innerHTML = FITNESS_CATS.map(cat => `
+    <div class="form-group" style="margin-bottom:10px">
+      <label style="font-size:13px;font-weight:600;margin-bottom:4px;display:block">${cat.label}</label>
+      <select id="fta-sel-${cat.id}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        <option value="">— 請選擇 —</option>
+        ${cat.items.map(it => `<option value="${it}" ${test?.selectedItems?.[cat.id]===it?'selected':''}>${it}</option>`).join('')}
+      </select>
+    </div>`).join('');
+
+  // 結果回報
+  document.getElementById('ft-admin-results-form').innerHTML = FITNESS_CATS.map(cat => {
+    const item = test?.selectedItems?.[cat.id];
+    const res  = test?.results?.[cat.id];
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <span style="font-size:13px;flex:1">${cat.label}${item ? '　'+item : ''}</span>
+      <div style="display:flex;gap:6px">
+        <button class="ft-btn-result ${res==='pass'?'active-pass':''}" onclick="ftAdminSetResult('${cat.id}','pass',this)">✅ 合格</button>
+        <button class="ft-btn-result ${res==='fail'?'active-fail':''}" onclick="ftAdminSetResult('${cat.id}','fail',this)">❌ 不合格</button>
+        <button class="ft-btn-result" onclick="ftAdminSetResult('${cat.id}','',this)">清除</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ftEditOverlay').classList.add('open');
+};
+
+window.ftAdminSetResult = function(catId, val, btn) {
+  const row = btn.closest('div[style*="border-bottom"]');
+  row.querySelectorAll('.ft-btn-result').forEach(b => {
+    b.classList.remove('active-pass','active-fail');
+  });
+  if (val === 'pass') btn.classList.add('active-pass');
+  if (val === 'fail') btn.classList.add('active-fail');
+  btn.dataset.chosen = val;
+  // store on the row for later reading
+  row.dataset.catId = catId;
+  row.dataset.result = val;
+};
+
+document.getElementById('ftEditClose')?.addEventListener('click',  () => document.getElementById('ftEditOverlay').classList.remove('open'));
+document.getElementById('ftEditCancel')?.addEventListener('click', () => document.getElementById('ftEditOverlay').classList.remove('open'));
+
+document.getElementById('ftEditSave')?.addEventListener('click', async () => {
+  if (!ftEditPersonnelId) return;
+  const dateVal = document.getElementById('ft-admin-date')?.value;
+  if (!dateVal) { alert('請選擇體測日期'); return; }
+
+  const selectedItems = {};
+  FITNESS_CATS.forEach(cat => {
+    selectedItems[cat.id] = document.getElementById('fta-sel-'+cat.id)?.value || '';
+  });
+
+  const results = {};
+  document.querySelectorAll('#ft-admin-results-form [data-cat-id]').forEach(row => {
+    if (row.dataset.catId) results[row.dataset.catId] = row.dataset.result || '';
+  });
+  // 也讀取沒被點過的（原始值）
+  const existing = fitnessTests.find(t => t.personnelId === ftEditPersonnelId);
+  FITNESS_CATS.forEach(cat => {
+    if (!(cat.id in results)) results[cat.id] = existing?.results?.[cat.id] || '';
+  });
+
+  const p = personnel.find(x => x.id === ftEditPersonnelId);
+  const btn = document.getElementById('ftEditSave');
+  btn.disabled = true;
+  try {
+    const data = {
+      personnelId: ftEditPersonnelId,
+      name:        p?.name || '',
+      unit:        p?.unit || '',
+      testDate:    dateVal,
+      selectedItems,
+      results,
+      updatedAt:   serverTimestamp(),
+    };
+    if (existing) {
+      await updateDoc(doc(db, 'fitnessTests', existing.id), data);
+    } else {
+      await addDoc(COL_FITNESS, { ...data, submittedAt: serverTimestamp() });
+    }
+    document.getElementById('ftEditOverlay').classList.remove('open');
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});

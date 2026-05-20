@@ -385,6 +385,29 @@
             </div>
           </div>
 
+          <!-- 年度體測 -->
+          <div class="profile-card" id="fitness-test-profile-card">
+            <div class="profile-card-header">
+              <span class="profile-card-icon">🏃</span>
+              <span class="profile-card-title">年度體測</span>
+              <button class="btn btn-secondary btn-sm" id="ft-prof-edit-btn" style="margin-left:auto">設定 / 編輯</button>
+            </div>
+            <div id="ft-prof-view" style="margin-top:14px">
+              <div class="prof-empty-hint">尚未設定體測計畫，點擊「設定 / 編輯」開始建立。</div>
+            </div>
+            <div id="ft-prof-form" style="display:none;margin-top:14px">
+              <div class="form-group" style="margin-bottom:12px">
+                <label style="font-size:13px;font-weight:600;margin-bottom:4px;display:block">體測日期</label>
+                <input type="date" id="ft-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+              </div>
+              <div id="ft-items-form"></div>
+              <div style="display:flex;gap:8px;margin-top:14px">
+                <button class="btn btn-secondary" id="ft-prof-cancel-btn">取消</button>
+                <button class="btn btn-primary" id="ft-prof-save-btn">儲存體測計畫</button>
+              </div>
+            </div>
+          </div>
+
           <!-- 車輛資訊 -->
           <div class="profile-card" id="vehicle-profile-card">
             <div class="profile-card-header">
@@ -435,29 +458,6 @@
             </div>
           </div>
 
-          <!-- 年度體測 -->
-          <div class="profile-card" id="fitness-test-profile-card">
-            <div class="profile-card-header">
-              <span class="profile-card-icon">🏃</span>
-              <span class="profile-card-title">年度體測</span>
-              <button class="btn btn-secondary btn-sm" id="ft-prof-edit-btn" style="margin-left:auto">設定 / 編輯</button>
-            </div>
-            <div id="ft-prof-view" style="margin-top:14px">
-              <div class="prof-empty-hint">尚未設定體測計畫，點擊「設定 / 編輯」開始建立。</div>
-            </div>
-            <div id="ft-prof-form" style="display:none;margin-top:14px">
-              <div class="form-group" style="margin-bottom:12px">
-                <label style="font-size:13px;font-weight:600;margin-bottom:4px;display:block">體測日期</label>
-                <input type="date" id="ft-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
-              </div>
-              <div id="ft-items-form"></div>
-              <div style="display:flex;gap:8px;margin-top:14px">
-                <button class="btn btn-secondary" id="ft-prof-cancel-btn">取消</button>
-                <button class="btn btn-primary" id="ft-prof-save-btn">儲存體測計畫</button>
-              </div>
-            </div>
-          </div>
-
         </div>
       </section>
 
@@ -474,6 +474,31 @@
         </div>
         <div id="ft-admin-list"></div>
       </section>
+
+  <!-- 體測編輯 Modal（承辦人用） -->
+  <div class="modal-overlay" id="ftEditOverlay">
+    <div class="modal" id="ftEditModal">
+      <div class="modal-header">
+        <h3 id="ft-edit-title">編輯體測計畫</h3>
+        <button class="modal-close" id="ftEditClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>體測日期</label>
+          <input type="date" id="ft-admin-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        </div>
+        <div id="ft-admin-items-form"></div>
+        <div style="margin-top:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:10px">回報結果（若已體測）</div>
+          <div id="ft-admin-results-form"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="ftEditCancel">取消</button>
+        <button class="btn btn-primary" id="ftEditSave">儲存</button>
+      </div>
+    </div>
+  </div>
 
       <!-- 每日清點 -->
       <section id="page-daily-inventory" class="page">
