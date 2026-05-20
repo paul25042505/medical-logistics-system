@@ -175,7 +175,6 @@ const ROLES = {
   personnel: { label: '人事管理承辦', pages: new Set(['home','profile','daily-inventory','personnel','applications','fitness-test']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','daily-inventory','vehicles','uniform-points']) },
   medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','daily-inventory','medical-supplies','medical-equipment']) },
-  gaoguan:   { label: '高勤官',       pages: new Set(['home','profile','daily-inventory','personnel','vehicles','uniform-points','medical-supplies','medical-equipment']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile']) },
 };
 const FEATURE_GROUPS = [
@@ -197,13 +196,6 @@ const FEATURE_GROUPS = [
   { group: '醫療軍品管理', icon: '💊', features: [
     { id: 'medical-supplies',   label: '藥材清點' },
     { id: 'medical-equipment',  label: '衛材裝備清點' },
-  ]},
-  { group: '高勤業務', icon: '🎖️', features: [
-    { id: 'personnel',       label: '人員資訊管理' },
-    { id: 'vehicles',        label: '車輛資訊管理' },
-    { id: 'uniform-points',  label: '服裝供售點數' },
-    { id: 'medical-supplies',label: '藥材清點' },
-    { id: 'medical-equipment',label:'衛材裝備清點' },
   ]},
 ];
 
