@@ -5546,7 +5546,7 @@ function renderFitnessAdminPage() {
           <span class="ft-admin-name">${p.rank||''} ${p.name}</span>
           <span class="unit-tag">${p.unit||'—'}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div class="ft-admin-right">
           <span class="ft-badge" style="background:#f1f5f9;color:#94a3b8">未設定</span>
           ${editBtn}
         </div>
@@ -5575,7 +5575,7 @@ function renderFitnessAdminPage() {
         <span class="ft-admin-date">📅 ${test.testDate}</span>
         <div class="ft-admin-items">${itemsHtml}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <div class="ft-admin-right">
         ${statusBadge}
         ${editBtn}
       </div>
