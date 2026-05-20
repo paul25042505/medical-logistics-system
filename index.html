@@ -629,14 +629,32 @@
 
         <!-- 品項管理面板 -->
         <div id="medEquipTypePanel" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <span style="font-size:13px;color:var(--text-muted)">定義裝備品項種類，新增裝備時可由下拉選擇</span>
-            <button class="btn btn-primary btn-sm" id="addEquipTypeBtn">＋ 新增品項</button>
-          </div>
-          <div id="medEquipTypeList" class="me-type-list"></div>
-          <div id="medEquipTypeEmpty" class="empty-state" style="display:none">
-            <div class="icon">📦</div>
-            <p>尚無品項，請點擊「＋ 新增品項」</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+            <!-- 左：批量校正 -->
+            <div style="background:var(--white);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
+              <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px">📅 批量校正記錄</div>
+              <div style="margin-bottom:10px">
+                <label style="font-size:13px;font-weight:500;display:block;margin-bottom:5px">校正日期</label>
+                <input type="date" id="bulk-calib-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
+              </div>
+              <div id="bulk-calib-equip-list" style="font-size:13px;color:#94a3b8">請先選擇校正日期</div>
+              <button id="bulk-calib-submit" class="btn btn-primary btn-sm" style="display:none;margin-top:12px;width:100%">✓ 批量新增校正日期</button>
+            </div>
+
+            <!-- 右：品項管理 -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <span style="font-size:13px;color:var(--text-muted)">定義裝備品項種類，新增裝備時可由下拉選擇</span>
+                <button class="btn btn-primary btn-sm" id="addEquipTypeBtn" style="flex-shrink:0;margin-left:8px">＋ 新增品項</button>
+              </div>
+              <div id="medEquipTypeList" class="me-type-list"></div>
+              <div id="medEquipTypeEmpty" class="empty-state" style="display:none">
+                <div class="icon">📦</div>
+                <p>尚無品項，請點擊「＋ 新增品項」</p>
+              </div>
+            </div>
+
           </div>
         </div>
 

@@ -4830,6 +4830,86 @@ document.getElementById('medEquipTypeTabBtn')?.addEventListener('click', () => {
   switchMedEquipTab(medEquipTab === 'types' ? 'list' : 'types');
 });
 
+// ── 批量校正 ─────────────────────────────────────────────
+function renderBulkCalibList() {
+  const date     = document.getElementById('bulk-calib-date')?.value;
+  const listEl   = document.getElementById('bulk-calib-equip-list');
+  const submitBtn = document.getElementById('bulk-calib-submit');
+  if (!listEl) return;
+
+  if (!date) {
+    listEl.innerHTML = `<div style="color:#94a3b8;font-size:13px">請先選擇校正日期</div>`;
+    if (submitBtn) submitBtn.style.display = 'none';
+    return;
+  }
+  const equips = medEquipments.filter(e => e.status !== 'scrapped');
+  if (!equips.length) {
+    listEl.innerHTML = `<div style="color:#94a3b8;font-size:13px">尚無裝備資料</div>`;
+    if (submitBtn) submitBtn.style.display = 'none';
+    return;
+  }
+  if (submitBtn) submitBtn.style.display = '';
+
+  // group by typeName
+  const grouped = {};
+  equips.forEach(e => {
+    const k = e.typeName || '未分類';
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(e);
+  });
+
+  listEl.innerHTML =
+    `<div style="display:flex;gap:6px;margin-bottom:10px">
+       <button type="button" onclick="bulkCalibSelectAll(true)"  class="btn btn-sm btn-secondary">全選</button>
+       <button type="button" onclick="bulkCalibSelectAll(false)" class="btn btn-sm btn-secondary">取消全選</button>
+     </div>` +
+    Object.entries(grouped).map(([typeName, items]) =>
+      `<div style="margin-bottom:10px">
+         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">${typeName}</div>
+         ${items.map(e => {
+           const alreadyDone = (e.calibrations || []).some(c => c.date === date);
+           return `<label style="display:flex;align-items:center;gap:8px;padding:4px 2px;cursor:pointer">
+             <input type="checkbox" class="bulk-calib-check" value="${e.id}" ${alreadyDone ? '' : 'checked'}>
+             <span style="font-size:13px;flex:1">#${e.code || '—'}</span>
+             ${alreadyDone ? `<span style="font-size:11px;color:#16a34a;font-weight:600">已記錄</span>` : ''}
+           </label>`;
+         }).join('')}
+       </div>`
+    ).join('');
+}
+
+window.bulkCalibSelectAll = (checked) => {
+  document.querySelectorAll('.bulk-calib-check').forEach(cb => { cb.checked = checked; });
+};
+
+document.getElementById('bulk-calib-date')?.addEventListener('change', renderBulkCalibList);
+
+document.getElementById('bulk-calib-submit')?.addEventListener('click', async () => {
+  const date = document.getElementById('bulk-calib-date')?.value;
+  if (!date) return;
+  const selected = [...document.querySelectorAll('.bulk-calib-check:checked')].map(cb => cb.value);
+  if (!selected.length) { alert('請勾選至少一台裝備'); return; }
+  const btn = document.getElementById('bulk-calib-submit');
+  if (btn) { btn.disabled = true; btn.textContent = '儲存中…'; }
+  try {
+    await Promise.all(selected.map(id => {
+      const e = medEquipments.find(x => x.id === id);
+      const existing = e?.calibrations || [];
+      if (existing.some(c => c.date === date)) return Promise.resolve();
+      const updated = [{ date }, ...existing].sort((a, b) => b.date.localeCompare(a.date));
+      return updateDoc(doc(db, 'medEquipments', id), { calibrations: updated });
+    }));
+    document.getElementById('bulk-calib-date').value = '';
+    renderBulkCalibList();
+    alert(`✓ 已為 ${selected.length} 台裝備新增校正記錄`);
+  } catch(err) {
+    console.error(err);
+    alert('儲存失敗：' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ 批量新增校正日期'; }
+  }
+});
+
 function renderMedicalEquipment() {
   const q      = (document.getElementById('medEquipSearch')?.value || '').toLowerCase();
   const typeId = document.getElementById('medEquipTypeFilter')?.value || '';
