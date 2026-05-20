@@ -2543,16 +2543,16 @@ main {
 
 /* 管理員列表 */
 .ft-admin-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
   padding: 14px 0;
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
+  align-items: start;
 }
-.ft-admin-info  { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.ft-admin-info  { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 0; }
 .ft-admin-name  { font-size: 15px; font-weight: 700; }
 .ft-admin-date  { font-size: 12px; color: var(--text-muted); }
 .ft-admin-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .ft-admin-item  { font-size: 12px; background: var(--bg); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); }
+.ft-admin-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
