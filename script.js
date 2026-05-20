@@ -4769,7 +4769,7 @@ window.toggleMedSupplyHidden = async function(id, currentlyHidden) {
 // ── 衛材裝備清點 ───────────────────────────────────────
 
 function populateEquipTypeDropdowns() {
-  const opts = equipmentTypes.map(t => `<option value="${t.id}">${t.name}${t.category ? `（${t.category}）` : ''}</option>`).join('');
+  const opts = equipmentTypes.map(t => `<option value="${t.id}">${t.name}${t.brand ? ` — ${t.brand}` : ''}${t.category ? `（${t.category}）` : ''}</option>`).join('');
   const typeFilter = document.getElementById('medEquipTypeFilter');
   if (typeFilter) {
     const cur = typeFilter.value;
@@ -4794,8 +4794,9 @@ function renderEquipTypes() {
     <div class="me-type-item">
       <div>
         <span class="me-type-name">${t.name}</span>
+        ${t.brand ? `<span class="me-type-cat" style="background:#dbeafe;color:#1d4ed8">${t.brand}</span>` : ''}
         ${t.category ? `<span class="me-type-cat">${t.category}</span>` : ''}
-        ${t.note ? `<span style="font-size:12px;color:var(--text-muted);margin-left:6px">${t.note}</span>` : ''}
+        ${t.note ? `<span style="font-size:12px;color:var(--text-muted);margin-left:4px">${t.note}</span>` : ''}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn-icon" onclick="editEquipType('${t.id}')">✏️</button>
@@ -5003,6 +5004,7 @@ function openEquipTypeModal(id = null) {
   document.getElementById('equip-type-modal-title').textContent = t ? '編輯品項' : '新增品項';
   const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v ?? ''; };
   sv('et-name',     t?.name);
+  sv('et-brand',    t?.brand || '');
   sv('et-category', t?.category || '');
   sv('et-note',     t?.note);
   document.getElementById('equipTypeModalOverlay').classList.add('open');
@@ -5024,6 +5026,7 @@ document.getElementById('equipTypeSaveBtn')?.addEventListener('click', async () 
   if (!name) { alert('請輸入品項名稱'); return; }
   const data = {
     name,
+    brand:    document.getElementById('et-brand')?.value.trim() || '',
     category: document.getElementById('et-category')?.value.trim() || '',
     note:     document.getElementById('et-note')?.value.trim() || '',
   };
