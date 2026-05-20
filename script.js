@@ -5609,8 +5609,8 @@ window.openFtEdit = function(personnelId) {
   document.getElementById('ft-admin-results-form').innerHTML = FITNESS_CATS.map(cat => {
     const item = test?.selectedItems?.[cat.id];
     const res  = test?.results?.[cat.id];
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <span style="font-size:13px;flex:1">${cat.label}${item ? '　'+item : ''}</span>
+    return `<div style="display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1px solid var(--border)" data-cat-id="${cat.id}">
+      <span style="font-size:13px;font-weight:500">${cat.label}${item ? '　' + item : ''}</span>
       <div style="display:flex;gap:6px">
         <button class="ft-btn-result ${res==='pass'?'active-pass':''}" onclick="ftAdminSetResult('${cat.id}','pass',this)">✅ 合格</button>
         <button class="ft-btn-result ${res==='fail'?'active-fail':''}" onclick="ftAdminSetResult('${cat.id}','fail',this)">❌ 不合格</button>
