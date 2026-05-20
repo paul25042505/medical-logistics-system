@@ -2597,6 +2597,44 @@ main {
 .ft-badge-upcoming { background: #fef3c7; color: #b45309; }
 .ft-badge-today    { background: #dbeafe; color: #1d4ed8; }
 .ft-badge-done     { background: #dcfce7; color: #15803d; }
+.ft-badge-fail     { background: #fee2e2; color: #dc2626; }
+
+/* 歷次體測記錄 */
+.ft-history-section {
+  margin-top: 16px;
+  border-top: 2px solid var(--border);
+  padding-top: 12px;
+}
+.ft-history-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+.ft-history-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ft-history-row:last-child { border-bottom: none; }
+.ft-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.ft-history-date { font-size: 13px; font-weight: 600; color: var(--text); }
+.ft-history-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.ft-history-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+.ft-history-badge.pass { background: #dcfce7; color: #15803d; }
+.ft-history-badge.fail { background: #fee2e2; color: #dc2626; }
 
 .ft-item-row {
   display: flex;

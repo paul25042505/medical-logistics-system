@@ -5583,14 +5583,38 @@ function renderFitnessProfile() {
       }).join('')}
     </div>` : '';
 
-  view.innerHTML = `
+  // 歷次體測記錄
+  const history = (test.history || []).slice().reverse();
+  const historyHtml = history.length ? `
+    <div class="ft-history-section">
+      <div class="ft-history-title">歷次體測記錄</div>
+      ${history.map(h => {
+        const statusIcon = h.status === 'pass' ? '✅' : '❌';
+        const itemBadges = FITNESS_CATS.map(cat => {
+          const item = h.selectedItems?.[cat.id];
+          if (!item) return '';
+          const res = h.results?.[cat.id];
+          return `<span class="ft-history-badge ${res==='pass'?'pass':res==='fail'?'fail':''}">${res==='pass'?'✅':res==='fail'?'❌':'⬜'} ${item}</span>`;
+        }).filter(Boolean).join('');
+        return `<div class="ft-history-row">
+          <div class="ft-history-head">
+            <span class="ft-history-date">📅 ${h.testDate}</span>
+            <span class="ft-badge ${h.status==='pass'?'ft-badge-done':'ft-badge-fail'}">${statusIcon} ${h.status==='pass'?'合格':'不合格'}</span>
+          </div>
+          <div class="ft-history-items">${itemBadges}</div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const currentSection = test.testDate ? `
     <div class="ft-header-row">
       <span class="ft-date-label">📅 ${test.testDate}</span>
       ${statusBadge}
     </div>
     ${itemsHtml}
-    ${resultSection}
-  `;
+    ${resultSection}` : `<div class="prof-empty-hint">尚未設定下次體測日期，點擊「設定 / 編輯」安排。</div>`;
+
+  view.innerHTML = currentSection + historyHtml;
 }
 
 // 開啟編輯表單
@@ -5869,5 +5893,65 @@ document.getElementById('ftEditSave')?.addEventListener('click', async () => {
     }
     document.getElementById('ftEditOverlay').classList.remove('open');
   } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+// ── 歸檔此次體測 ──────────────────────────────────────
+document.getElementById('ftEditArchive')?.addEventListener('click', async () => {
+  if (!ftEditPersonnelId) return;
+
+  const dateVal = document.getElementById('ft-admin-date')?.value;
+  if (!dateVal) { alert('請先設定體測日期才能歸檔'); return; }
+
+  const selectedItems = {};
+  FITNESS_CATS.forEach(cat => {
+    selectedItems[cat.id] = document.getElementById('fta-sel-'+cat.id)?.value || '';
+  });
+
+  const results = {};
+  document.querySelectorAll('#ft-admin-results-form [data-cat-id]').forEach(row => {
+    if (row.dataset.catId) results[row.dataset.catId] = row.dataset.result || '';
+  });
+  const existing = fitnessTests.find(t => t.personnelId === ftEditPersonnelId);
+  FITNESS_CATS.forEach(cat => {
+    if (!(cat.id in results)) results[cat.id] = existing?.results?.[cat.id] || '';
+  });
+
+  const hasResult = Object.values(results).some(v => v === 'pass' || v === 'fail');
+  if (!hasResult) { alert('請先記錄至少一項體測結果再歸檔'); return; }
+
+  const allPassed = FITNESS_CATS.every(cat => {
+    const item = selectedItems[cat.id];
+    return !item || results[cat.id] === 'pass';
+  });
+  const overallStatus = allPassed ? 'pass' : 'fail';
+  const label = overallStatus === 'pass' ? '✅ 合格' : '❌ 不合格';
+
+  if (!confirm(`將 ${dateVal} 的體測結果（${label}）歸檔記錄？\n歸檔後當前體測日期將清空，可重新安排下次體測。`)) return;
+
+  const currentHistory = existing?.history || [];
+  const entry = { testDate: dateVal, selectedItems, results, status: overallStatus, archivedAt: new Date().toISOString() };
+
+  const btn = document.getElementById('ftEditArchive');
+  btn.disabled = true;
+  try {
+    const p = personnel.find(x => x.id === ftEditPersonnelId);
+    const data = {
+      personnelId: ftEditPersonnelId,
+      name: p?.name || '',
+      unit: p?.unit || '',
+      testDate: '',
+      selectedItems: {},
+      results: {},
+      history: [...currentHistory, entry],
+      updatedAt: serverTimestamp(),
+    };
+    if (existing) {
+      await updateDoc(doc(db, 'fitnessTests', existing.id), data);
+    } else {
+      await addDoc(COL_FITNESS, { ...data, submittedAt: serverTimestamp() });
+    }
+    document.getElementById('ftEditOverlay').classList.remove('open');
+  } catch(e) { console.error(e); alert('歸檔失敗：' + e.message); }
   finally { btn.disabled = false; }
 });
