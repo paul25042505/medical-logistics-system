@@ -1424,6 +1424,8 @@ main {
 .lead-time {
   font-size: 12px;
   color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .lead-fields {
   display: flex;

@@ -1855,7 +1855,14 @@ function renderLeads() {
       l.lineConsent  && `加入LINE：${l.lineConsent}`,
     ].filter(Boolean);
 
-    const ts = l.submittedAt ? l.submittedAt.replace('T', ' ').slice(0, 16) : '—';
+    const ts = (() => {
+      if (!l.submittedAt) return '—';
+      if (l.submittedAt.includes('T')) {
+        const d = new Date(l.submittedAt);
+        if (!isNaN(d)) return d.toLocaleString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+      return l.submittedAt;
+    })();
 
     return `<div class="lead-card">
       <div class="lead-card-header">
