@@ -2476,3 +2476,83 @@ main {
     font-size: 18px;
   }
 }
+
+/* ── 年度體測 ─────────────────────────────────────────── */
+.ft-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ft-date-label { font-size: 15px; font-weight: 700; color: var(--text); }
+
+.ft-badge {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ft-badge-upcoming { background: #fef3c7; color: #b45309; }
+.ft-badge-today    { background: #dbeafe; color: #1d4ed8; }
+.ft-badge-done     { background: #dcfce7; color: #15803d; }
+
+.ft-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.ft-item-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.ft-cat  { font-size: 11px; color: var(--text-muted); }
+.ft-item { font-size: 14px; font-weight: 600; color: var(--text); }
+
+.ft-result { font-size: 12px; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.ft-result.pass    { background: #dcfce7; color: #15803d; }
+.ft-result.fail    { background: #fee2e2; color: #dc2626; }
+.ft-result.pending { background: #f1f5f9; color: #94a3b8; }
+
+.ft-result-section { margin-top: 14px; }
+.ft-result-title { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; }
+.ft-result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.ft-result-label { font-size: 13px; flex: 1; }
+.ft-result-btns  { display: flex; gap: 6px; }
+.ft-btn-result {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ft-btn-result.active-pass { background: #dcfce7; border-color: #86efac; color: #15803d; font-weight: 700; }
+.ft-btn-result.active-fail { background: #fee2e2; border-color: #fca5a5; color: #dc2626; font-weight: 700; }
+
+/* 管理員列表 */
+.ft-admin-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.ft-admin-info  { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.ft-admin-name  { font-size: 15px; font-weight: 700; }
+.ft-admin-date  { font-size: 12px; color: var(--text-muted); }
+.ft-admin-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ft-admin-item  { font-size: 12px; background: var(--bg); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); }

@@ -42,6 +42,7 @@ const COL_USERS         = collection(db, 'users');
 const COL_APPLICATIONS  = collection(db, 'applications');
 const COL_VEHICLES      = collection(db, 'vehicles');
 const COL_UNIFORM_POINTS  = collection(db, 'uniformPoints');
+const COL_FITNESS         = collection(db, 'fitnessTests');
 const COL_ACCOUNT_REQS    = collection(db, 'accountRequests');
 const COL_MED_SUPPLIES    = collection(db, 'medSupplies');
 const COL_MED_INV_LOGS    = collection(db, 'medInventoryLogs');
@@ -67,6 +68,13 @@ let editingRcrId   = null;
 
 let personnel          = [];
 let personnelUnitFilter = [];
+let fitnessTests       = [];
+
+const FITNESS_CATS = [
+  { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）'] },
+  { id: 'core',      label: '腹部核心肌群（擇一）',     items: ['兩分鐘仰臥起坐', '平板撐體 (Plank)', '仰臥捲腹'] },
+  { id: 'cardio',    label: '心肺耐力（擇一）',          items: ['三千公尺徒手跑步', '五公里健走', '二十公尺漸進式折返跑', '八百公尺游走', '五分鐘跳繩'] },
+];
 let editingPersonnelId = null;
 let viewingPersonnelId = null;
 
@@ -159,10 +167,10 @@ let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points','medical-supplies','medical-equipment','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','vehicles','uniform-points','medical-supplies','medical-equipment']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
-  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','daily-inventory','personnel','applications']) },
+  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','daily-inventory','personnel','applications','fitness-test']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','daily-inventory','vehicles','uniform-points']) },
   medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','daily-inventory','medical-supplies','medical-equipment']) },
   gaoguan:   { label: '高勤官',       pages: new Set(['home','profile','daily-inventory','personnel','vehicles','uniform-points','medical-supplies','medical-equipment']) },
@@ -541,7 +549,7 @@ function hideLoadingScreen() {
 }
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 13) hideLoadingScreen();
+  if (loaded.size >= 14) hideLoadingScreen();
 }
 
 // ── Districts ─────────────────────────────────────────
@@ -1061,6 +1069,7 @@ const PAGE_INIT = {
   'medical-supplies':  () => renderMedicalSupplies(),
   'medical-equipment': () => renderMedicalEquipment(),
   'daily-inventory':   () => renderDailyInventory(),
+  'fitness-test':      () => renderFitnessAdminPage(),
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -2227,6 +2236,15 @@ function startApp() {
     } catch(e) { console.error('accountRequests snapshot error', e); }
     markLoaded('accountRequests');
   }, () => markLoaded('accountRequests'));
+
+  onSnapshot(COL_FITNESS, snap => {
+    try {
+      fitnessTests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (document.getElementById('page-fitness-test')?.classList.contains('active')) renderFitnessAdminPage();
+      renderFitnessProfile();
+    } catch(e) { console.error('fitnessTests snapshot error', e); }
+    markLoaded('fitnessTests');
+  }, () => markLoaded('fitnessTests'));
 
   onSnapshot(COL_MED_SUPPLIES, snap => {
     try {
@@ -5334,3 +5352,225 @@ document.addEventListener('click', e => {
   const pane = document.getElementById(`role-pane-${target}`);
   if (pane) pane.style.display = '';
 });
+
+// ══════════════════════════════════════════════════════
+// ── 年度體測 ──────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+
+// ── 個人資料頁：體測卡片 ──────────────────────────────
+function renderFitnessProfile() {
+  if (!currentUser) return;
+  const view = document.getElementById('ft-prof-view');
+  if (!view) return;
+
+  const test = fitnessTests.find(t => t.personnelId === currentUser.uid);
+
+  if (!test) {
+    view.innerHTML = '<div class="prof-empty-hint">尚未設定體測計畫，點擊「設定 / 編輯」開始建立。</div>';
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tDate = new Date(test.testDate + 'T00:00:00');
+  const daysLeft = Math.round((tDate - today) / 86400000);
+
+  const statusBadge = daysLeft > 0
+    ? `<span class="ft-badge ft-badge-upcoming">⏳ 還剩 ${daysLeft} 天</span>`
+    : daysLeft === 0
+      ? `<span class="ft-badge ft-badge-today">📅 今天體測！</span>`
+      : `<span class="ft-badge ft-badge-done">已體測</span>`;
+
+  const itemsHtml = FITNESS_CATS.map(cat => {
+    const item   = test.selectedItems?.[cat.id] || '—';
+    const result = test.results?.[cat.id];
+    const resBadge = result === 'pass'
+      ? `<span class="ft-result pass">✅ 合格</span>`
+      : result === 'fail'
+        ? `<span class="ft-result fail">❌ 不合格</span>`
+        : daysLeft <= 0 && item !== '—' ? `<span class="ft-result pending">待回報</span>` : '';
+    return `<div class="ft-item-row">
+      <div class="ft-item-meta"><span class="ft-cat">${cat.label}</span><span class="ft-item">${item}</span></div>
+      ${resBadge}
+    </div>`;
+  }).join('');
+
+  const resultSection = daysLeft <= 0 ? `
+    <div class="ft-result-section">
+      <div class="ft-result-title">回報體測結果</div>
+      ${FITNESS_CATS.map(cat => {
+        const item = test.selectedItems?.[cat.id];
+        if (!item) return '';
+        const res = test.results?.[cat.id];
+        return `<div class="ft-result-row">
+          <span class="ft-result-label">${cat.label}　${item}</span>
+          <div class="ft-result-btns">
+            <button class="ft-btn-result ${res==='pass'?'active-pass':''}" onclick="setFitnessResult('${test.id}','${cat.id}','pass')">✅ 合格</button>
+            <button class="ft-btn-result ${res==='fail'?'active-fail':''}" onclick="setFitnessResult('${test.id}','${cat.id}','fail')">❌ 不合格</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  view.innerHTML = `
+    <div class="ft-header-row">
+      <span class="ft-date-label">📅 ${test.testDate}</span>
+      ${statusBadge}
+    </div>
+    ${itemsHtml}
+    ${resultSection}
+  `;
+}
+
+// 開啟編輯表單
+document.getElementById('ft-prof-edit-btn')?.addEventListener('click', () => {
+  const test = fitnessTests.find(t => t.personnelId === currentUser?.uid);
+  const form = document.getElementById('ft-prof-form');
+  const view = document.getElementById('ft-prof-view');
+  if (!form || !view) return;
+
+  // 填入日期
+  const dateEl = document.getElementById('ft-date');
+  if (dateEl) dateEl.value = test?.testDate || '';
+
+  // 渲染項目選單
+  const itemsForm = document.getElementById('ft-items-form');
+  if (itemsForm) {
+    itemsForm.innerHTML = FITNESS_CATS.map(cat => `
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:13px;font-weight:600;margin-bottom:4px;display:block">${cat.label}</label>
+        <select id="ft-sel-${cat.id}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          <option value="">— 請選擇 —</option>
+          ${cat.items.map(it => `<option value="${it}" ${test?.selectedItems?.[cat.id]===it?'selected':''}>${it}</option>`).join('')}
+        </select>
+      </div>`).join('');
+  }
+
+  view.style.display = 'none';
+  form.style.display = '';
+});
+
+document.getElementById('ft-prof-cancel-btn')?.addEventListener('click', () => {
+  document.getElementById('ft-prof-form').style.display = 'none';
+  document.getElementById('ft-prof-view').style.display = '';
+});
+
+document.getElementById('ft-prof-save-btn')?.addEventListener('click', async () => {
+  if (!currentUser) return;
+  const dateVal = document.getElementById('ft-date')?.value;
+  if (!dateVal) { alert('請選擇體測日期'); return; }
+
+  const selectedItems = {};
+  FITNESS_CATS.forEach(cat => {
+    selectedItems[cat.id] = document.getElementById('ft-sel-'+cat.id)?.value || '';
+  });
+  if (!Object.values(selectedItems).some(v => v)) { alert('請至少選擇一個體測項目'); return; }
+
+  const btn = document.getElementById('ft-prof-save-btn');
+  btn.disabled = true;
+  try {
+    const existing = fitnessTests.find(t => t.personnelId === currentUser.uid);
+    const data = {
+      personnelId:   currentUser.uid,
+      name:          profileData?.name || '',
+      unit:          profileData?.unit || '',
+      testDate:      dateVal,
+      selectedItems,
+      updatedAt:     serverTimestamp(),
+    };
+    if (existing) {
+      await updateDoc(doc(db, 'fitnessTests', existing.id), data);
+    } else {
+      await addDoc(COL_FITNESS, { ...data, results: {}, submittedAt: serverTimestamp() });
+    }
+    document.getElementById('ft-prof-form').style.display = 'none';
+    document.getElementById('ft-prof-view').style.display = '';
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+window.setFitnessResult = async function(testId, catId, result) {
+  try {
+    await updateDoc(doc(db, 'fitnessTests', testId), {
+      [`results.${catId}`]: result,
+      updatedAt: serverTimestamp(),
+    });
+  } catch(e) { alert('回報失敗：' + e.message); }
+};
+
+// ── 管理員頁：年度體測管理 ────────────────────────────
+let ftAdminTab = 'all';
+
+document.getElementById('page-fitness-test')?.addEventListener('click', e => {
+  const btn = e.target.closest('[data-ft-tab]');
+  if (!btn) return;
+  ftAdminTab = btn.dataset.ftTab;
+  document.querySelectorAll('[data-ft-tab]').forEach(b => b.classList.toggle('active', b.dataset.ftTab === ftAdminTab));
+  renderFitnessAdminPage();
+});
+
+function renderFitnessAdminPage() {
+  const container = document.getElementById('ft-admin-list');
+  if (!container) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // 把 personnel 和 fitnessTests 合併
+  const allPersonnel = filterByUnitScope(personnel);
+  const rows = allPersonnel.map(p => {
+    const test = fitnessTests.find(t => t.personnelId === p.id || t.personnelId === p.uid);
+    return { p, test };
+  });
+
+  const filtered = rows.filter(({ test }) => {
+    if (ftAdminTab === 'all')      return true;
+    if (ftAdminTab === 'unset')    return !test;
+    if (!test) return false;
+    const d = new Date(test.testDate + 'T00:00:00');
+    const daysLeft = Math.round((d - today) / 86400000);
+    if (ftAdminTab === 'upcoming') return daysLeft >= 0;
+    if (ftAdminTab === 'reported') return daysLeft < 0 || Object.values(test.results||{}).some(v=>v);
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-state"><p>沒有符合條件的記錄</p></div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(({ p, test }) => {
+    if (!test) return `
+      <div class="ft-admin-row">
+        <div class="ft-admin-info">
+          <span class="ft-admin-name">${p.rank||''} ${p.name}</span>
+          <span class="unit-tag">${p.unit||'—'}</span>
+        </div>
+        <span class="ft-badge" style="background:#f1f5f9;color:#94a3b8">未設定</span>
+      </div>`;
+
+    const tDate = new Date(test.testDate + 'T00:00:00');
+    const daysLeft = Math.round((tDate - today) / 86400000);
+    const statusBadge = daysLeft > 0
+      ? `<span class="ft-badge ft-badge-upcoming">還剩 ${daysLeft} 天</span>`
+      : daysLeft === 0
+        ? `<span class="ft-badge ft-badge-today">今天</span>`
+        : `<span class="ft-badge ft-badge-done">已體測</span>`;
+
+    const itemsHtml = FITNESS_CATS.map(cat => {
+      const item = test.selectedItems?.[cat.id];
+      if (!item) return '';
+      const res = test.results?.[cat.id];
+      const resBadge = res === 'pass' ? '✅' : res === 'fail' ? '❌' : daysLeft <= 0 ? '⬜' : '';
+      return `<span class="ft-admin-item">${resBadge} ${item}</span>`;
+    }).filter(Boolean).join('');
+
+    return `<div class="ft-admin-row">
+      <div class="ft-admin-info">
+        <span class="ft-admin-name">${p.rank||''} ${p.name}</span>
+        <span class="unit-tag">${p.unit||'—'}</span>
+        <span class="ft-admin-date">📅 ${test.testDate}</span>
+        <div class="ft-admin-items">${itemsHtml}</div>
+      </div>
+      ${statusBadge}
+    </div>`;
+  }).join('');
+}
