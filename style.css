@@ -2599,6 +2599,20 @@ main {
 .ft-badge-done     { background: #dcfce7; color: #15803d; }
 .ft-badge-fail     { background: #fee2e2; color: #dc2626; }
 
+.ft-passed-banner {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* 歷次體測記錄 */
 .ft-history-section {
   margin-top: 16px;

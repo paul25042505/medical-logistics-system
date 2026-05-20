@@ -5583,28 +5583,19 @@ function renderFitnessProfile() {
       }).join('')}
     </div>` : '';
 
-  // 歷次體測記錄
-  const history = (test.history || []).slice().reverse();
-  const historyHtml = history.length ? `
-    <div class="ft-history-section">
-      <div class="ft-history-title">歷次體測記錄</div>
-      ${history.map(h => {
-        const statusIcon = h.status === 'pass' ? '✅' : '❌';
-        const itemBadges = FITNESS_CATS.map(cat => {
-          const item = h.selectedItems?.[cat.id];
-          if (!item) return '';
-          const res = h.results?.[cat.id];
-          return `<span class="ft-history-badge ${res==='pass'?'pass':res==='fail'?'fail':''}">${res==='pass'?'✅':res==='fail'?'❌':'⬜'} ${item}</span>`;
-        }).filter(Boolean).join('');
-        return `<div class="ft-history-row">
-          <div class="ft-history-head">
-            <span class="ft-history-date">📅 ${h.testDate}</span>
-            <span class="ft-badge ${h.status==='pass'?'ft-badge-done':'ft-badge-fail'}">${statusIcon} ${h.status==='pass'?'合格':'不合格'}</span>
-          </div>
-          <div class="ft-history-items">${itemBadges}</div>
-        </div>`;
-      }).join('')}
-    </div>` : '';
+  const historyHtml = buildHistoryHtml(test);
+  const passEntry   = getThisYearPass(test);
+
+  // 今年已合格 → 顯示合格橫幅，不再顯示待體測資訊
+  if (passEntry) {
+    view.innerHTML = `
+      <div class="ft-passed-banner">
+        ✅ ${passEntry.testDate.slice(0,4)} 年度體測已合格
+        <span style="font-size:12px;opacity:.8">（${passEntry.testDate}）</span>
+      </div>
+      ${historyHtml}`;
+    return;
+  }
 
   const currentSection = test.testDate ? `
     <div class="ft-header-row">
@@ -5696,6 +5687,35 @@ window.setFitnessResult = async function(testId, catId, result) {
 // ── 管理員頁：年度體測管理 ────────────────────────────
 let ftAdminTab = 'all';
 
+// 判斷是否今年已合格（history 有今年的 pass 紀錄）
+function getThisYearPass(test) {
+  if (!test) return null;
+  const yr = String(new Date().getFullYear());
+  return (test.history || []).find(h => h.status === 'pass' && (h.testDate || '').startsWith(yr));
+}
+
+function buildHistoryHtml(test) {
+  const history = (test?.history || []).slice().reverse();
+  if (!history.length) return '';
+  return `<div class="ft-history-section">
+    <div class="ft-history-title">歷次體測記錄</div>
+    ${history.map(h => {
+      const badges = FITNESS_CATS.map(cat => {
+        const item = h.selectedItems?.[cat.id]; if (!item) return '';
+        const res  = h.results?.[cat.id];
+        return `<span class="ft-history-badge ${res==='pass'?'pass':res==='fail'?'fail':''}">${res==='pass'?'✅':res==='fail'?'❌':'⬜'} ${item}</span>`;
+      }).filter(Boolean).join('');
+      return `<div class="ft-history-row">
+        <div class="ft-history-head">
+          <span class="ft-history-date">📅 ${h.testDate}</span>
+          <span class="ft-badge ${h.status==='pass'?'ft-badge-done':'ft-badge-fail'}">${h.status==='pass'?'✅ 合格':'❌ 不合格'}</span>
+        </div>
+        <div class="ft-history-items">${badges}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 document.getElementById('page-fitness-test')?.addEventListener('click', e => {
   const btn = e.target.closest('[data-ft-tab]');
   if (!btn) return;
@@ -5736,14 +5756,17 @@ function renderFitnessAdminPage() {
     return { p, test };
   });
 
-  const filtered = rows.filter(({ test }) => {
+  const filtered = rows.filter(({ p, test }) => {
     if (ftAdminTab === 'all')      return true;
-    if (ftAdminTab === 'unset')    return !test;
+    if (ftAdminTab === 'unset')    return !test || (!test.testDate && !getThisYearPass(test));
     if (!test) return false;
-    const d = new Date(test.testDate + 'T00:00:00');
-    const daysLeft = Math.round((d - today) / 86400000);
-    if (ftAdminTab === 'upcoming') return daysLeft >= 0;
-    if (ftAdminTab === 'reported') return daysLeft < 0 || Object.values(test.results||{}).some(v=>v);
+    if (ftAdminTab === 'reported') return !!getThisYearPass(test);
+    if (ftAdminTab === 'upcoming') {
+      if (getThisYearPass(test)) return false;
+      if (!test.testDate) return false;
+      const d = new Date(test.testDate + 'T00:00:00');
+      return Math.round((d - today) / 86400000) >= 0;
+    }
     return true;
   });
 
@@ -5767,19 +5790,36 @@ function renderFitnessAdminPage() {
         </div>
       </div>`;
 
-    const tDate = new Date(test.testDate + 'T00:00:00');
-    const daysLeft = Math.round((tDate - today) / 86400000);
-    const statusBadge = daysLeft > 0
-      ? `<span class="ft-badge ft-badge-upcoming">還剩 ${daysLeft} 天</span>`
-      : daysLeft === 0
-        ? `<span class="ft-badge ft-badge-today">今天</span>`
-        : `<span class="ft-badge ft-badge-done">已體測</span>`;
+    // 今年已合格 → 優先顯示
+    const passEntry = getThisYearPass(test);
+    if (passEntry) return `
+      <div class="ft-admin-row">
+        <div class="ft-admin-info">
+          <span class="ft-admin-name">${p.rank||''} ${p.name}</span>
+          <span class="unit-tag">${p.unit||'—'}</span>
+          <span class="ft-admin-date">合格日：${passEntry.testDate}</span>
+        </div>
+        <div class="ft-admin-right">
+          <span class="ft-badge ft-badge-done">✅ 今年已合格</span>
+          ${editBtn}
+        </div>
+      </div>`;
+
+    const tDate = test.testDate ? new Date(test.testDate + 'T00:00:00') : null;
+    const daysLeft = tDate ? Math.round((tDate - today) / 86400000) : null;
+    const statusBadge = !tDate
+      ? `<span class="ft-badge" style="background:#f1f5f9;color:#94a3b8">待安排補測</span>`
+      : daysLeft > 0
+        ? `<span class="ft-badge ft-badge-upcoming">還剩 ${daysLeft} 天</span>`
+        : daysLeft === 0
+          ? `<span class="ft-badge ft-badge-today">今天</span>`
+          : `<span class="ft-badge ft-badge-done">已體測</span>`;
 
     const itemsHtml = FITNESS_CATS.map(cat => {
       const item = test.selectedItems?.[cat.id];
       if (!item) return '';
       const res = test.results?.[cat.id];
-      const resBadge = res === 'pass' ? '✅' : res === 'fail' ? '❌' : daysLeft <= 0 ? '⬜' : '';
+      const resBadge = res === 'pass' ? '✅' : res === 'fail' ? '❌' : (daysLeft !== null && daysLeft <= 0) ? '⬜' : '';
       return `<span class="ft-admin-item">${resBadge} ${item}</span>`;
     }).filter(Boolean).join('');
 
@@ -5787,8 +5827,8 @@ function renderFitnessAdminPage() {
       <div class="ft-admin-info">
         <span class="ft-admin-name">${p.rank||''} ${p.name}</span>
         <span class="unit-tag">${p.unit||'—'}</span>
-        <span class="ft-admin-date">📅 ${test.testDate}</span>
-        <div class="ft-admin-items">${itemsHtml}</div>
+        ${test.testDate ? `<span class="ft-admin-date">📅 ${test.testDate}</span>` : ''}
+        ${itemsHtml ? `<div class="ft-admin-items">${itemsHtml}</div>` : ''}
       </div>
       <div class="ft-admin-right">
         ${statusBadge}
@@ -5833,6 +5873,10 @@ window.openFtEdit = function(personnelId) {
       </div>
     </div>`;
   }).join('');
+
+  // 歷史紀錄顯示在 modal 底部
+  const histSec = document.getElementById('ft-edit-history');
+  if (histSec) histSec.innerHTML = buildHistoryHtml(test);
 
   document.getElementById('ftEditOverlay').classList.add('open');
 };
