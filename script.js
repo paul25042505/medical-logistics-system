@@ -47,6 +47,7 @@ const COL_ACCOUNT_REQS    = collection(db, 'accountRequests');
 const COL_MED_SUPPLIES    = collection(db, 'medSupplies');
 const COL_MED_INV_LOGS    = collection(db, 'medInventoryLogs');
 const COL_MED_EQUIPS      = collection(db, 'medEquipments');
+const COL_EQUIP_TYPES    = collection(db, 'equipmentTypes');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -87,6 +88,7 @@ let editingVehicleId = null;
 let medSupplies      = [];
 let medInventoryLogs = [];
 let medEquipments    = [];
+let equipmentTypes    = [];
 
 // 車輛狀態設定（提前至頂部避免 TDZ）
 const VS = {
@@ -549,7 +551,7 @@ function hideLoadingScreen() {
 }
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 14) hideLoadingScreen();
+  if (loaded.size >= 15) hideLoadingScreen();
 }
 
 // ── Districts ─────────────────────────────────────────
@@ -1067,7 +1069,7 @@ const PAGE_INIT = {
   'vehicles':          () => renderVehiclesPage(),
   'uniform-points':    () => renderUniformPointsPage(),
   'medical-supplies':  () => renderMedicalSupplies(),
-  'medical-equipment': () => renderMedicalEquipment(),
+  'medical-equipment': () => { renderMedicalEquipment(); populateEquipTypeDropdowns(); },
   'daily-inventory':   () => renderDailyInventory(),
   'fitness-test':      () => renderFitnessAdminPage(),
 };
@@ -2275,11 +2277,24 @@ function startApp() {
   onSnapshot(COL_MED_EQUIPS, snap => {
     try {
       medEquipments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      medEquipments.sort((a, b) => (a.name||'').localeCompare(b.name||'', 'zh-TW'));
+      medEquipments.sort((a, b) => (a.typeName||'').localeCompare(b.typeName||'', 'zh-TW') || (a.code||'').localeCompare(b.code||'', 'zh-TW'));
       if (document.getElementById('page-medical-equipment')?.classList.contains('active')) renderMedicalEquipment();
     } catch(e) { console.error('medEquipments snapshot error', e); }
     markLoaded('medEquipments');
   }, () => markLoaded('medEquipments'));
+
+  onSnapshot(COL_EQUIP_TYPES, snap => {
+    try {
+      equipmentTypes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      equipmentTypes.sort((a, b) => (a.name||'').localeCompare(b.name||'', 'zh-TW'));
+      if (document.getElementById('page-medical-equipment')?.classList.contains('active')) {
+        renderEquipTypes();
+        renderMedicalEquipment();
+        populateEquipTypeDropdowns();
+      }
+    } catch(e) { console.error('equipmentTypes snapshot error', e); }
+    markLoaded('equipmentTypes');
+  }, () => markLoaded('equipmentTypes'));
 
   onSnapshot(COL_PERSONNEL_AUDIT, snap => {
     try {
@@ -4753,34 +4768,89 @@ window.toggleMedSupplyHidden = async function(id, currentlyHidden) {
 
 // ── 衛材裝備清點 ───────────────────────────────────────
 
+function populateEquipTypeDropdowns() {
+  const opts = equipmentTypes.map(t => `<option value="${t.id}">${t.name}${t.category ? `（${t.category}）` : ''}</option>`).join('');
+  const typeFilter = document.getElementById('medEquipTypeFilter');
+  if (typeFilter) {
+    const cur = typeFilter.value;
+    typeFilter.innerHTML = `<option value="">全部品項</option>${opts}`;
+    typeFilter.value = cur;
+  }
+  const typeSelect = document.getElementById('me-type-select');
+  if (typeSelect) {
+    const cur = typeSelect.value;
+    typeSelect.innerHTML = `<option value="">請選擇品項</option>${opts}`;
+    typeSelect.value = cur;
+  }
+}
+
+function renderEquipTypes() {
+  const listEl = document.getElementById('medEquipTypeList');
+  const empty  = document.getElementById('medEquipTypeEmpty');
+  if (!listEl) return;
+  if (!equipmentTypes.length) { listEl.innerHTML = ''; if (empty) empty.style.display = ''; return; }
+  if (empty) empty.style.display = 'none';
+  listEl.innerHTML = equipmentTypes.map(t => `
+    <div class="me-type-item">
+      <div>
+        <span class="me-type-name">${t.name}</span>
+        ${t.category ? `<span class="me-type-cat">${t.category}</span>` : ''}
+        ${t.note ? `<span style="font-size:12px;color:var(--text-muted);margin-left:6px">${t.note}</span>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn-icon" onclick="editEquipType('${t.id}')">✏️</button>
+        <button class="btn-icon danger" onclick="deleteEquipType('${t.id}','${(t.name||'').replace(/'/g,"\\'")}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Tab toggle ──
+let medEquipTab = 'list'; // 'list' | 'types'
+function switchMedEquipTab(tab) {
+  medEquipTab = tab;
+  const listPanel  = document.getElementById('medEquipListPanel');
+  const typePanel  = document.getElementById('medEquipTypePanel');
+  const addBtn     = document.getElementById('addMedEquipBtn');
+  const tabBtn     = document.getElementById('medEquipTypeTabBtn');
+  if (tab === 'types') {
+    listPanel.style.display = 'none';
+    typePanel.style.display = '';
+    addBtn.style.display = 'none';
+    tabBtn.textContent = '← 裝備清單';
+    renderEquipTypes();
+  } else {
+    typePanel.style.display = 'none';
+    listPanel.style.display = '';
+    addBtn.style.display = '';
+    tabBtn.textContent = '📋 品項管理';
+    renderMedicalEquipment();
+  }
+}
+
+document.getElementById('medEquipTypeTabBtn')?.addEventListener('click', () => {
+  switchMedEquipTab(medEquipTab === 'types' ? 'list' : 'types');
+});
+
 function renderMedicalEquipment() {
   const q      = (document.getElementById('medEquipSearch')?.value || '').toLowerCase();
-  const cat    = document.getElementById('medEquipCategoryFilter')?.value || '';
+  const typeId = document.getElementById('medEquipTypeFilter')?.value || '';
   const status = document.getElementById('medEquipStatusFilter')?.value  || '';
 
   let list = filterByUnitScope(medEquipments);
-  if (q)      list = list.filter(e => (e.name||'').toLowerCase().includes(q) || (e.code||'').toLowerCase().includes(q));
-  if (cat)    list = list.filter(e => e.category === cat);
+  if (q)      list = list.filter(e => (e.typeName||'').toLowerCase().includes(q) || (e.code||'').toLowerCase().includes(q));
+  if (typeId) list = list.filter(e => e.typeId === typeId);
   if (status) list = list.filter(e => (e.status || 'normal') === status);
 
   const statsEl = document.getElementById('medEquipStats');
   if (statsEl) {
-    const total       = medEquipments.length;
-    const maintenance = medEquipments.filter(e => e.status === 'maintenance').length;
-    const scrapped    = medEquipments.filter(e => e.status === 'scrapped').length;
+    const all         = filterByUnitScope(medEquipments);
+    const total       = all.length;
+    const maintenance = all.filter(e => e.status === 'maintenance').length;
+    const scrapped    = all.filter(e => e.status === 'scrapped').length;
     statsEl.innerHTML = `<div class="med-stats-bar">
-      <div class="med-stat-card">
-        <div class="val">${total}</div>
-        <div class="lbl">總品項</div>
-      </div>
-      <div class="med-stat-card yellow">
-        <div class="val" style="color:var(--yellow)">${maintenance}</div>
-        <div class="lbl">維修中</div>
-      </div>
-      <div class="med-stat-card red">
-        <div class="val" style="color:var(--red)">${scrapped}</div>
-        <div class="lbl">已報廢</div>
-      </div>
+      <div class="med-stat-card"><div class="val">${total}</div><div class="lbl">總台數</div></div>
+      <div class="med-stat-card yellow"><div class="val" style="color:var(--yellow)">${maintenance}</div><div class="lbl">維修中</div></div>
+      <div class="med-stat-card red"><div class="val" style="color:var(--red)">${scrapped}</div><div class="lbl">已報廢</div></div>
     </div>`;
   }
 
@@ -4800,52 +4870,60 @@ function renderMedicalEquipment() {
     if (!d) return '<span style="color:var(--text-muted)">未設定</span>';
     const diff = Math.ceil((new Date(d) - new Date()) / 86400000);
     const color = diff < 30 ? 'var(--red)' : diff < 90 ? 'var(--yellow)' : 'var(--text)';
-    return `<span style="color:${color}">${formatDate(d)}${diff < 90 && diff >= 0 ? `（剩 ${diff} 天）` : diff < 0 ? '（已過期）' : ''}</span>`;
+    return `<span style="color:${color}">${formatDate(d)}${diff < 0 ? '（已過期）' : diff < 90 ? `（剩 ${diff} 天）` : ''}</span>`;
   };
 
-  listEl.innerHTML = list.map(e => `
-    <div class="me-card">
-      <div class="me-card-header">
-        <div>
-          <div class="me-card-name">${e.name || '—'}</div>
-          <div class="me-card-sub">
-            ${e.code ? `<span>#${e.code}</span><span>·</span>` : ''}
-            ${e.category ? `<span>${e.category}</span>` : ''}
-            ${e.spec ? `<span>·</span><span>${e.spec}</span>` : ''}
-          </div>
-        </div>
-        <div class="me-card-header-right">
-          ${statusBadge(e.status || 'normal')}
-          <div class="me-card-actions">
-            <button class="btn-icon" onclick="editMedEquip('${e.id}')">✏️</button>
-            <button class="btn-icon danger" onclick="deleteMedEquip('${e.id}','${(e.name||'').replace(/'/g,"\\'")}')">🗑</button>
-          </div>
-        </div>
+  // Group by typeName for display
+  const grouped = {};
+  list.forEach(e => {
+    const key = e.typeId || '__none__';
+    if (!grouped[key]) grouped[key] = { typeName: e.typeName || '未分類', category: e.typeCategory || '', items: [] };
+    grouped[key].items.push(e);
+  });
+
+  listEl.innerHTML = Object.values(grouped).map(g => `
+    <div class="me-group">
+      <div class="me-group-header">
+        <span class="me-group-name">${g.typeName}</span>
+        ${g.category ? `<span class="di-drug-cat">${g.category}</span>` : ''}
+        <span class="me-group-count">${g.items.length} 台</span>
       </div>
-      <div class="me-fields">
-        <div class="me-field">
-          <div class="me-field-label">電池1效期</div>
-          <div class="me-field-value">${batteryDisplay(e.battery1)}</div>
-        </div>
-        <div class="me-field">
-          <div class="me-field-label">電池2效期</div>
-          <div class="me-field-value">${batteryDisplay(e.battery2)}</div>
-        </div>
-        <div class="me-field">
-          <div class="me-field-label">最後清點日</div>
-          <div class="me-field-value">${e.lastChecked ? formatDate(e.lastChecked) : '<span style="color:var(--text-muted)">未清點</span>'}</div>
-        </div>
-        <div class="me-field">
-          <div class="me-field-label">保管人</div>
-          <div class="me-field-value">${e.custodian || '—'}</div>
-        </div>
-        ${e.note ? `<div class="me-field full"><div class="me-field-label">備註</div><div class="me-field-value">${e.note}</div></div>` : ''}
-      </div>
+      ${g.items.map(e => `
+        <div class="me-card">
+          <div class="me-card-header">
+            <div>
+              <div class="me-card-name">#${e.code || '—'}</div>
+              ${e.custodian ? `<div class="me-card-sub">保管人：${e.custodian}</div>` : ''}
+            </div>
+            <div class="me-card-header-right">
+              ${statusBadge(e.status || 'normal')}
+              <div class="me-card-actions">
+                <button class="btn-icon" onclick="editMedEquip('${e.id}')">✏️</button>
+                <button class="btn-icon danger" onclick="deleteMedEquip('${e.id}','${(e.code||'').replace(/'/g,"\\'")}')">🗑</button>
+              </div>
+            </div>
+          </div>
+          <div class="me-fields">
+            <div class="me-field">
+              <div class="me-field-label">電池1效期</div>
+              <div class="me-field-value">${batteryDisplay(e.battery1)}</div>
+            </div>
+            <div class="me-field">
+              <div class="me-field-label">電池2效期</div>
+              <div class="me-field-value">${batteryDisplay(e.battery2)}</div>
+            </div>
+            <div class="me-field">
+              <div class="me-field-label">最後清點日</div>
+              <div class="me-field-value">${e.lastChecked ? formatDate(e.lastChecked) : '<span style="color:var(--text-muted)">未清點</span>'}</div>
+            </div>
+            ${e.note ? `<div class="me-field"><div class="me-field-label">備註</div><div class="me-field-value">${e.note}</div></div>` : ''}
+          </div>
+        </div>`).join('')}
     </div>`).join('');
 }
 
 document.getElementById('medEquipSearch')?.addEventListener('input', renderMedicalEquipment);
-document.getElementById('medEquipCategoryFilter')?.addEventListener('change', renderMedicalEquipment);
+document.getElementById('medEquipTypeFilter')?.addEventListener('change', renderMedicalEquipment);
 document.getElementById('medEquipStatusFilter')?.addEventListener('change', renderMedicalEquipment);
 
 // ── 衛材裝備 CRUD ──────────────────────────────────────
@@ -4854,18 +4932,16 @@ let editingMedEquipId = null;
 function openMedEquipModal(id = null) {
   editingMedEquipId = id;
   const e = id ? medEquipments.find(x => x.id === id) : null;
-  document.getElementById('med-equip-modal-title').textContent = e ? '編輯裝備品項' : '新增裝備品項';
+  document.getElementById('med-equip-modal-title').textContent = e ? '編輯裝備' : '新增裝備';
+  populateEquipTypeDropdowns();
   const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v ?? ''; };
-  sv('me-name',         e?.name);
+  sv('me-type-select',  e?.typeId || '');
   sv('me-code',         e?.code);
-  sv('me-category',     e?.category);
-  sv('me-spec',         e?.spec);
-  sv('me-qty',          e?.qty ?? '');
-  sv('me-custodian',    e?.custodian);
   sv('me-battery1',     e?.battery1 || '');
   sv('me-battery2',     e?.battery2 || '');
   sv('me-last-checked', e?.lastChecked || '');
   sv('me-status',       e?.status || 'normal');
+  sv('me-custodian',    e?.custodian);
   sv('me-note',         e?.note);
   document.getElementById('medEquipModalOverlay').classList.add('open');
 }
@@ -4882,25 +4958,24 @@ document.getElementById('medEquipModalOverlay')?.addEventListener('click', e => 
 });
 
 document.getElementById('medEquipSaveBtn')?.addEventListener('click', async () => {
-  const name = document.getElementById('me-name')?.value.trim();
-  if (!name) { alert('請輸入裝備名稱'); return; }
-
+  const typeId = document.getElementById('me-type-select')?.value;
+  const code   = document.getElementById('me-code')?.value.trim();
+  if (!typeId) { alert('請選擇裝備品項'); return; }
+  if (!code)   { alert('請輸入序號／編號'); return; }
+  const typeObj = equipmentTypes.find(t => t.id === typeId);
   const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  const qtyRaw = document.getElementById('me-qty')?.value;
   const data = {
-    name,
-    code:        gv('me-code'),
-    category:    gv('me-category'),
-    spec:        gv('me-spec'),
-    qty:         qtyRaw !== '' ? Number(qtyRaw) : null,
-    custodian:   gv('me-custodian'),
+    typeId,
+    typeName:     typeObj?.name || '',
+    typeCategory: typeObj?.category || '',
+    code,
     battery1:    gv('me-battery1'),
     battery2:    gv('me-battery2'),
     lastChecked: gv('me-last-checked'),
     status:      gv('me-status') || 'normal',
+    custodian:   gv('me-custodian'),
     note:        gv('me-note'),
   };
-
   try {
     if (editingMedEquipId) {
       await updateDoc(doc(db, 'medEquipments', editingMedEquipId), data);
@@ -4913,9 +4988,60 @@ document.getElementById('medEquipSaveBtn')?.addEventListener('click', async () =
 
 window.editMedEquip = id => openMedEquipModal(id);
 
-window.deleteMedEquip = async function(id, name) {
-  if (!confirm(`確定要刪除「${name}」？此操作無法復原。`)) return;
+window.deleteMedEquip = async function(id, code) {
+  if (!confirm(`確定要刪除序號「${code}」的裝備？此操作無法復原。`)) return;
   try { await deleteDoc(doc(db, 'medEquipments', id)); }
+  catch(e) { alert('刪除失敗：' + e.message); }
+};
+
+// ── 裝備品項類型管理 ──
+let editingEquipTypeId = null;
+
+function openEquipTypeModal(id = null) {
+  editingEquipTypeId = id;
+  const t = id ? equipmentTypes.find(x => x.id === id) : null;
+  document.getElementById('equip-type-modal-title').textContent = t ? '編輯品項' : '新增品項';
+  const sv = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v ?? ''; };
+  sv('et-name',     t?.name);
+  sv('et-category', t?.category || '');
+  sv('et-note',     t?.note);
+  document.getElementById('equipTypeModalOverlay').classList.add('open');
+}
+
+function closeEquipTypeModal() {
+  document.getElementById('equipTypeModalOverlay').classList.remove('open');
+}
+
+document.getElementById('addEquipTypeBtn')?.addEventListener('click', () => openEquipTypeModal(null));
+document.getElementById('equipTypeModalClose')?.addEventListener('click', closeEquipTypeModal);
+document.getElementById('equipTypeCancelBtn')?.addEventListener('click', closeEquipTypeModal);
+document.getElementById('equipTypeModalOverlay')?.addEventListener('click', e => {
+  if (e.target.id === 'equipTypeModalOverlay') closeEquipTypeModal();
+});
+
+document.getElementById('equipTypeSaveBtn')?.addEventListener('click', async () => {
+  const name = document.getElementById('et-name')?.value.trim();
+  if (!name) { alert('請輸入品項名稱'); return; }
+  const data = {
+    name,
+    category: document.getElementById('et-category')?.value.trim() || '',
+    note:     document.getElementById('et-note')?.value.trim() || '',
+  };
+  try {
+    if (editingEquipTypeId) {
+      await updateDoc(doc(db, 'equipmentTypes', editingEquipTypeId), data);
+    } else {
+      await addDoc(COL_EQUIP_TYPES, { ...data, createdAt: serverTimestamp() });
+    }
+    closeEquipTypeModal();
+  } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
+});
+
+window.editEquipType = id => openEquipTypeModal(id);
+
+window.deleteEquipType = async function(id, name) {
+  if (!confirm(`確定要刪除品項「${name}」？\n（已建立的裝備紀錄不受影響）`)) return;
+  try { await deleteDoc(doc(db, 'equipmentTypes', id)); }
   catch(e) { alert('刪除失敗：' + e.message); }
 };
 

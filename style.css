@@ -2428,6 +2428,51 @@ main {
 .me-field-value { font-size: 13px; color: var(--text); }
 .me-field.full { grid-column: 1 / -1; }
 
+.me-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.me-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.me-group-name { font-weight: 700; font-size: 14px; color: var(--text); }
+.me-group-count { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+.me-group .me-card {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+.me-group .me-card:last-child { border-bottom: none; }
+
+/* 品項管理列表 */
+.me-type-list { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.me-type-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+.me-type-item:last-child { border-bottom: none; }
+.me-type-name { font-weight: 600; font-size: 14px; color: var(--text); }
+.me-type-cat {
+  margin-left: 8px;
+  font-size: 11px;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
 /* ── 醫務所分區 tabs ── */
 .pharmacy-tab-bar {
   display: flex;

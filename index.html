@@ -614,35 +614,49 @@
       <section id="page-medical-equipment" class="page">
         <div class="recruit-header">
           <h2 class="page-title">🩺 衛材裝備清點</h2>
-          <button class="btn btn-primary" id="addMedEquipBtn">＋ 新增品項</button>
-        </div>
-        <div class="toolbar">
-          <div class="search-bar">
-            <input type="text" id="medEquipSearch" placeholder="搜尋裝備名稱、編號…">
-          </div>
-          <div class="filter-bar">
-            <select id="medEquipCategoryFilter">
-              <option value="">全部類別</option>
-              <option value="急救器材">急救器材</option>
-              <option value="診療器材">診療器材</option>
-              <option value="防護裝備">防護裝備</option>
-              <option value="運輸擔架">運輸擔架</option>
-              <option value="通訊聯絡">通訊聯絡</option>
-              <option value="其他">其他</option>
-            </select>
-            <select id="medEquipStatusFilter">
-              <option value="">全部狀態</option>
-              <option value="normal">堪用</option>
-              <option value="maintenance">維修中</option>
-              <option value="scrapped">已報廢</option>
-            </select>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-secondary" id="medEquipTypeTabBtn">📋 品項管理</button>
+            <button class="btn btn-primary" id="addMedEquipBtn" style="display:none">＋ 新增裝備</button>
           </div>
         </div>
-        <div id="medEquipStats" style="margin-bottom:12px"></div>
-        <div id="medEquipList" class="me-card-list"></div>
-        <div id="medEquipEmpty" class="empty-state" style="display:none">
-          <div class="icon">🩺</div>
-          <p>尚無裝備資料，請點擊「＋ 新增品項」開始建立</p>
+
+        <!-- 品項管理面板 -->
+        <div id="medEquipTypePanel" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:13px;color:var(--text-muted)">定義裝備品項種類，新增裝備時可由下拉選擇</span>
+            <button class="btn btn-primary btn-sm" id="addEquipTypeBtn">＋ 新增品項</button>
+          </div>
+          <div id="medEquipTypeList" class="me-type-list"></div>
+          <div id="medEquipTypeEmpty" class="empty-state" style="display:none">
+            <div class="icon">📦</div>
+            <p>尚無品項，請點擊「＋ 新增品項」</p>
+          </div>
+        </div>
+
+        <!-- 裝備清單面板 -->
+        <div id="medEquipListPanel">
+          <div class="toolbar">
+            <div class="search-bar">
+              <input type="text" id="medEquipSearch" placeholder="搜尋序號、品項名稱…">
+            </div>
+            <div class="filter-bar">
+              <select id="medEquipTypeFilter">
+                <option value="">全部品項</option>
+              </select>
+              <select id="medEquipStatusFilter">
+                <option value="">全部狀態</option>
+                <option value="normal">堪用</option>
+                <option value="maintenance">維修中</option>
+                <option value="scrapped">已報廢</option>
+              </select>
+            </div>
+          </div>
+          <div id="medEquipStats" style="margin-bottom:12px"></div>
+          <div id="medEquipList" class="me-card-list"></div>
+          <div id="medEquipEmpty" class="empty-state" style="display:none">
+            <div class="icon">🩺</div>
+            <p>尚無裝備資料，請點擊「＋ 新增裝備」開始建立</p>
+          </div>
         </div>
       </section>
 
@@ -1863,44 +1877,22 @@
 
   <!-- 衛材裝備 新增/編輯 Modal -->
   <div class="modal-overlay" id="medEquipModalOverlay">
-    <div class="modal" style="max-width:540px">
+    <div class="modal" style="max-width:480px">
       <div class="modal-header">
-        <h3 class="modal-title" id="med-equip-modal-title">新增裝備品項</h3>
+        <h3 class="modal-title" id="med-equip-modal-title">新增裝備</h3>
         <button class="modal-close" id="medEquipModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
           <div class="form-group" style="grid-column:1/-1">
-            <label>裝備名稱 <span style="color:var(--red)">*</span></label>
-            <input type="text" id="me-name" placeholder="例：AED自動電擊器">
-          </div>
-          <div class="form-group">
-            <label>編號</label>
-            <input type="text" id="me-code" placeholder="例：MED-001">
-          </div>
-          <div class="form-group">
-            <label>類別</label>
-            <select id="me-category">
-              <option value="">請選擇</option>
-              <option>急救器材</option>
-              <option>診療器材</option>
-              <option>防護裝備</option>
-              <option>運輸擔架</option>
-              <option>通訊聯絡</option>
-              <option>其他</option>
+            <label>裝備品項 <span style="color:var(--red)">*</span></label>
+            <select id="me-type-select">
+              <option value="">請選擇品項</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>規格型號</label>
-            <input type="text" id="me-spec" placeholder="型號或規格">
-          </div>
-          <div class="form-group">
-            <label>數量</label>
-            <input type="number" id="me-qty" min="0" placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>保管人</label>
-            <input type="text" id="me-custodian" placeholder="姓名">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>序號／編號 <span style="color:var(--red)">*</span></label>
+            <input type="text" id="me-code" placeholder="例：400155351">
           </div>
           <div class="form-group">
             <label>電池1效期</label>
@@ -1923,6 +1915,10 @@
             </select>
           </div>
           <div class="form-group" style="grid-column:1/-1">
+            <label>保管人</label>
+            <input type="text" id="me-custodian" placeholder="姓名">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
             <label>備註</label>
             <textarea id="me-note" rows="2" placeholder="備註說明…" style="resize:vertical"></textarea>
           </div>
@@ -1931,6 +1927,44 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="medEquipCancelBtn">取消</button>
         <button class="btn btn-primary" id="medEquipSaveBtn">💾 儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 裝備品項類型 新增/編輯 Modal -->
+  <div class="modal-overlay" id="equipTypeModalOverlay">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h3 class="modal-title" id="equip-type-modal-title">新增品項</h3>
+        <button class="modal-close" id="equipTypeModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>品項名稱 <span style="color:var(--red)">*</span></label>
+            <input type="text" id="et-name" placeholder="例：自動體外去顫器（AED）">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>類別</label>
+            <select id="et-category">
+              <option value="">請選擇</option>
+              <option>急救器材</option>
+              <option>診療器材</option>
+              <option>防護裝備</option>
+              <option>運輸擔架</option>
+              <option>通訊聯絡</option>
+              <option>其他</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>備註</label>
+            <input type="text" id="et-note" placeholder="備註或說明">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="equipTypeCancelBtn">取消</button>
+        <button class="btn btn-primary" id="equipTypeSaveBtn">💾 儲存</button>
       </div>
     </div>
   </div>
