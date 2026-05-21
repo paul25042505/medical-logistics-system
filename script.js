@@ -5714,9 +5714,7 @@ document.getElementById('diSignConfirmBtn')?.addEventListener('click', async () 
 })();
 
 // ── 角色權限管理分頁切換 ──────────────────────────────
-document.addEventListener('click', e => {
-  const tab = e.target.closest('.role-mgmt-tab');
-  if (!tab) return;
+window.switchRoleMgmtTab = function(tab) {
   const card = tab.closest('.admin-card');
   if (!card) return;
   card.querySelectorAll('.role-mgmt-tab').forEach(t => t.classList.remove('active'));
@@ -5724,8 +5722,9 @@ document.addEventListener('click', e => {
   const target = tab.dataset.tab;
   card.querySelectorAll('.role-mgmt-pane').forEach(p => { p.style.display = 'none'; });
   const pane = document.getElementById(`role-pane-${target}`);
-  if (pane) pane.style.display = '';
-});
+  if (pane) { pane.style.display = ''; }
+  if (target === 'assign') renderUserRoleAssignment();
+};
 
 // ══════════════════════════════════════════════════════
 // ── 年度體測 ──────────────────────────────────────────
@@ -5937,7 +5936,91 @@ function populateFtUnitFilter() {
   sel.value = cur;
 }
 
+function renderFitnessStats() {
+  const panel = document.getElementById('ft-stats-panel');
+  if (!panel) return;
+
+  const allPersonnel = filterByUnitScope(personnel);
+  const unitOrder = [...new Set(
+    (adminSettings.medUnits || []).concat(allPersonnel.map(p => p.unit).filter(Boolean))
+  )];
+
+  const statsPerUnit = unitOrder
+    .map(unit => {
+      const members = allPersonnel.filter(p => p.unit === unit);
+      if (!members.length) return null;
+      const total    = members.length;
+      const reported = members.filter(p => {
+        const t = fitnessTests.find(x => x.personnelId === p.id || x.personnelId === p.uid);
+        return !!t;
+      }).length;
+      const passed = members.filter(p => {
+        const t = fitnessTests.find(x => x.personnelId === p.id || x.personnelId === p.uid);
+        return !!getThisYearPass(t);
+      }).length;
+      return { unit, total, reported, passed };
+    })
+    .filter(Boolean);
+
+  // Overall battalion stats
+  const totalAll    = allPersonnel.length;
+  const reportedAll = allPersonnel.filter(p => {
+    const t = fitnessTests.find(x => x.personnelId === p.id || x.personnelId === p.uid);
+    return !!t;
+  }).length;
+  const passedAll   = allPersonnel.filter(p => {
+    const t = fitnessTests.find(x => x.personnelId === p.id || x.personnelId === p.uid);
+    return !!getThisYearPass(t);
+  }).length;
+
+  const pct = (n, d) => d ? Math.round(n / d * 100) : 0;
+
+  const unitCards = statsPerUnit.map(s => {
+    const rPct = pct(s.reported, s.total);
+    const qPct = pct(s.passed, s.total);
+    const shortName = s.unit.replace(/^衛生營/, '').trim() || s.unit;
+    return `<div class="ft-stat-card">
+      <div class="ft-stat-unit">${shortName}</div>
+      <div class="ft-stat-row">
+        <span class="ft-stat-label">報進率</span>
+        <span class="ft-stat-value">${s.reported}/${s.total}</span>
+        <span class="ft-stat-pct">${rPct}%</span>
+      </div>
+      <div class="ft-stat-bar"><div class="ft-stat-bar-fill" style="width:${rPct}%;background:var(--accent)"></div></div>
+      <div class="ft-stat-row" style="margin-top:6px">
+        <span class="ft-stat-label">合格率</span>
+        <span class="ft-stat-value">${s.passed}/${s.total}</span>
+        <span class="ft-stat-pct ${qPct >= 80 ? 'ft-stat-green' : qPct >= 60 ? 'ft-stat-yellow' : 'ft-stat-red'}">${qPct}%</span>
+      </div>
+      <div class="ft-stat-bar"><div class="ft-stat-bar-fill" style="width:${qPct}%;background:${qPct >= 80 ? '#16a34a' : qPct >= 60 ? '#ca8a04' : '#dc2626'}"></div></div>
+    </div>`;
+  }).join('');
+
+  const rAll = pct(reportedAll, totalAll);
+  const qAll = pct(passedAll, totalAll);
+
+  panel.innerHTML = `
+    <div class="ft-stats-grid">${unitCards}
+      <div class="ft-stat-card ft-stat-card-all">
+        <div class="ft-stat-unit">全營</div>
+        <div class="ft-stat-row">
+          <span class="ft-stat-label">報進率</span>
+          <span class="ft-stat-value">${reportedAll}/${totalAll}</span>
+          <span class="ft-stat-pct">${rAll}%</span>
+        </div>
+        <div class="ft-stat-bar"><div class="ft-stat-bar-fill" style="width:${rAll}%;background:var(--accent)"></div></div>
+        <div class="ft-stat-row" style="margin-top:6px">
+          <span class="ft-stat-label">合格率</span>
+          <span class="ft-stat-value">${passedAll}/${totalAll}</span>
+          <span class="ft-stat-pct ${qAll >= 80 ? 'ft-stat-green' : qAll >= 60 ? 'ft-stat-yellow' : 'ft-stat-red'}">${qAll}%</span>
+        </div>
+        <div class="ft-stat-bar"><div class="ft-stat-bar-fill" style="width:${qAll}%;background:${qAll >= 80 ? '#16a34a' : qAll >= 60 ? '#ca8a04' : '#dc2626'}"></div></div>
+      </div>
+    </div>`;
+}
+
 function renderFitnessAdminPage() {
+  renderFitnessStats();
   const container = document.getElementById('ft-admin-list');
   if (!container) return;
 

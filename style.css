@@ -2685,6 +2685,49 @@ main {
 .ft-btn-result.active-fail { background: #fee2e2; border-color: #fca5a5; color: #dc2626; font-weight: 700; }
 
 /* 管理員列表 */
+.ft-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.ft-stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.ft-stat-card-all {
+  border-color: var(--accent);
+  background: #eff6ff;
+}
+.ft-stat-unit {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+.ft-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ft-stat-label { font-size: 11px; color: var(--text-muted); flex: 0 0 auto; }
+.ft-stat-value { font-size: 12px; font-weight: 600; color: var(--text); margin-left: auto; }
+.ft-stat-pct   { font-size: 12px; font-weight: 700; min-width: 36px; text-align: right; }
+.ft-stat-green  { color: #16a34a; }
+.ft-stat-yellow { color: #ca8a04; }
+.ft-stat-red    { color: #dc2626; }
+.ft-stat-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 99px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+.ft-stat-bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s; }
+
 .ft-admin-row {
   display: grid;
   grid-template-columns: 1fr auto;
