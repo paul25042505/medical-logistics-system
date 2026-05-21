@@ -72,7 +72,7 @@ let personnelUnitFilter = [];
 let fitnessTests       = [];
 
 const FITNESS_CATS = [
-  { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）'] },
+  { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）', '屈臂懸垂（女性）'] },
   { id: 'core',      label: '腹部核心肌群（擇一）',     items: ['兩分鐘仰臥起坐', '平板撐體 (Plank)', '仰臥捲腹'] },
   { id: 'cardio',    label: '心肺耐力（擇一）',          items: ['三千公尺徒手跑步', '五公里健走', '二十公尺漸進式折返跑', '八百公尺游走', '五分鐘跳繩'] },
 ];
