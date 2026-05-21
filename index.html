@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260522">
+  <link rel="stylesheet" href="style.css?v=20260523">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -32,7 +32,7 @@
         </div>
 
         <div class="auth-error" id="login-error"></div>
-        <button class="btn btn-google btn-full" id="google-login-btn">
+        <button type="button" class="btn btn-google btn-full" id="google-login-btn">
           <span class="google-icon">G</span> 使用 Google 登入
         </button>
         <p class="auth-hint">尚未申請帳號？登入後填寫申請資料，等待管理員審核。</p>
@@ -51,7 +51,7 @@
               <option value="logistics">後勤管理承辦</option>
               <option value="member">一般成員</option>
             </select>
-            <button id="dev-login-btn"
+            <button type="button" id="dev-login-btn"
               style="width:100%;padding:8px;background:transparent;border:1px solid #ccc;color:#555;border-radius:6px;cursor:pointer;font-size:13px">快速登入</button>
           </div>
         </div>
@@ -82,8 +82,8 @@
           </div>
         </div>
         <div class="auth-error" id="reg-error"></div>
-        <button class="btn btn-primary btn-full" id="submit-register-btn" style="margin-top:14px">提交申請</button>
-        <button class="btn btn-secondary btn-full" id="reg-cancel-btn" style="margin-top:6px">取消</button>
+        <button type="button" class="btn btn-primary btn-full" id="submit-register-btn" style="margin-top:14px">提交申請</button>
+        <button type="button" class="btn btn-secondary btn-full" id="reg-cancel-btn" style="margin-top:6px">取消</button>
       </div>
 
       <!-- 畫面3：等待審核 -->
@@ -92,7 +92,7 @@
         <p class="auth-desc">您的帳號正在審核中</p>
         <div class="auth-email-tag" id="pending-email-display"></div>
         <p class="auth-hint">請等待管理員核准後，重新整理頁面即可登入。</p>
-        <button class="btn btn-secondary btn-full" id="pending-logout-btn" style="margin-top:16px">登出</button>
+        <button type="button" class="btn btn-secondary btn-full" id="pending-logout-btn" style="margin-top:16px">登出</button>
       </div>
     </div>
   </div>
@@ -104,11 +104,11 @@
   </div>
 
   <header style="display:none">
-    <button class="menu-btn" id="menuBtn">☰</button>
+    <button type="button" class="menu-btn" id="menuBtn">☰</button>
     <h1>衛生營後勤資訊管理系統</h1>
     <div class="header-user">
       <span class="header-email" id="header-email"></span>
-      <button class="btn-logout" id="logout-btn">登出</button>
+      <button type="button" class="btn-logout" id="logout-btn">登出</button>
     </div>
   </header>
 
@@ -164,7 +164,7 @@
       <section id="page-trainee-list" class="page">
         <div class="recruit-header">
           <h2 class="page-title">👥 訓員列表</h2>
-          <button class="btn btn-primary" id="addBtn">＋ 新增</button>
+          <button type="button" class="btn btn-primary" id="addBtn">＋ 新增</button>
         </div>
         <div class="tabs">
           <button type="button" class="tab-btn active" data-tab="civilian">社會青年</button>
@@ -190,7 +190,7 @@
       <section id="page-batch-sched" class="page">
         <div class="recruit-header">
           <h2 class="page-title">📅 梯次期程</h2>
-          <button class="btn btn-primary" id="addBatchBtn">＋ 新增梯次</button>
+          <button type="button" class="btn btn-primary" id="addBatchBtn">＋ 新增梯次</button>
         </div>
         <div id="batch-sched-content"></div>
       </section>
@@ -230,7 +230,7 @@
       <section id="page-recruiters" class="page">
         <div class="recruit-header">
           <h2 class="page-title">🪖 招募員管理</h2>
-          <button class="btn btn-primary" id="addRecruiterBtn">＋ 新增招募員</button>
+          <button type="button" class="btn btn-primary" id="addRecruiterBtn">＋ 新增招募員</button>
         </div>
         <div id="recruiter-list" class="recruiter-list"></div>
       </section>
@@ -248,7 +248,7 @@
             <div class="profile-card-header">
               <span class="profile-card-icon">📋</span>
               <span class="profile-card-title">人員資訊</span>
-              <button class="btn btn-secondary btn-sm" id="prof-edit-btn" style="margin-left:auto">✏️ 編輯</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="prof-edit-btn" style="margin-left:auto">✏️ 編輯</button>
             </div>
 
             <!-- 檢視模式 -->
@@ -397,8 +397,8 @@
               </div>
 
               <div class="profile-card-footer" style="margin-top:20px">
-                <button class="btn btn-secondary" id="prof-cancel-btn">取消</button>
-                <button class="btn btn-primary" id="prof-save-btn">儲存</button>
+                <button type="button" class="btn btn-secondary" id="prof-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="prof-save-btn">儲存</button>
               </div>
             </div>
           </div>
@@ -408,7 +408,7 @@
             <div class="profile-card-header">
               <span class="profile-card-icon">🏃</span>
               <span class="profile-card-title">年度體測</span>
-              <button class="btn btn-secondary btn-sm" id="ft-prof-edit-btn" style="margin-left:auto">設定 / 編輯</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="ft-prof-edit-btn" style="margin-left:auto">設定 / 編輯</button>
             </div>
             <div id="ft-prof-view" style="margin-top:14px">
               <div class="prof-empty-hint">尚未設定體測計畫，點擊「設定 / 編輯」開始建立。</div>
@@ -420,8 +420,8 @@
               </div>
               <div id="ft-items-form"></div>
               <div style="display:flex;gap:8px;margin-top:14px">
-                <button class="btn btn-secondary" id="ft-prof-cancel-btn">取消</button>
-                <button class="btn btn-primary" id="ft-prof-save-btn">儲存體測計畫</button>
+                <button type="button" class="btn btn-secondary" id="ft-prof-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="ft-prof-save-btn">儲存體測計畫</button>
               </div>
             </div>
           </div>
@@ -443,7 +443,7 @@
             <div class="profile-card-header">
               <span class="profile-card-icon">👕</span>
               <span class="profile-card-title">服裝供售點數</span>
-              <button class="btn btn-primary btn-sm" id="up-prof-open-btn" style="margin-left:auto">更新本月點數</button>
+              <button type="button" class="btn btn-primary btn-sm" id="up-prof-open-btn" style="margin-left:auto">更新本月點數</button>
             </div>
 
             <!-- 檢視模式 -->
@@ -470,8 +470,8 @@
                 </div>
               </div>
               <div class="profile-card-footer" style="margin-top:14px">
-                <button class="btn btn-secondary" id="up-prof-cancel-btn">取消</button>
-                <button class="btn btn-primary" id="up-prof-save-btn">送出申報</button>
+                <button type="button" class="btn btn-secondary" id="up-prof-cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary" id="up-prof-save-btn">送出申報</button>
               </div>
             </div>
           </div>
@@ -504,7 +504,7 @@
     <div class="modal" id="ftEditModal">
       <div class="modal-header">
         <h3 id="ft-edit-title">編輯體測計畫</h3>
-        <button class="modal-close" id="ftEditClose">✕</button>
+        <button type="button" class="modal-close" id="ftEditClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group" style="margin-bottom:12px">
@@ -519,9 +519,9 @@
         <div id="ft-edit-history"></div>
       </div>
       <div class="modal-footer" style="gap:8px">
-        <button class="btn btn-secondary" id="ftEditCancel">取消</button>
-        <button class="btn btn-secondary" id="ftEditArchive" style="color:var(--text-muted)">📁 歸檔此次體測</button>
-        <button class="btn btn-primary" id="ftEditSave">儲存</button>
+        <button type="button" class="btn btn-secondary" id="ftEditCancel">取消</button>
+        <button type="button" class="btn btn-secondary" id="ftEditArchive" style="color:var(--text-muted)">📁 歸檔此次體測</button>
+        <button type="button" class="btn btn-primary" id="ftEditSave">儲存</button>
       </div>
     </div>
   </div>
@@ -530,7 +530,7 @@
       <section id="page-daily-inventory" class="page">
         <div class="recruit-header">
           <h2 class="page-title">📋 每日清點</h2>
-          <button class="btn btn-secondary" id="di-load-prev-btn" style="font-size:13px">↩ 帶入最新紀錄</button>
+          <button type="button" class="btn btn-secondary" id="di-load-prev-btn" style="font-size:13px">↩ 帶入最新紀錄</button>
         </div>
 
         <div class="di-meta-bar">
@@ -561,7 +561,7 @@
         </div>
 
         <div style="margin-top:24px;display:flex;justify-content:flex-end">
-          <button class="btn btn-primary" id="di-submit-btn">✅ 確認清點並簽名</button>
+          <button type="button" class="btn btn-primary" id="di-submit-btn">✅ 確認清點並簽名</button>
         </div>
       </section>
 
@@ -569,7 +569,7 @@
       <section id="page-medical-supplies" class="page">
         <div class="recruit-header">
           <h2 class="page-title">💊 藥材清點</h2>
-          <button class="btn btn-primary" id="addMedSupplyBtn">＋ 新增品項</button>
+          <button type="button" class="btn btn-primary" id="addMedSupplyBtn">＋ 新增品項</button>
         </div>
 
         <!-- 醫務所分區 tabs -->
@@ -599,7 +599,7 @@
               <option value="low">庫存不足</option>
               <option value="expired">已過期</option>
             </select>
-            <button id="medSupplyShowHiddenBtn" class="btn-outline btn-sm" title="顯示／隱藏 已隱藏的藥品">👁 顯示隱藏</button>
+            <button type="button" id="medSupplyShowHiddenBtn" class="btn-outline btn-sm" title="顯示／隱藏 已隱藏的藥品">👁 顯示隱藏</button>
           </div>
         </div>
         <div id="medSupplyStats" style="margin-bottom:12px"></div>
@@ -641,8 +641,8 @@
         <div class="recruit-header">
           <h2 class="page-title">🩺 衛材裝備清點</h2>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn btn-secondary" id="medEquipTypeTabBtn">📋 品項管理</button>
-            <button class="btn btn-primary" id="addMedEquipBtn" style="display:none">＋ 新增裝備</button>
+            <button type="button" class="btn btn-secondary" id="medEquipTypeTabBtn">📋 品項管理</button>
+            <button type="button" class="btn btn-primary" id="addMedEquipBtn" style="display:none">＋ 新增裝備</button>
           </div>
         </div>
 
@@ -658,14 +658,14 @@
                 <input type="date" id="bulk-calib-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
               </div>
               <div id="bulk-calib-equip-list" style="font-size:13px;color:#94a3b8">請先選擇校正日期</div>
-              <button id="bulk-calib-submit" class="btn btn-primary btn-sm" style="display:none;margin-top:12px;width:100%">✓ 批量新增校正日期</button>
+              <button type="button" id="bulk-calib-submit" class="btn btn-primary btn-sm" style="display:none;margin-top:12px;width:100%">✓ 批量新增校正日期</button>
             </div>
 
             <!-- 右：品項管理 -->
             <div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <span style="font-size:13px;color:var(--text-muted)">定義裝備品項種類，新增裝備時可由下拉選擇</span>
-                <button class="btn btn-primary btn-sm" id="addEquipTypeBtn" style="flex-shrink:0;margin-left:8px">＋ 新增品項</button>
+                <button type="button" class="btn btn-primary btn-sm" id="addEquipTypeBtn" style="flex-shrink:0;margin-left:8px">＋ 新增品項</button>
               </div>
               <div id="medEquipTypeList" class="me-type-list"></div>
               <div id="medEquipTypeEmpty" class="empty-state" style="display:none">
@@ -717,7 +717,7 @@
             <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">招募問卷使用的來源部隊單位</p>
             <div class="admin-input-row">
               <input type="text" id="admin-unit-input" placeholder="新增單位名稱">
-              <button class="btn btn-primary btn-sm" id="admin-unit-add">新增</button>
+              <button type="button" class="btn btn-primary btn-sm" id="admin-unit-add">新增</button>
             </div>
             <ul class="admin-list" id="admin-unit-list"></ul>
           </div>
@@ -727,7 +727,7 @@
             <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">招募問卷使用的營級選項</p>
             <div class="admin-input-row">
               <input type="text" id="admin-battalion-input" placeholder="新增營級名稱">
-              <button class="btn btn-primary btn-sm" id="admin-battalion-add">新增</button>
+              <button type="button" class="btn btn-primary btn-sm" id="admin-battalion-add">新增</button>
             </div>
             <ul class="admin-list" id="admin-battalion-list"></ul>
           </div>
@@ -737,7 +737,7 @@
             <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">招募問卷使用的連級選項</p>
             <div class="admin-input-row">
               <input type="text" id="admin-company-input" placeholder="新增連級名稱">
-              <button class="btn btn-primary btn-sm" id="admin-company-add">新增</button>
+              <button type="button" class="btn btn-primary btn-sm" id="admin-company-add">新增</button>
             </div>
             <ul class="admin-list" id="admin-company-list"></ul>
           </div>
@@ -756,8 +756,8 @@
               </div>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <button class="btn btn-primary btn-sm" id="admin-sheets-save">💾 儲存設定</button>
-              <button class="btn btn-secondary btn-sm" id="admin-sheets-test">🔗 測試連線</button>
+              <button type="button" class="btn btn-primary btn-sm" id="admin-sheets-save">💾 儲存設定</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="admin-sheets-test">🔗 測試連線</button>
               <span id="admin-sheets-status" style="font-size:12px;color:var(--text-muted)"></span>
             </div>
           </div>
@@ -773,7 +773,7 @@
             <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">人員資訊管理、車輛管理、服裝點數使用的單位</p>
             <div class="admin-input-row">
               <input type="text" id="admin-medunit-input" placeholder="例：衛生營營部">
-              <button class="btn btn-primary btn-sm" id="admin-medunit-add">新增</button>
+              <button type="button" class="btn btn-primary btn-sm" id="admin-medunit-add">新增</button>
             </div>
             <ul class="admin-list" id="admin-medunit-list"></ul>
           </div>
@@ -825,7 +825,7 @@
             <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">藥材清點、每日清點的藥局分區。各醫務所庫存獨立計算。</p>
             <div class="admin-input-row">
               <input type="text" id="admin-pharmacy-input" placeholder="例：成功北醫務所">
-              <button class="btn btn-primary btn-sm" id="admin-pharmacy-add">新增</button>
+              <button type="button" class="btn btn-primary btn-sm" id="admin-pharmacy-add">新增</button>
             </div>
             <ul class="admin-list" id="admin-pharmacy-list"></ul>
           </div>
@@ -846,9 +846,9 @@
         <div class="recruit-header">
           <h2 class="page-title">👤 人員資訊管理</h2>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-secondary" id="personnelExportBtn">⬇ 匯出 CSV</button>
-            <button class="btn btn-secondary" id="personnelImportBtn">⬆ 批次匯入</button>
-            <button class="btn btn-primary" id="personnelAddBtn">＋ 新增人員</button>
+            <button type="button" class="btn btn-secondary" id="personnelExportBtn">⬇ 匯出 CSV</button>
+            <button type="button" class="btn btn-secondary" id="personnelImportBtn">⬆ 批次匯入</button>
+            <button type="button" class="btn btn-primary" id="personnelAddBtn">＋ 新增人員</button>
           </div>
         </div>
 
@@ -909,7 +909,7 @@
         <div id="personnel-pane-audit" style="display:none">
           <div class="personnel-audit-bar">
             <span id="personnel-audit-count" style="font-size:13px;color:var(--text-muted)"></span>
-            <button class="btn btn-secondary btn-sm" id="personnelAuditClearBtn">🗑 清除所有紀錄</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="personnelAuditClearBtn">🗑 清除所有紀錄</button>
           </div>
           <div class="personnel-table-wrap">
             <table class="personnel-table">
@@ -936,9 +936,9 @@
         <div class="recruit-header">
           <h2 class="page-title">🚗 車輛資訊管理</h2>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 新增車輛</button>
-            <button class="btn btn-secondary btn-sm" id="vehicleBatchBtn">📋 批次輸入</button>
-            <button class="btn btn-secondary btn-sm" id="vehicleExportBtn">⬇ 匯出 CSV</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openVehicleModal()">＋ 新增車輛</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="vehicleBatchBtn">📋 批次輸入</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="vehicleExportBtn">⬇ 匯出 CSV</button>
           </div>
         </div>
         <div class="toolbar">
@@ -993,9 +993,9 @@
         <div class="recruit-header">
           <h2 class="page-title">👕 服裝供售點數</h2>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-primary btn-sm" onclick="openUniformPointsModal()">＋ 新增</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openUniformPointsModal()">＋ 新增</button>
             <a class="btn btn-secondary btn-sm" href="uniform-form.html" target="_blank">🔗 申報表連結</a>
-            <button class="btn btn-secondary btn-sm" id="uniformPointsExportBtn">⬇ 匯出 CSV</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="uniformPointsExportBtn">⬇ 匯出 CSV</button>
           </div>
         </div>
 
@@ -1059,7 +1059,7 @@
           <h2 class="page-title">📥 入職申請</h2>
           <div style="display:flex;gap:8px;align-items:center">
             <a class="btn btn-secondary btn-sm" href="form.html" target="_blank">🔗 申請表連結</a>
-            <button class="btn btn-secondary btn-sm" id="appExportBtn">⬇ 匯出 CSV</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="appExportBtn">⬇ 匯出 CSV</button>
           </div>
         </div>
         <div class="toolbar">
@@ -1082,7 +1082,7 @@
       <section id="page-leads" class="page">
         <div class="recruit-header">
           <h2 class="page-title">📝 問卷填答</h2>
-          <button class="btn btn-secondary btn-sm" id="leads-refresh-btn">🔄 重新整理</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="leads-refresh-btn">🔄 重新整理</button>
         </div>
         <div id="leads-load-status" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
         <div class="search-bar">
@@ -1099,7 +1099,7 @@
     <div class="modal" id="modal">
       <div class="modal-header">
         <h3 id="modal-title">新增訓員</h3>
-        <button class="modal-close" id="modalClose">✕</button>
+        <button type="button" class="modal-close" id="modalClose">✕</button>
       </div>
       <div class="modal-body">
 
@@ -1234,8 +1234,8 @@
 
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancelBtn">取消</button>
-        <button class="btn btn-primary" id="saveBtn">儲存</button>
+        <button type="button" class="btn btn-secondary" id="cancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="saveBtn">儲存</button>
       </div>
     </div>
   </div>
@@ -1245,7 +1245,7 @@
     <div class="modal modal-large" id="detailModal">
       <div class="modal-header">
         <h3 id="detail-title">訓員詳情</h3>
-        <button class="modal-close" id="detailClose">✕</button>
+        <button type="button" class="modal-close" id="detailClose">✕</button>
       </div>
       <div class="modal-body" id="detail-body"></div>
     </div>
@@ -1256,7 +1256,7 @@
     <div class="modal" id="interviewModal">
       <div class="modal-header">
         <h3>新增約談紀錄</h3>
-        <button class="modal-close" id="interviewClose">✕</button>
+        <button type="button" class="modal-close" id="interviewClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-section">
@@ -1296,8 +1296,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="interviewCancel">取消</button>
-        <button class="btn btn-primary" id="interviewSave">儲存約談</button>
+        <button type="button" class="btn btn-secondary" id="interviewCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="interviewSave">儲存約談</button>
       </div>
     </div>
   </div>
@@ -1307,7 +1307,7 @@
     <div class="modal" id="batchModal">
       <div class="modal-header">
         <h3 id="batch-modal-title">新增梯次</h3>
-        <button class="modal-close" id="batchModalClose">✕</button>
+        <button type="button" class="modal-close" id="batchModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-section">
@@ -1375,8 +1375,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="batchCancelBtn">取消</button>
-        <button class="btn btn-primary" id="batchSaveBtn">儲存</button>
+        <button type="button" class="btn btn-secondary" id="batchCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="batchSaveBtn">儲存</button>
       </div>
     </div>
   </div>
@@ -1386,7 +1386,7 @@
     <div class="modal" style="max-width:420px">
       <div class="modal-header">
         <h3 id="recruiter-modal-title">新增招募員</h3>
-        <button class="modal-close" id="recruiterModalClose">✕</button>
+        <button type="button" class="modal-close" id="recruiterModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
@@ -1405,8 +1405,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="recruiterCancelBtn">取消</button>
-        <button class="btn btn-primary" id="recruiterSaveBtn">💾 儲存</button>
+        <button type="button" class="btn btn-secondary" id="recruiterCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="recruiterSaveBtn">💾 儲存</button>
       </div>
     </div>
   </div>
@@ -1417,7 +1417,7 @@
     <div class="modal modal-large" id="personnelModal">
       <div class="modal-header">
         <h3 id="personnel-modal-title">新增人員</h3>
-        <button class="modal-close" id="personnelModalClose">✕</button>
+        <button type="button" class="modal-close" id="personnelModalClose">✕</button>
       </div>
       <div class="modal-body">
 
@@ -1567,8 +1567,8 @@
 
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="personnelCancelBtn">取消</button>
-        <button class="btn btn-primary" id="personnelSaveBtn">儲存</button>
+        <button type="button" class="btn btn-secondary" id="personnelCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="personnelSaveBtn">儲存</button>
       </div>
     </div>
   </div>
@@ -1578,12 +1578,12 @@
     <div class="modal modal-large" id="personnelDetailModal">
       <div class="modal-header">
         <h3 id="personnel-detail-title">人員詳情</h3>
-        <button class="modal-close" id="personnelDetailClose">✕</button>
+        <button type="button" class="modal-close" id="personnelDetailClose">✕</button>
       </div>
       <div class="modal-body" id="personnelDetailBody"></div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="personnelDetailClose2">關閉</button>
-        <button class="btn btn-primary" id="personnelDetailEditBtn">✏️ 編輯</button>
+        <button type="button" class="btn btn-secondary" id="personnelDetailClose2">關閉</button>
+        <button type="button" class="btn btn-primary" id="personnelDetailEditBtn">✏️ 編輯</button>
       </div>
     </div>
   </div>
@@ -1593,7 +1593,7 @@
     <div class="modal modal-large" id="personnelImportModal">
       <div class="modal-header">
         <h3>⬆ 批次匯入人員</h3>
-        <button class="modal-close" id="personnelImportClose">✕</button>
+        <button type="button" class="modal-close" id="personnelImportClose">✕</button>
       </div>
       <div class="modal-body">
 
@@ -1604,7 +1604,7 @@
             <p>單位請填寫：衛生營營部 / 衛生營第一連 / 衛生營第二連</p>
           </div>
           <div class="import-actions-top">
-            <button class="btn btn-secondary" id="importTplBtn">⬇ 下載範本 CSV</button>
+            <button type="button" class="btn btn-secondary" id="importTplBtn">⬇ 下載範本 CSV</button>
           </div>
           <label class="import-dropzone" id="importDropzone">
             <div class="import-drop-icon">📂</div>
@@ -1613,7 +1613,7 @@
           </label>
           <div class="import-file-info" id="importFileInfo" style="display:none">
             <span id="importFileName"></span>
-            <button class="import-clear-btn" id="importClearBtn">✕ 重新選擇</button>
+            <button type="button" class="import-clear-btn" id="importClearBtn">✕ 重新選擇</button>
           </div>
         </div>
 
@@ -1645,10 +1645,10 @@
 
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="importBackBtn" style="display:none">← 重新選擇</button>
+        <button type="button" class="btn btn-secondary" id="importBackBtn" style="display:none">← 重新選擇</button>
         <div style="flex:1"></div>
-        <button class="btn btn-secondary" id="importCancelBtn">取消</button>
-        <button class="btn btn-primary" id="importConfirmBtn" style="display:none">✔ 確認匯入</button>
+        <button type="button" class="btn btn-secondary" id="importCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="importConfirmBtn" style="display:none">✔ 確認匯入</button>
       </div>
     </div>
   </div>
@@ -1658,7 +1658,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 id="vehicle-modal-title">新增車輛</h3>
-        <button class="modal-close" id="vehicleModalClose">✕</button>
+        <button type="button" class="modal-close" id="vehicleModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-section">
@@ -1704,8 +1704,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="vehicleCancelBtn">取消</button>
-        <button class="btn btn-primary" id="vehicleSaveBtn">儲存</button>
+        <button type="button" class="btn btn-secondary" id="vehicleCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="vehicleSaveBtn">儲存</button>
       </div>
     </div>
   </div>
@@ -1715,7 +1715,7 @@
     <div class="modal" style="max-width:900px;width:96vw">
       <div class="modal-header">
         <h3>📋 批次新增車輛</h3>
-        <button class="modal-close" id="vehicleBatchClose">✕</button>
+        <button type="button" class="modal-close" id="vehicleBatchClose">✕</button>
       </div>
       <div class="modal-body" style="padding-bottom:0">
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">每行填一筆，填好後按「全部儲存」。</p>
@@ -1735,12 +1735,12 @@
             <tbody id="vehicleBatchBody"></tbody>
           </table>
         </div>
-        <button class="btn btn-secondary btn-sm" id="vehicleBatchAddRow" style="margin:10px 0 4px">＋ 新增一行</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="vehicleBatchAddRow" style="margin:10px 0 4px">＋ 新增一行</button>
       </div>
       <div class="modal-footer">
         <span id="vehicleBatchStatus" style="font-size:13px;color:var(--text-muted);margin-right:auto"></span>
-        <button class="btn btn-secondary" id="vehicleBatchCancel">取消</button>
-        <button class="btn btn-primary" id="vehicleBatchSave">全部儲存（<span id="vehicleBatchCount">0</span> 筆）</button>
+        <button type="button" class="btn btn-secondary" id="vehicleBatchCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="vehicleBatchSave">全部儲存（<span id="vehicleBatchCount">0</span> 筆）</button>
       </div>
     </div>
   </div>
@@ -1750,7 +1750,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 id="up-modal-title">新增點數記錄</h3>
-        <button class="modal-close" id="upModalClose">✕</button>
+        <button type="button" class="modal-close" id="upModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
@@ -1809,8 +1809,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="upCancelBtn">取消</button>
-        <button class="btn btn-primary" id="upSaveBtn">儲存</button>
+        <button type="button" class="btn btn-secondary" id="upCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="upSaveBtn">儲存</button>
       </div>
     </div>
   </div>
@@ -1820,15 +1820,15 @@
     <div class="modal modal-large" id="appDetailModal">
       <div class="modal-header">
         <h3 id="app-detail-title">入職申請詳情</h3>
-        <button class="modal-close" id="appDetailClose">✕</button>
+        <button type="button" class="modal-close" id="appDetailClose">✕</button>
       </div>
       <div class="modal-body" id="app-detail-body"></div>
       <div class="modal-footer">
-        <button class="btn btn-danger" id="appDeleteBtn">🗑 刪除</button>
+        <button type="button" class="btn btn-danger" id="appDeleteBtn">🗑 刪除</button>
         <div style="flex:1"></div>
-        <button class="btn btn-secondary" id="appDetailClose2">關閉</button>
-        <button class="btn btn-secondary" id="appPrintBtn">🖨 列印報表</button>
-        <button class="btn btn-primary" id="appImportBtn">⬆ 匯入人員資料</button>
+        <button type="button" class="btn btn-secondary" id="appDetailClose2">關閉</button>
+        <button type="button" class="btn btn-secondary" id="appPrintBtn">🖨 列印報表</button>
+        <button type="button" class="btn btn-primary" id="appImportBtn">⬆ 匯入人員資料</button>
       </div>
     </div>
   </div>
@@ -1838,7 +1838,7 @@
     <div class="modal" style="max-width:520px">
       <div class="modal-header">
         <h3 class="modal-title">✍️ 確認清點簽名</h3>
-        <button class="modal-close" id="diSignModalClose">✕</button>
+        <button type="button" class="modal-close" id="diSignModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div id="di-summary" style="margin-bottom:16px;font-size:13px"></div>
@@ -1852,8 +1852,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="diSignCancelBtn">取消</button>
-        <button class="btn btn-primary" id="diSignConfirmBtn">✓ 完成清點</button>
+        <button type="button" class="btn btn-secondary" id="diSignCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="diSignConfirmBtn">✓ 完成清點</button>
       </div>
     </div>
   </div>
@@ -1863,7 +1863,7 @@
     <div class="modal" style="max-width:480px">
       <div class="modal-header">
         <h3 class="modal-title" id="med-supply-modal-title">新增藥材品項</h3>
-        <button class="modal-close" id="medSupplyModalClose">✕</button>
+        <button type="button" class="modal-close" id="medSupplyModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
@@ -1904,8 +1904,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="medSupplyCancelBtn">取消</button>
-        <button class="btn btn-primary" id="medSupplySaveBtn">💾 儲存</button>
+        <button type="button" class="btn btn-secondary" id="medSupplyCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="medSupplySaveBtn">💾 儲存</button>
       </div>
     </div>
   </div>
@@ -1915,7 +1915,7 @@
     <div class="modal" style="max-width:480px">
       <div class="modal-header">
         <h3 class="modal-title" id="med-equip-modal-title">新增裝備</h3>
-        <button class="modal-close" id="medEquipModalClose">✕</button>
+        <button type="button" class="modal-close" id="medEquipModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
@@ -1968,8 +1968,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="medEquipCancelBtn">取消</button>
-        <button class="btn btn-primary" id="medEquipSaveBtn">💾 儲存</button>
+        <button type="button" class="btn btn-secondary" id="medEquipCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="medEquipSaveBtn">💾 儲存</button>
       </div>
     </div>
   </div>
@@ -1979,7 +1979,7 @@
     <div class="modal" style="max-width:400px">
       <div class="modal-header">
         <h3 class="modal-title" id="equip-type-modal-title">新增品項</h3>
-        <button class="modal-close" id="equipTypeModalClose">✕</button>
+        <button type="button" class="modal-close" id="equipTypeModalClose">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
@@ -2010,8 +2010,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="equipTypeCancelBtn">取消</button>
-        <button class="btn btn-primary" id="equipTypeSaveBtn">💾 儲存</button>
+        <button type="button" class="btn btn-secondary" id="equipTypeCancelBtn">取消</button>
+        <button type="button" class="btn btn-primary" id="equipTypeSaveBtn">💾 儲存</button>
       </div>
     </div>
   </div>
@@ -2019,6 +2019,6 @@
   <!-- 列印區（隱藏，列印時顯示） -->
   <div id="print-area" style="display:none"></div>
 
-  <script type="module" src="script.js?v=20260522"></script>
+  <script type="module" src="script.js?v=20260523"></script>
 </body>
 </html>
