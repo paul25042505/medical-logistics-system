@@ -286,6 +286,7 @@ main {
   border-bottom: 3px solid transparent;
   margin-bottom: -2px;
   transition: color 0.2s, border-color 0.2s;
+  touch-action: manipulation;
 }
 .tab-btn:hover { color: var(--accent); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -383,6 +384,7 @@ main {
   font-size: 14px;
   font-weight: 500;
   transition: background 0.15s, transform 0.1s;
+  touch-action: manipulation;
 }
 .btn:active { transform: scale(0.97); }
 .btn-primary { background: var(--accent); color: white; }
