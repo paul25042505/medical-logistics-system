@@ -2650,7 +2650,7 @@ function renderPersonnel() {
   }).join('');
 
   tbody.querySelectorAll('.personnel-row').forEach(row => {
-    row.addEventListener('click', () => openPersonnelDetail(row.dataset.id));
+    row.addEventListener('click', () => openPersonnelEdit(row.dataset.id));
   });
 }
 
@@ -2868,19 +2868,6 @@ document.querySelectorAll('[data-personnel-tab]').forEach(btn => {
 window.openPersonnelEdit = function (id) {
   const p = personnel.find(x => x.id === id);
   const name = p ? `${p.rank || ''} ${p.name}`.trim() : id;
-  // 二次確認警語
-  const confirmed = confirm(
-`【一般公務機密】
-
-您即將存取人事機敏資訊，
-系統將完整記錄帳號、時間及操作紀錄。
-
-限權責人員依職務需求使用，
-禁止未經授權查詢、修改、翻攝或外流資料。
-
-確定繼續？`
-  );
-  if (!confirmed) return;
   writeAuditLog('編輯', name);
   closePersonnelDetail();
   openPersonnelForm(id);
