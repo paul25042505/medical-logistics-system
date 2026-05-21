@@ -1,4 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
+button { touch-action: manipulation; } /* iOS scroll-container tap delay fix for every button */
 
 /* ── 機敏資料警語橫幅 ── */
 .classified-banner {
@@ -2753,3 +2754,29 @@ main {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ── Toast 通知 ── */
+#app-toast {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.app-toast-msg {
+  background: rgba(30,30,30,0.88);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 22px;
+  font-size: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.25s;
+  backdrop-filter: blur(4px);
+}
+.app-toast-msg.show { opacity: 1; }

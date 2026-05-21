@@ -176,7 +176,7 @@ const ROLES = {
   training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points']) },
   medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment']) },
-  member:    { label: '一般成員',     pages: new Set(['home','profile','contacts']) },
+  member:    { label: '一般成員',     pages: new Set(['home','profile','contacts','daily-inventory']) },
 };
 const FEATURE_GROUPS = [
   { group: '招募管理', icon: '📋', features: [
@@ -265,6 +265,38 @@ function applyRolePermissions(role) {
     }
   }
 })();
+
+// ── UI Helpers（取代原生 alert/confirm，相容 iOS standalone）──
+function showToast(msg, duration = 2800) {
+  const container = document.getElementById('app-toast');
+  if (!container) { console.log('[toast]', msg); return; }
+  const el = document.createElement('div');
+  el.className = 'app-toast-msg';
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+function showConfirm(msg, onConfirm, onCancel) {
+  const overlay = document.getElementById('app-confirm-overlay');
+  const msgEl   = document.getElementById('app-confirm-msg');
+  const okBtn   = document.getElementById('app-confirm-ok');
+  const cancelBtn = document.getElementById('app-confirm-cancel');
+  if (!overlay) {
+    if (window.confirm(msg)) onConfirm?.();
+    else onCancel?.();
+    return;
+  }
+  msgEl.textContent = msg;
+  const close = () => overlay.classList.remove('open');
+  okBtn.onclick     = () => { close(); onConfirm?.(); };
+  cancelBtn.onclick = () => { close(); onCancel?.(); };
+  overlay.classList.add('open');
+}
 
 // ── Auth ──────────────────────────────────────────────
 const ADMIN_EMAIL = 'paul25042505@gmail.com';
@@ -1146,7 +1178,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (btn.dataset.medtab) return;       // handled by medtab listener
     if (btn.dataset.ftTab) return;        // handled by page-fitness-test listener
     if (btn.dataset.personnelTab) return; // handled by [data-personnel-tab] listener
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    // Only clear active on sibling tabs in the same container to avoid wiping other pages' tab state
+    btn.closest('.tabs')?.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
     renderList();
@@ -2830,9 +2863,11 @@ function closePersonnelForm() {
 document.getElementById('personnelAddBtn').addEventListener('click', () => openPersonnelForm(null));
 
 // 勾選招募員時顯示/隱藏證照效期欄位
-document.getElementById('pf-isRecruiter').addEventListener('change', function() {
-  document.getElementById('pf-certExpiry-group').style.display = this.checked ? '' : 'none';
-  if (!this.checked) document.getElementById('pf-certExpiry').value = '';
+document.getElementById('pf-isRecruiter')?.addEventListener('change', function() {
+  const grp = document.getElementById('pf-certExpiry-group');
+  const exp = document.getElementById('pf-certExpiry');
+  if (grp) grp.style.display = this.checked ? '' : 'none';
+  if (!this.checked && exp) exp.value = '';
 });
 document.getElementById('personnelCancelBtn').addEventListener('click', closePersonnelForm);
 document.getElementById('personnelModalClose').addEventListener('click', closePersonnelForm);
@@ -4235,7 +4270,7 @@ document.getElementById('up-prof-save-btn')?.addEventListener('click', async () 
     }
     document.getElementById('up-profile-form').style.display = 'none';
     // Navigate to uniform-points if accessible
-    const allowed = ROLES[currentRole]?.pages || ROLES.member.pages;
+    const allowed = getRolePages(currentRole);
     if (allowed.has('uniform-points')) navigateTo('uniform-points');
   } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
   finally { btn.disabled = false; }
@@ -5413,36 +5448,41 @@ window.removeDiBatchRow = function(btn) {
   btn.closest('.di-batch-row').remove();
 };
 
-document.getElementById('di-load-prev-btn')?.addEventListener('click', async () => {
-  if (!medInventoryLogs.length) { alert('尚無清點紀錄可帶入'); return; }
+document.getElementById('di-load-prev-btn')?.addEventListener('click', () => {
+  if (!medInventoryLogs.length) { showToast('尚無清點紀錄可帶入'); return; }
   // 優先找同醫務所的最新紀錄
   const pharmaId = document.getElementById('di-pharmacy')?.value || '';
   const latest = pharmaId
     ? (medInventoryLogs.find(l => l.pharmacyId === pharmaId) || medInventoryLogs[0])
     : medInventoryLogs[0];
-  if (!confirm(`帶入 ${latest.date}（${latest.pharmacyName || ''}${latest.recorderName || latest.recorder}）的清點數據？`)) return;
+  showConfirm(
+    `帶入 ${latest.date}（${latest.pharmacyName || ''}${latest.recorderName || latest.recorder}）的清點數據？`,
+    () => {
+      document.querySelectorAll('.di-drug-card').forEach(card => {
+        const sid = card.dataset.supplyId;
+        const logItem = (latest.items || []).find(i => i.supplyId === sid);
+        if (!logItem) return;
 
-  document.querySelectorAll('.di-drug-card').forEach(card => {
-    const sid = card.dataset.supplyId;
-    const logItem = (latest.items || []).find(i => i.supplyId === sid);
-    if (!logItem) return;
+        const rowsContainer = card.querySelector('.di-batch-rows');
+        if (!rowsContainer) return;
+        rowsContainer.innerHTML = '';
 
-    const rowsContainer = card.querySelector('.di-batch-rows');
-    rowsContainer.innerHTML = ''; // clear
+        const batches = logItem.batches || (logItem.counted != null ? [{ qty: logItem.counted, expiry: logItem.expiry || '' }] : []);
+        if (!batches.length) batches.push({ qty: '', expiry: '' });
 
-    const batches = logItem.batches || (logItem.counted != null ? [{ qty: logItem.counted, expiry: logItem.expiry || '' }] : []);
-    if (!batches.length) batches.push({ qty: '', expiry: '' });
-
-    batches.forEach(b => {
-      const row = document.createElement('div');
-      row.className = 'di-batch-row';
-      row.innerHTML = `
-        <input type="month" class="di-batch-expiry" value="${b.expiry || ''}" placeholder="效期">
-        <input type="number" class="di-batch-qty" value="${b.qty ?? ''}" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="數量">
-        <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
-      rowsContainer.appendChild(row);
-    });
-  });
+        batches.forEach(b => {
+          const row = document.createElement('div');
+          row.className = 'di-batch-row';
+          row.innerHTML = `
+            <input type="month" class="di-batch-expiry" value="${b.expiry || ''}" placeholder="效期">
+            <input type="number" class="di-batch-qty" value="${b.qty ?? ''}" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="數量">
+            <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
+          rowsContainer.appendChild(row);
+        });
+      });
+      showToast('✓ 已帶入最新清點數據');
+    }
+  );
 });
 
 // ── 清點紀錄 ───────────────────────────────────────────
