@@ -1,4 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
+button { touch-action: manipulation; } /* iOS scroll-container tap delay fix for every button */
 
 /* ── 機敏資料警語橫幅 ── */
 .classified-banner {

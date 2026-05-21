@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260524">
+  <link rel="stylesheet" href="style.css?v=20260525">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -498,33 +498,6 @@
         </div>
         <div id="ft-admin-list"></div>
       </section>
-
-  <!-- 體測編輯 Modal（承辦人用） -->
-  <div class="modal-overlay" id="ftEditOverlay">
-    <div class="modal" id="ftEditModal">
-      <div class="modal-header">
-        <h3 id="ft-edit-title">編輯體測計畫</h3>
-        <button type="button" class="modal-close" id="ftEditClose">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group" style="margin-bottom:12px">
-          <label>體測日期</label>
-          <input type="date" id="ft-admin-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
-        </div>
-        <div id="ft-admin-items-form"></div>
-        <div style="margin-top:16px">
-          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:10px">回報結果（若已體測）</div>
-          <div id="ft-admin-results-form"></div>
-        </div>
-        <div id="ft-edit-history"></div>
-      </div>
-      <div class="modal-footer" style="gap:8px">
-        <button type="button" class="btn btn-secondary" id="ftEditCancel">取消</button>
-        <button type="button" class="btn btn-secondary" id="ftEditArchive" style="color:var(--text-muted)">📁 歸檔此次體測</button>
-        <button type="button" class="btn btn-primary" id="ftEditSave">儲存</button>
-      </div>
-    </div>
-  </div>
 
       <!-- 每日清點 -->
       <section id="page-daily-inventory" class="page">
@@ -1094,6 +1067,33 @@
     </main>
   </div>
 
+  <!-- ══ 體測編輯 Modal（承辦人用） ══ -->
+  <div class="modal-overlay" id="ftEditOverlay">
+    <div class="modal" id="ftEditModal">
+      <div class="modal-header">
+        <h3 id="ft-edit-title">編輯體測計畫</h3>
+        <button type="button" class="modal-close" id="ftEditClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>體測日期</label>
+          <input type="date" id="ft-admin-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        </div>
+        <div id="ft-admin-items-form"></div>
+        <div style="margin-top:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:10px">回報結果（若已體測）</div>
+          <div id="ft-admin-results-form"></div>
+        </div>
+        <div id="ft-edit-history"></div>
+      </div>
+      <div class="modal-footer" style="gap:8px">
+        <button type="button" class="btn btn-secondary" id="ftEditCancel">取消</button>
+        <button type="button" class="btn btn-secondary" id="ftEditArchive" style="color:var(--text-muted)">📁 歸檔此次體測</button>
+        <button type="button" class="btn btn-primary" id="ftEditSave">儲存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ 新增/編輯訓員 ══ -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal" id="modal">
@@ -1561,6 +1561,20 @@
             <div class="form-group full">
               <label>備註</label>
               <textarea id="pf-notes" rows="2" placeholder="其他補充說明…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4 class="section-title">招募員資訊</h4>
+          <div class="form-grid">
+            <div class="form-group" style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:6px 0">
+              <input type="checkbox" id="pf-isRecruiter" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary)">
+              <label for="pf-isRecruiter" style="font-weight:500;cursor:pointer;margin:0">此人員為招募員</label>
+            </div>
+            <div class="form-group" id="pf-certExpiry-group" style="display:none">
+              <label>招募員證照效期</label>
+              <input type="date" id="pf-certExpiry">
             </div>
           </div>
         </div>
@@ -2035,6 +2049,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260524"></script>
+  <script type="module" src="script.js?v=20260525"></script>
 </body>
 </html>

@@ -176,7 +176,7 @@ const ROLES = {
   training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points']) },
   medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment']) },
-  member:    { label: '一般成員',     pages: new Set(['home','profile','contacts']) },
+  member:    { label: '一般成員',     pages: new Set(['home','profile','contacts','daily-inventory']) },
 };
 const FEATURE_GROUPS = [
   { group: '招募管理', icon: '📋', features: [
@@ -1178,7 +1178,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (btn.dataset.medtab) return;       // handled by medtab listener
     if (btn.dataset.ftTab) return;        // handled by page-fitness-test listener
     if (btn.dataset.personnelTab) return; // handled by [data-personnel-tab] listener
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    // Only clear active on sibling tabs in the same container to avoid wiping other pages' tab state
+    btn.closest('.tabs')?.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
     renderList();
@@ -2862,9 +2863,11 @@ function closePersonnelForm() {
 document.getElementById('personnelAddBtn').addEventListener('click', () => openPersonnelForm(null));
 
 // 勾選招募員時顯示/隱藏證照效期欄位
-document.getElementById('pf-isRecruiter').addEventListener('change', function() {
-  document.getElementById('pf-certExpiry-group').style.display = this.checked ? '' : 'none';
-  if (!this.checked) document.getElementById('pf-certExpiry').value = '';
+document.getElementById('pf-isRecruiter')?.addEventListener('change', function() {
+  const grp = document.getElementById('pf-certExpiry-group');
+  const exp = document.getElementById('pf-certExpiry');
+  if (grp) grp.style.display = this.checked ? '' : 'none';
+  if (!this.checked && exp) exp.value = '';
 });
 document.getElementById('personnelCancelBtn').addEventListener('click', closePersonnelForm);
 document.getElementById('personnelModalClose').addEventListener('click', closePersonnelForm);
@@ -4267,7 +4270,7 @@ document.getElementById('up-prof-save-btn')?.addEventListener('click', async () 
     }
     document.getElementById('up-profile-form').style.display = 'none';
     // Navigate to uniform-points if accessible
-    const allowed = ROLES[currentRole]?.pages || ROLES.member.pages;
+    const allowed = getRolePages(currentRole);
     if (allowed.has('uniform-points')) navigateTo('uniform-points');
   } catch(e) { console.error(e); alert('儲存失敗：' + e.message); }
   finally { btn.disabled = false; }
