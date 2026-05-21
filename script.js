@@ -266,6 +266,38 @@ function applyRolePermissions(role) {
   }
 })();
 
+// ── UI Helpers（取代原生 alert/confirm，相容 iOS standalone）──
+function showToast(msg, duration = 2800) {
+  const container = document.getElementById('app-toast');
+  if (!container) { console.log('[toast]', msg); return; }
+  const el = document.createElement('div');
+  el.className = 'app-toast-msg';
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+function showConfirm(msg, onConfirm, onCancel) {
+  const overlay = document.getElementById('app-confirm-overlay');
+  const msgEl   = document.getElementById('app-confirm-msg');
+  const okBtn   = document.getElementById('app-confirm-ok');
+  const cancelBtn = document.getElementById('app-confirm-cancel');
+  if (!overlay) {
+    if (window.confirm(msg)) onConfirm?.();
+    else onCancel?.();
+    return;
+  }
+  msgEl.textContent = msg;
+  const close = () => overlay.classList.remove('open');
+  okBtn.onclick     = () => { close(); onConfirm?.(); };
+  cancelBtn.onclick = () => { close(); onCancel?.(); };
+  overlay.classList.add('open');
+}
+
 // ── Auth ──────────────────────────────────────────────
 const ADMIN_EMAIL = 'paul25042505@gmail.com';
 const authPage    = document.getElementById('auth-page');
@@ -5413,36 +5445,41 @@ window.removeDiBatchRow = function(btn) {
   btn.closest('.di-batch-row').remove();
 };
 
-document.getElementById('di-load-prev-btn')?.addEventListener('click', async () => {
-  if (!medInventoryLogs.length) { alert('尚無清點紀錄可帶入'); return; }
+document.getElementById('di-load-prev-btn')?.addEventListener('click', () => {
+  if (!medInventoryLogs.length) { showToast('尚無清點紀錄可帶入'); return; }
   // 優先找同醫務所的最新紀錄
   const pharmaId = document.getElementById('di-pharmacy')?.value || '';
   const latest = pharmaId
     ? (medInventoryLogs.find(l => l.pharmacyId === pharmaId) || medInventoryLogs[0])
     : medInventoryLogs[0];
-  if (!confirm(`帶入 ${latest.date}（${latest.pharmacyName || ''}${latest.recorderName || latest.recorder}）的清點數據？`)) return;
+  showConfirm(
+    `帶入 ${latest.date}（${latest.pharmacyName || ''}${latest.recorderName || latest.recorder}）的清點數據？`,
+    () => {
+      document.querySelectorAll('.di-drug-card').forEach(card => {
+        const sid = card.dataset.supplyId;
+        const logItem = (latest.items || []).find(i => i.supplyId === sid);
+        if (!logItem) return;
 
-  document.querySelectorAll('.di-drug-card').forEach(card => {
-    const sid = card.dataset.supplyId;
-    const logItem = (latest.items || []).find(i => i.supplyId === sid);
-    if (!logItem) return;
+        const rowsContainer = card.querySelector('.di-batch-rows');
+        if (!rowsContainer) return;
+        rowsContainer.innerHTML = '';
 
-    const rowsContainer = card.querySelector('.di-batch-rows');
-    rowsContainer.innerHTML = ''; // clear
+        const batches = logItem.batches || (logItem.counted != null ? [{ qty: logItem.counted, expiry: logItem.expiry || '' }] : []);
+        if (!batches.length) batches.push({ qty: '', expiry: '' });
 
-    const batches = logItem.batches || (logItem.counted != null ? [{ qty: logItem.counted, expiry: logItem.expiry || '' }] : []);
-    if (!batches.length) batches.push({ qty: '', expiry: '' });
-
-    batches.forEach(b => {
-      const row = document.createElement('div');
-      row.className = 'di-batch-row';
-      row.innerHTML = `
-        <input type="month" class="di-batch-expiry" value="${b.expiry || ''}" placeholder="效期">
-        <input type="number" class="di-batch-qty" value="${b.qty ?? ''}" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="數量">
-        <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
-      rowsContainer.appendChild(row);
-    });
-  });
+        batches.forEach(b => {
+          const row = document.createElement('div');
+          row.className = 'di-batch-row';
+          row.innerHTML = `
+            <input type="month" class="di-batch-expiry" value="${b.expiry || ''}" placeholder="效期">
+            <input type="number" class="di-batch-qty" value="${b.qty ?? ''}" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="數量">
+            <button type="button" class="di-batch-remove" onclick="removeDiBatchRow(this)" title="移除">×</button>`;
+          rowsContainer.appendChild(row);
+        });
+      });
+      showToast('✓ 已帶入最新清點數據');
+    }
+  );
 });
 
 // ── 清點紀錄 ───────────────────────────────────────────

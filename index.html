@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260523">
+  <link rel="stylesheet" href="style.css?v=20260524">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -2019,6 +2019,22 @@
   <!-- 列印區（隱藏，列印時顯示） -->
   <div id="print-area" style="display:none"></div>
 
-  <script type="module" src="script.js?v=20260523"></script>
+  <!-- 通用確認對話框（取代 confirm()，iOS standalone 模式下 confirm() 會被靜默忽略） -->
+  <div class="modal-overlay" id="app-confirm-overlay">
+    <div class="modal" style="max-width:360px">
+      <div class="modal-body" style="padding:24px 24px 12px">
+        <p id="app-confirm-msg" style="font-size:15px;line-height:1.6;margin:0"></p>
+      </div>
+      <div class="modal-footer" style="gap:8px">
+        <button type="button" class="btn btn-secondary" id="app-confirm-cancel">取消</button>
+        <button type="button" class="btn btn-primary" id="app-confirm-ok">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 通知容器 -->
+  <div id="app-toast"></div>
+
+  <script type="module" src="script.js?v=20260524"></script>
 </body>
 </html>
