@@ -169,13 +169,13 @@ let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment']) },
-  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
-  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','daily-inventory','personnel','applications','fitness-test']) },
-  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','daily-inventory','vehicles','uniform-points']) },
-  medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','daily-inventory','medical-supplies','medical-equipment']) },
-  member:    { label: '一般成員',     pages: new Set(['home','profile']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment']) },
+  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
+  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test']) },
+  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points']) },
+  medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment']) },
+  member:    { label: '一般成員',     pages: new Set(['home','profile','contacts']) },
 };
 const FEATURE_GROUPS = [
   { group: '招募管理', icon: '📋', features: [
@@ -1092,6 +1092,7 @@ const PAGE_INIT = {
   'batch-sched':     () => renderBatchSched(),
   'interview-query': () => renderInterviewQuery(),
   'recruiters':      () => renderRecruiters(),
+  'contacts':        () => renderContacts(),
   'leads':           () => fetchLeadsFromSheets(),
   'profile':         () => { renderProfilePage(); renderMyVehicles(); }, // renderMyUniformPoints 由 renderProfilePage 在 profileData 載入後呼叫
   'admin':           () => { renderAdminPage(); },
@@ -2546,6 +2547,62 @@ function populatePersonnelUnit() {
     units.map(u => `<option${u === cur ? ' selected' : ''}>${u}</option>`).join('');
 }
 
+// ── 通訊錄 ────────────────────────────────────────────
+function renderContacts() {
+  const listEl  = document.getElementById('contacts-list');
+  const emptyEl = document.getElementById('contacts-empty');
+  const q = (document.getElementById('contacts-search')?.value || '').toLowerCase();
+  if (!listEl) return;
+
+  const filtered = personnel.filter(p =>
+    !q || (p.name + (p.rank || '') + (p.unit || '')).toLowerCase().includes(q)
+  );
+
+  if (!filtered.length) {
+    listEl.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  const unitOrder = [...new Set(
+    (adminSettings.medUnits || []).concat(filtered.map(p => p.unit).filter(Boolean))
+  )];
+  const grouped = {};
+  filtered
+    .sort((a, b) => rankWeight(a.rank) - rankWeight(b.rank) || (a.name || '').localeCompare(b.name || '', 'zh-TW'))
+    .forEach(p => {
+      const u = p.unit || '其他';
+      if (!grouped[u]) grouped[u] = [];
+      grouped[u].push(p);
+    });
+
+  const units = unitOrder.filter(u => grouped[u])
+    .concat(Object.keys(grouped).filter(u => !unitOrder.includes(u)));
+
+  listEl.innerHTML = units.map(unit => `
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">${unit}</div>
+      ${grouped[unit].map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--white);border-radius:8px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+          <div>
+            <span style="font-size:12px;color:var(--text-muted);margin-right:6px">${p.rank || ''}</span>
+            <span style="font-weight:600;font-size:14px">${p.name || '—'}</span>
+          </div>
+          ${p.phone
+            ? `<a href="tel:${p.phone}" style="font-size:14px;color:var(--accent);text-decoration:none;font-weight:500">📞 ${p.phone}</a>`
+            : `<span style="font-size:13px;color:var(--text-muted)">—</span>`}
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+document.getElementById('contacts-search')?.addEventListener('input', renderContacts);
+
+// ── 編輯二次確認 ──────────────────────────────────────
+function confirmEdit() {
+  return confirm('進入編輯模式，操作將被系統記錄。\n\n確定繼續？');
+}
+
 function renderPersonnelUnitFilters() {
   const units = getVehicleUnits();
   const chips  = document.getElementById('personnelUnitChips');
@@ -2866,6 +2923,7 @@ document.querySelectorAll('[data-personnel-tab]').forEach(btn => {
 });
 
 window.openPersonnelEdit = function (id) {
+  if (!confirmEdit()) return;
   const p = personnel.find(x => x.id === id);
   const name = p ? `${p.rank || ''} ${p.name}`.trim() : id;
   writeAuditLog('編輯', name);
@@ -3025,9 +3083,7 @@ document.getElementById('personnelDetailOverlay').addEventListener('click', e =>
   if (e.target.id === 'personnelDetailOverlay') closePersonnelDetail();
 });
 document.getElementById('personnelDetailEditBtn').addEventListener('click', () => {
-  const id = viewingPersonnelId;
-  closePersonnelDetail();
-  openPersonnelForm(id);
+  openPersonnelEdit(viewingPersonnelId);
 });
 
 // ── 批次匯入 ──────────────────────────────────────────

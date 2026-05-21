@@ -134,6 +134,7 @@
         <li data-roles="admin,manager,medical"><a href="#" class="nav-link" data-page="medical-supplies">💊 藥材清點</a></li>
         <li data-roles="admin,manager,medical"><a href="#" class="nav-link" data-page="medical-equipment">🩺 衛材裝備清點</a></li>
         <div class="nav-section-label" id="nav-section-system" style="margin-top:12px">系統</div>
+        <li><a href="#" class="nav-link" data-page="contacts">📞 通訊錄</a></li>
         <li id="admin-nav-item" style="display:none"><a href="#" class="nav-link" data-page="admin">⚙️ 後台管理</a></li>
       </ul>
     </nav>
@@ -141,6 +142,20 @@
     <main id="main">
 
       <section id="page-home" class="page active"></section>
+
+      <!-- 通訊錄 -->
+      <section id="page-contacts" class="page">
+        <h2 class="page-title">📞 通訊錄</h2>
+        <div class="toolbar">
+          <div class="search-bar">
+            <input type="text" id="contacts-search" placeholder="搜尋姓名、階級、單位…">
+          </div>
+        </div>
+        <div id="contacts-list" style="margin-top:12px"></div>
+        <div id="contacts-empty" class="empty-state" style="display:none">
+          <div class="icon">📞</div><p>查無人員</p>
+        </div>
+      </section>
 
       <!-- 訓員列表 -->
       <section id="page-trainee-list" class="page">
