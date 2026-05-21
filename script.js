@@ -802,9 +802,28 @@ function renderAdminAccountsSection() {
       <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <select id="link-sel-${u.id}" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
           <option value="">— 選擇要連結的人員 —</option>
-          ${[...personnel].sort((a,b)=>(a.name||'').localeCompare(b.name||'','zh-TW'))
-            .map(p=>`<option value="${p.id}">${p.rank ? p.rank+' ' : ''}${p.name}${p.unit ? '　'+p.unit : ''}</option>`)
-            .join('')}
+          ${(() => {
+            const unitOrder = [...new Set(
+              (adminSettings.medUnits || []).concat(
+                [...personnel].map(p => p.unit).filter(Boolean)
+              )
+            )];
+            const grouped = {};
+            [...personnel]
+              .sort((a,b) => rankWeight(a.rank) - rankWeight(b.rank) || (a.name||'').localeCompare(b.name||'','zh-TW'))
+              .forEach(p => {
+                const u = p.unit || '其他';
+                if (!grouped[u]) grouped[u] = [];
+                grouped[u].push(p);
+              });
+            return unitOrder
+              .filter(u => grouped[u])
+              .concat(Object.keys(grouped).filter(u => !unitOrder.includes(u)))
+              .map(unit => `<optgroup label="${unit}">${
+                grouped[unit].map(p => `<option value="${p.id}">${p.rank ? p.rank+' ' : ''}${p.name}</option>`).join('')
+              }</optgroup>`)
+              .join('');
+          })()}
         </select>
         <button class="btn btn-sm btn-primary" onclick="linkUserToPersonnel('${u.id}')">連結人員</button>
       </div>` : ''}
