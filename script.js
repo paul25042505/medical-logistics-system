@@ -173,6 +173,7 @@ const ROLES = {
   manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
   personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test']) },
+  training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points']) },
   medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile','contacts']) },
