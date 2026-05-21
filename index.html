@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260521">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 </head>
 <body>
 
@@ -164,8 +167,8 @@
           <button class="btn btn-primary" id="addBtn">＋ 新增</button>
         </div>
         <div class="tabs">
-          <button class="tab-btn active" data-tab="civilian">社會青年</button>
-          <button class="tab-btn" data-tab="military">新訓轉服</button>
+          <button type="button" class="tab-btn active" data-tab="civilian">社會青年</button>
+          <button type="button" class="tab-btn" data-tab="military">新訓轉服</button>
         </div>
         <div class="toolbar">
           <div class="search-bar">
@@ -483,10 +486,10 @@
         </div>
         <div id="ft-stats-panel" style="margin-bottom:16px"></div>
         <div class="tab-bar" style="margin-bottom:10px">
-          <button class="tab-btn active" data-ft-tab="all">全部</button>
-          <button class="tab-btn" data-ft-tab="upcoming">待體測</button>
-          <button class="tab-btn" data-ft-tab="reported">今年已合格</button>
-          <button class="tab-btn" data-ft-tab="unset">未設定</button>
+          <button type="button" class="tab-btn active" data-ft-tab="all">全部</button>
+          <button type="button" class="tab-btn" data-ft-tab="upcoming">待體測</button>
+          <button type="button" class="tab-btn" data-ft-tab="reported">今年已合格</button>
+          <button type="button" class="tab-btn" data-ft-tab="unset">未設定</button>
         </div>
         <div class="filter-bar" style="margin-bottom:14px">
           <select id="ftUnitFilter" style="flex:1;max-width:200px">
@@ -573,8 +576,8 @@
         <div class="pharmacy-tab-bar" id="med-pharmacy-tabs"></div>
 
         <div class="tabs" style="margin-bottom:16px">
-          <button class="tab-btn active" data-medtab="catalog">📦 藥材目錄</button>
-          <button class="tab-btn" data-medtab="logs">📋 清點紀錄</button>
+          <button type="button" class="tab-btn active" data-medtab="catalog">📦 藥材目錄</button>
+          <button type="button" class="tab-btn" data-medtab="logs">📋 清點紀錄</button>
         </div>
         <div id="medsup-pane-catalog">
         <div class="toolbar">
@@ -787,8 +790,8 @@
             <div class="admin-card-title">🔐 角色與業務管理</div>
             <!-- tabs -->
             <div class="role-mgmt-tabs">
-              <button class="role-mgmt-tab active" data-tab="perm" id="role-tab-perm" onclick="switchRoleMgmtTab('perm')" style="touch-action:manipulation">🔧 業務功能設定</button>
-              <button class="role-mgmt-tab" data-tab="assign" id="role-tab-assign" onclick="switchRoleMgmtTab('assign')" style="touch-action:manipulation">👤 帳號角色分配</button>
+              <button type="button" class="role-mgmt-tab active" id="role-tab-perm" style="touch-action:manipulation">🔧 業務功能設定</button>
+              <button type="button" class="role-mgmt-tab" id="role-tab-assign" style="touch-action:manipulation">👤 帳號角色分配</button>
             </div>
             <!-- tab: 業務功能設定 -->
             <div class="role-mgmt-pane" id="role-pane-perm">
@@ -851,8 +854,8 @@
 
         <!-- 人員管理分頁 -->
         <div class="tabs" style="margin-bottom:16px">
-          <button class="tab-btn active" data-personnel-tab="list">👤 人員列表</button>
-          <button class="tab-btn" data-personnel-tab="audit">📋 操作紀錄</button>
+          <button type="button" class="tab-btn active" data-personnel-tab="list">👤 人員列表</button>
+          <button type="button" class="tab-btn" data-personnel-tab="audit">📋 操作紀錄</button>
         </div>
         <div id="personnel-pane-list">
 
@@ -2016,6 +2019,6 @@
   <!-- 列印區（隱藏，列印時顯示） -->
   <div id="print-area" style="display:none"></div>
 
-  <script type="module" src="script.js"></script>
+  <script type="module" src="script.js?v=20260521"></script>
 </body>
 </html>

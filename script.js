@@ -1140,7 +1140,9 @@ function navigateTo(page) {
 // ── Tabs ──────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    if (btn.dataset.medtab) return; // handled by medtab listener
+    if (btn.dataset.medtab) return;       // handled by medtab listener
+    if (btn.dataset.ftTab) return;        // handled by page-fitness-test listener
+    if (btn.dataset.personnelTab) return; // handled by [data-personnel-tab] listener
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentTab = btn.dataset.tab;
@@ -5731,6 +5733,24 @@ window.switchRoleMgmtTab = function(target) {
   });
   if (target === 'assign') renderUserRoleAssignment();
 };
+
+// iOS Safari: attach touchend listeners directly to bypass scroll-container tap delay
+(function() {
+  ['perm', 'assign'].forEach(tab => {
+    const btn = document.getElementById('role-tab-' + tab);
+    if (!btn) return;
+    let _pendingTouch = false;
+    btn.addEventListener('touchend', function(e) {
+      _pendingTouch = true;
+      e.preventDefault();
+      window.switchRoleMgmtTab(tab);
+      setTimeout(function() { _pendingTouch = false; }, 600);
+    }, { passive: false });
+    btn.addEventListener('click', function() {
+      if (!_pendingTouch) window.switchRoleMgmtTab(tab);
+    });
+  });
+})();
 
 // ══════════════════════════════════════════════════════
 // ── 年度體測 ──────────────────────────────────────────
