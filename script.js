@@ -1104,7 +1104,12 @@ const PAGE_INIT = {
   'medical-supplies':  () => renderMedicalSupplies(),
   'medical-equipment': () => { renderMedicalEquipment(); populateEquipTypeDropdowns(); },
   'daily-inventory':   () => renderDailyInventory(),
-  'fitness-test':      () => { populateFtUnitFilter(); renderFitnessAdminPage(); },
+  'fitness-test':      () => {
+    ftAdminTab = 'all';
+    document.querySelectorAll('[data-ft-tab]').forEach(b => b.classList.toggle('active', b.dataset.ftTab === 'all'));
+    populateFtUnitFilter();
+    renderFitnessAdminPage();
+  },
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -5714,17 +5719,22 @@ document.getElementById('diSignConfirmBtn')?.addEventListener('click', async () 
 })();
 
 // ── 角色權限管理分頁切換 ──────────────────────────────
-window.switchRoleMgmtTab = function(tab) {
+function doRoleMgmtTabSwitch(tab) {
   const card = tab.closest('.admin-card');
   if (!card) return;
   card.querySelectorAll('.role-mgmt-tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
   const target = tab.dataset.tab;
   card.querySelectorAll('.role-mgmt-pane').forEach(p => { p.style.display = 'none'; });
-  const pane = document.getElementById(`role-pane-${target}`);
-  if (pane) { pane.style.display = ''; }
+  const pane = document.getElementById('role-pane-' + target);
+  if (pane) pane.style.display = 'block';
   if (target === 'assign') renderUserRoleAssignment();
-};
+}
+window.switchRoleMgmtTab = doRoleMgmtTabSwitch;
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.role-mgmt-tab');
+  if (tab) doRoleMgmtTabSwitch(tab);
+});
 
 // ══════════════════════════════════════════════════════
 // ── 年度體測 ──────────────────────────────────────────
