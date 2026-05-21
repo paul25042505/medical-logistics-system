@@ -787,8 +787,8 @@
             <div class="admin-card-title">🔐 角色與業務管理</div>
             <!-- tabs -->
             <div class="role-mgmt-tabs">
-              <button class="role-mgmt-tab active" data-tab="perm" onclick="switchRoleMgmtTab(this)">🔧 業務功能設定</button>
-              <button class="role-mgmt-tab" data-tab="assign" onclick="switchRoleMgmtTab(this)">👤 帳號角色分配</button>
+              <button class="role-mgmt-tab active" data-tab="perm" id="role-tab-perm" onclick="switchRoleMgmtTab('perm')" style="touch-action:manipulation">🔧 業務功能設定</button>
+              <button class="role-mgmt-tab" data-tab="assign" id="role-tab-assign" onclick="switchRoleMgmtTab('assign')" style="touch-action:manipulation">👤 帳號角色分配</button>
             </div>
             <!-- tab: 業務功能設定 -->
             <div class="role-mgmt-pane" id="role-pane-perm">

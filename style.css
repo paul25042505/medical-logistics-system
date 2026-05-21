@@ -1962,6 +1962,8 @@ main {
   margin-bottom: -2px;
   border-radius: 0;
   transition: color 0.15s, border-color 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .role-mgmt-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .role-mgmt-tab:hover:not(.active) { color: var(--text); }

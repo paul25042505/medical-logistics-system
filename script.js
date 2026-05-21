@@ -194,6 +194,9 @@ const FEATURE_GROUPS = [
     { id: 'vehicles',       label: '車輛資訊管理' },
     { id: 'uniform-points', label: '服裝供售點數' },
   ]},
+  { group: '訓練管理', icon: '🏃', features: [
+    { id: 'fitness-test', label: '年度體測管理' },
+  ]},
   { group: '醫療軍品管理', icon: '💊', features: [
     { id: 'medical-supplies',   label: '藥材清點' },
     { id: 'medical-equipment',  label: '衛材裝備清點' },
@@ -5719,22 +5722,15 @@ document.getElementById('diSignConfirmBtn')?.addEventListener('click', async () 
 })();
 
 // ── 角色權限管理分頁切換 ──────────────────────────────
-function doRoleMgmtTabSwitch(tab) {
-  const card = tab.closest('.admin-card');
-  if (!card) return;
-  card.querySelectorAll('.role-mgmt-tab').forEach(t => t.classList.remove('active'));
-  tab.classList.add('active');
-  const target = tab.dataset.tab;
-  card.querySelectorAll('.role-mgmt-pane').forEach(p => { p.style.display = 'none'; });
-  const pane = document.getElementById('role-pane-' + target);
-  if (pane) pane.style.display = 'block';
+window.switchRoleMgmtTab = function(target) {
+  ['perm','assign'].forEach(t => {
+    const btn  = document.getElementById('role-tab-' + t);
+    const pane = document.getElementById('role-pane-' + t);
+    if (btn)  btn.classList.toggle('active', t === target);
+    if (pane) pane.style.display = t === target ? 'block' : 'none';
+  });
   if (target === 'assign') renderUserRoleAssignment();
-}
-window.switchRoleMgmtTab = doRoleMgmtTabSwitch;
-document.addEventListener('click', e => {
-  const tab = e.target.closest('.role-mgmt-tab');
-  if (tab) doRoleMgmtTabSwitch(tab);
-});
+};
 
 // ══════════════════════════════════════════════════════
 // ── 年度體測 ──────────────────────────────────────────
@@ -6030,7 +6026,7 @@ function renderFitnessStats() {
 }
 
 function renderFitnessAdminPage() {
-  renderFitnessStats();
+  try { renderFitnessStats(); } catch(e) { console.error('renderFitnessStats error', e); }
   const container = document.getElementById('ft-admin-list');
   if (!container) return;
 
