@@ -230,15 +230,16 @@ function applyRolePermissions(role) {
   });
   // Section labels
   const show = {
-    admin:     ['recruit','personnel','logistics','medical','system'],
-    manager:   ['recruit','personnel','logistics','medical'],
+    admin:     ['recruit','personnel','training','logistics','medical','system'],
+    manager:   ['recruit','personnel','training','logistics','medical'],
     recruit:   ['recruit'],
-    personnel: ['personnel'],
+    personnel: ['personnel','training'],
+    training:  ['training'],
     logistics: ['logistics'],
     medical:   ['medical'],
     member:    [],
   }[role] || [];
-  ['recruit','personnel','logistics','medical','system'].forEach(s => {
+  ['recruit','personnel','training','logistics','medical','system'].forEach(s => {
     const el = document.getElementById(`nav-section-${s}`);
     if (el) el.style.display = show.includes(s) ? '' : 'none';
   });
@@ -1126,7 +1127,9 @@ document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
 });
 
 function navigateTo(page) {
-  const allowed = ROLES[currentRole]?.pages || ROLES.member.pages;
+  const allowed = getRolePages(currentRole);
+  allowed.add('home');
+  allowed.add('profile');
   if (!allowed.has(page)) return;
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   const link = document.querySelector(`.nav-link[data-page="${page}"]`);
