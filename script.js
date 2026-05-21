@@ -783,11 +783,10 @@ function renderAdminAccountsSection() {
         ? `<span style="font-size:12px;color:var(--green)">✓ 已核准</span>`
         : `<button class="btn btn-primary btn-sm" onclick="approveUser('${u.id}')">核准</button>`;
 
-    // 檢查是否已連結人員記錄
+    // 檢查是否已連結人員記錄（只用 uid / personnelId，不用 email，避免解除綁定後仍顯示連結）
     const linkedPers = personnel.find(p =>
       p.uid === u.id ||
-      p.id  === u.personnelId ||
-      (p.email && p.email.toLowerCase() === (u.email || '').toLowerCase())
+      p.id  === u.personnelId
     );
 
     return `<div style="padding:8px 10px;background:var(--bg);border-radius:6px;font-size:13px;margin-bottom:4px">
@@ -856,6 +855,32 @@ window.approveReqCreate = async function(id) {
     (u.email || '').toLowerCase() === (req.email || '').toLowerCase()
   );
 
+  // 若已有同 email 的人員記錄 → 自動合併，不建立重複
+  const emailLow = (req.email || '').toLowerCase();
+  const preLinkPers = emailLow
+    ? personnel.find(p => p.email && p.email.toLowerCase() === emailLow)
+    : null;
+
+  if (preLinkPers) {
+    try {
+      const updates = { updatedAt: serverTimestamp() };
+      if (req.unit  && !preLinkPers.unit)  updates.unit  = req.unit;
+      if (existUser) updates.uid = existUser.id;
+      await updateDoc(doc(db, 'personnel', preLinkPers.id), updates);
+      if (existUser) {
+        await updateDoc(doc(db, 'users', existUser.id), {
+          approved: true,
+          personnelId: preLinkPers.id,
+        });
+      }
+      await updateDoc(doc(db, 'accountRequests', id), {
+        status: 'approved', approvedAt: serverTimestamp(), personnelDocId: preLinkPers.id,
+      });
+      alert(`✓ 已核准「${req.name}」並自動連結至現有人員記錄「${preLinkPers.name}」`);
+    } catch(e) { console.error(e); alert('操作失敗：' + e.message); }
+    return;
+  }
+
   try {
     // 建立人員記錄
     const newRef = doc(COL_PERSONNEL);
@@ -870,7 +895,7 @@ window.approveReqCreate = async function(id) {
 
     // 同步核准已登入帳號（若有）
     if (existUser && !existUser.approved && !existUser.admin) {
-      await updateDoc(doc(db, 'users', existUser.id), { approved: true });
+      await updateDoc(doc(db, 'users', existUser.id), { approved: true, personnelId: newRef.id });
     }
 
     // 補上 personnelId 給尚未連結的服裝點數記錄
@@ -2679,7 +2704,7 @@ function fillPersonnelForm(p) {
         <input id="pf-email" type="email" value="${p.email || ''}" placeholder="輸入 Google 帳號信箱"
           style="flex:1;min-width:180px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
       </div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:4px">填入信箱後儲存，對方下次登入即自動連結；更改信箱會重置綁定狀態。</div>`;
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">預先填入信箱後儲存，對方申請帳號或登入時系統會自動連結，不需手動操作。</div>`;
   }
 }
 
