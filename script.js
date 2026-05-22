@@ -6065,7 +6065,13 @@ document.getElementById('page-fitness-test')?.addEventListener('click', e => {
   if (!btn) return;
   ftAdminTab = btn.dataset.ftTab;
   document.querySelectorAll('[data-ft-tab]').forEach(b => b.classList.toggle('active', b.dataset.ftTab === ftAdminTab));
-  renderFitnessAdminPage();
+  const isStandby = ftAdminTab === 'standby';
+  document.getElementById('ft-standby-panel').style.display  = isStandby ? '' : 'none';
+  document.getElementById('ft-admin-list').style.display     = isStandby ? 'none' : '';
+  document.getElementById('ft-unit-filter-bar').style.display = isStandby ? 'none' : '';
+  document.getElementById('ft-stats-panel').style.display    = isStandby ? 'none' : '';
+  if (isStandby) renderFtStandbyCalendar();
+  else renderFitnessAdminPage();
 });
 
 document.getElementById('ftUnitFilter')?.addEventListener('change', renderFitnessAdminPage);
