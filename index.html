@@ -134,9 +134,10 @@
         <div class="nav-section-label" id="nav-section-logistics" style="margin-top:12px">後勤管理</div>
         <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="vehicles">🚗 車輛資訊管理</a></li>
         <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="uniform-points">👕 服裝供售點數</a></li>
-        <div class="nav-section-label" id="nav-section-medical" style="margin-top:12px">醫療軍品管理</div>
+        <div class="nav-section-label" id="nav-section-medical" style="margin-top:12px">醫療軍品暨預防醫學管理</div>
         <li data-roles="admin,manager,medical"><a href="#" class="nav-link" data-page="medical-supplies">💊 藥材清點</a></li>
         <li data-roles="admin,manager,medical"><a href="#" class="nav-link" data-page="medical-equipment">🩺 衛材裝備清點</a></li>
+        <li data-roles="admin,manager,medical,personnel"><a href="#" class="nav-link" data-page="certifications">🪪 證照管制</a></li>
         <div class="nav-section-label" id="nav-section-system" style="margin-top:12px">系統</div>
         <li id="admin-nav-item" style="display:none"><a href="#" class="nav-link" data-page="admin">⚙️ 後台管理</a></li>
       </ul>
@@ -677,6 +678,36 @@
         </div>
       </section>
 
+      <!-- 證照管制 -->
+      <section id="page-certifications" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">🪪 證照管制</h2>
+          <button type="button" class="btn btn-primary" id="addCertBtn">＋ 新增證照</button>
+        </div>
+        <div class="filter-bar" style="margin-bottom:14px;gap:8px;flex-wrap:wrap">
+          <select id="certUnitFilter" style="min-width:140px"><option value="">全部單位</option></select>
+          <select id="certCategoryFilter" style="min-width:140px">
+            <option value="">全部類別</option>
+            <option value="緊急救護">緊急救護</option>
+            <option value="戰傷救護">戰傷救護</option>
+          </select>
+          <select id="certStatusFilter" style="min-width:120px">
+            <option value="">全部狀態</option>
+            <option value="valid">有效</option>
+            <option value="expiring">即將到期</option>
+            <option value="expired">已過期</option>
+            <option value="noexpiry">無效期</option>
+          </select>
+          <input type="text" id="certSearch" placeholder="搜尋姓名…" style="min-width:160px;flex:1">
+        </div>
+        <div id="cert-stats" style="margin-bottom:12px"></div>
+        <div id="cert-list"></div>
+        <div id="cert-empty" class="empty-state" style="display:none">
+          <div class="icon">🪪</div>
+          <p>尚無證照紀錄，點擊「新增證照」開始建立</p>
+        </div>
+      </section>
+
       <!-- 後台管理 -->
       <section id="page-admin" class="page">
         <h2 class="page-title">⚙️ 後台管理</h2>
@@ -1065,6 +1096,76 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- ══ 新增/編輯證照 ══ -->
+  <div class="modal-overlay" id="certModalOverlay">
+    <div class="modal modal-large" id="certModal">
+      <div class="modal-header">
+        <h3 id="cert-modal-title">新增證照</h3>
+        <button type="button" class="modal-close" id="certModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>人員 <span class="required">*</span></label>
+            <select id="cert-personnel-sel"><option value="">請選擇人員</option></select>
+          </div>
+          <div class="form-group">
+            <label>證照類別 <span class="required">*</span></label>
+            <select id="cert-category-sel">
+              <option value="">請選擇類別</option>
+              <option value="緊急救護">緊急救護</option>
+              <option value="戰傷救護">戰傷救護</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>證照等級 <span class="required">*</span></label>
+            <select id="cert-type-sel"><option value="">請先選類別</option></select>
+          </div>
+          <div class="form-group">
+            <label>取得日期</label>
+            <input type="date" id="cert-issue-date">
+          </div>
+          <div class="form-group">
+            <label>效期（到期日）</label>
+            <input type="date" id="cert-expiry-date">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">留空表示無效期限制</div>
+          </div>
+          <div class="form-group full">
+            <label>備註</label>
+            <input type="text" id="cert-notes" placeholder="訓練單位、課程名稱等補充說明">
+          </div>
+          <div class="form-group full">
+            <label>證照照片</label>
+            <div id="cert-photo-preview" style="margin-bottom:8px;display:none">
+              <img id="cert-photo-img" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--border);object-fit:contain" alt="證照照片">
+              <button type="button" class="btn btn-secondary btn-sm" id="cert-photo-clear" style="margin-top:6px">🗑 移除照片</button>
+            </div>
+            <label class="import-dropzone" id="cert-photo-dropzone" style="padding:20px">
+              <div class="import-drop-icon" style="font-size:28px">📷</div>
+              <div class="import-drop-text">點擊選擇照片，或拖曳至此（支援 JPG、PNG，自動壓縮）</div>
+              <input type="file" id="cert-photo-input" accept="image/*" style="display:none">
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between">
+        <button type="button" class="btn btn-danger" id="certDeleteBtn" style="display:none">🗑 刪除</button>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-secondary" id="certCancelBtn">取消</button>
+          <button type="button" class="btn btn-primary" id="certSaveBtn">💾 儲存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 證照照片全覽 -->
+  <div class="modal-overlay" id="certPhotoOverlay" style="background:rgba(0,0,0,0.85)">
+    <div style="position:relative;max-width:90vw;max-height:90vh">
+      <button type="button" class="modal-close" id="certPhotoClose" style="position:absolute;top:-36px;right:0;color:white;font-size:24px;background:none;border:none;cursor:pointer">✕</button>
+      <img id="certPhotoFull" style="max-width:90vw;max-height:90vh;border-radius:8px;object-fit:contain" alt="">
+    </div>
   </div>
 
   <!-- ══ 體測編輯 Modal（承辦人用） ══ -->

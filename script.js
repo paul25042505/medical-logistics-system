@@ -48,6 +48,7 @@ const COL_MED_SUPPLIES    = collection(db, 'medSupplies');
 const COL_MED_INV_LOGS    = collection(db, 'medInventoryLogs');
 const COL_MED_EQUIPS      = collection(db, 'medEquipments');
 const COL_EQUIP_TYPES    = collection(db, 'equipmentTypes');
+const COL_CERTS = collection(db, 'personnelCerts');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -70,12 +71,17 @@ let editingRcrId   = null;
 let personnel          = [];
 let personnelUnitFilter = [];
 let fitnessTests       = [];
+let certifications = [];
 
 const FITNESS_CATS = [
   { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）', '屈臂懸垂（女性）'] },
   { id: 'core',      label: '腹部核心肌群（擇一）',     items: ['兩分鐘仰臥起坐', '平板撐體 (Plank)', '仰臥捲腹'] },
   { id: 'cardio',    label: '心肺耐力（擇一）',          items: ['三千公尺徒手跑步', '五公里健走', '二十公尺漸進式折返跑', '八百公尺游走', '五分鐘跳繩'] },
 ];
+const CERT_TYPES = {
+  '緊急救護': ['EMT-1', 'EMT-2', 'EMT-P'],
+  '戰傷救護': ['CLS', 'CLS-I', 'CMC', 'CMC-I'],
+};
 let editingPersonnelId = null;
 let viewingPersonnelId = null;
 
