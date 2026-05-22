@@ -49,6 +49,7 @@ const COL_MED_INV_LOGS    = collection(db, 'medInventoryLogs');
 const COL_MED_EQUIPS      = collection(db, 'medEquipments');
 const COL_EQUIP_TYPES    = collection(db, 'equipmentTypes');
 const COL_CERTS = collection(db, 'personnelCerts');
+const COL_FT_STANDBY = collection(db, 'ftStandby');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -72,6 +73,7 @@ let personnel          = [];
 let personnelUnitFilter = [];
 let fitnessTests       = [];
 let certifications = [];
+let ftStandbyRecords = [];
 
 const FITNESS_CATS = [
   { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）', '屈臂懸垂（女性）'] },
@@ -585,7 +587,7 @@ function hideLoadingScreen() {
 }
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 16) hideLoadingScreen();
+  if (loaded.size >= 17) hideLoadingScreen();
 }
 
 // ── Districts ─────────────────────────────────────────
@@ -2432,6 +2434,16 @@ function startApp() {
     } catch(e) { console.error('certifications snapshot error', e); }
     markLoaded('certifications');
   }, () => markLoaded('certifications'));
+
+  onSnapshot(COL_FT_STANDBY, snap => {
+    try {
+      ftStandbyRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (ftAdminTab === 'standby' && document.getElementById('page-fitness-test')?.classList.contains('active')) {
+        renderFtStandbyCalendar();
+      }
+    } catch(e) { console.error('ftStandby snapshot error', e); }
+    markLoaded('ftStandby');
+  }, () => markLoaded('ftStandby'));
 
   onSnapshot(COL_PERSONNEL_AUDIT, snap => {
     try {
@@ -6051,7 +6063,13 @@ document.getElementById('page-fitness-test')?.addEventListener('click', e => {
   if (!btn) return;
   ftAdminTab = btn.dataset.ftTab;
   document.querySelectorAll('[data-ft-tab]').forEach(b => b.classList.toggle('active', b.dataset.ftTab === ftAdminTab));
-  renderFitnessAdminPage();
+  const isStandby = ftAdminTab === 'standby';
+  document.getElementById('ft-standby-panel').style.display  = isStandby ? '' : 'none';
+  document.getElementById('ft-admin-list').style.display     = isStandby ? 'none' : '';
+  document.getElementById('ft-unit-filter-bar').style.display = isStandby ? 'none' : '';
+  document.getElementById('ft-stats-panel').style.display    = isStandby ? 'none' : '';
+  if (isStandby) renderFtStandbyCalendar();
+  else renderFitnessAdminPage();
 });
 
 document.getElementById('ftUnitFilter')?.addEventListener('change', renderFitnessAdminPage);
@@ -6412,6 +6430,195 @@ document.getElementById('ftEditArchive')?.addEventListener('click', async () => 
     document.getElementById('ftEditOverlay').classList.remove('open');
   } catch(e) { console.error(e); alert('歸檔失敗：' + e.message); }
   finally { btn.disabled = false; }
+});
+
+// ── 體測駐點待命用車 ───────────────────────────────────
+
+let ftsYear  = new Date().getFullYear();
+let ftsMonth = new Date().getMonth(); // 0-based
+let ftsSelectedDate = null;
+let ftsEditingId = null;
+
+function renderFtStandbyCalendar() {
+  const cal = document.getElementById('fts-calendar');
+  if (!cal) return;
+
+  const label = document.getElementById('fts-month-label');
+  if (label) label.textContent = `${ftsYear} 年 ${ftsMonth + 1} 月`;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const daysInMonth = new Date(ftsYear, ftsMonth + 1, 0).getDate();
+  const firstDow = new Date(ftsYear, ftsMonth, 1).getDay(); // 0=Sun
+
+  const DOW_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
+  let html = DOW_LABELS.map(d => `<div class="fts-cal-dow">${d}</div>`).join('');
+
+  // Empty cells before 1st
+  for (let i = 0; i < firstDow; i++) html += `<div class="fts-cal-cell empty"><span class="fts-cal-day">0</span></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${ftsYear}-${String(ftsMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const rec = ftStandbyRecords.find(r => r.date === dateStr);
+    const dow = (firstDow + d - 1) % 7;
+    const classes = ['fts-cal-cell',
+      dow === 0 ? 'sunday' : dow === 6 ? 'saturday' : '',
+      dateStr === todayStr ? 'today' : '',
+      dateStr === ftsSelectedDate ? 'selected' : '',
+    ].filter(Boolean).join(' ');
+    const badge = rec ? `<span class="fts-cal-badge">🚑 ${rec.vehicleNumber || '待命'}</span>` : '';
+    html += `<div class="${classes}" data-fts-date="${dateStr}">
+      <span class="fts-cal-day">${d}</span>
+      ${badge}
+    </div>`;
+  }
+  cal.innerHTML = html;
+
+  // Render detail panel for selected date
+  renderFtStandbyDetail(ftsSelectedDate);
+}
+
+function renderFtStandbyDetail(dateStr) {
+  const panel = document.getElementById('fts-detail-panel');
+  if (!panel) return;
+  if (!dateStr) { panel.innerHTML = ''; return; }
+
+  const rec = ftStandbyRecords.find(r => r.date === dateStr);
+  const [y, m, d] = dateStr.split('-');
+  const dow = ['日','一','二','三','四','五','六'][new Date(dateStr + 'T00:00:00').getDay()];
+  const dateLabel = `${y} 年 ${+m} 月 ${+d} 日（${dow}）`;
+
+  if (!rec) {
+    panel.innerHTML = `
+      <div class="fts-detail-card">
+        <div class="fts-detail-header">
+          <span class="fts-detail-date">${dateLabel}</span>
+          <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3)" onclick="openFtsEdit('${dateStr}')">＋ 新增派遣</button>
+        </div>
+        <div style="padding:20px 16px;color:var(--text-muted);font-size:14px;text-align:center">此日期尚無待命用車派遣紀錄</div>
+      </div>`;
+    return;
+  }
+
+  const emtBadge = emt => emt ? `<span class="fts-person-emt">${emt}</span>` : '';
+  panel.innerHTML = `
+    <div class="fts-detail-card">
+      <div class="fts-detail-header">
+        <div>
+          <div class="fts-detail-date">${dateLabel}</div>
+          <div class="fts-detail-vehicle">🚑 ${rec.vehicleNumber || '—'}</div>
+        </div>
+        <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3)" onclick="openFtsEdit('${dateStr}')">✏️ 編輯</button>
+      </div>
+      <div class="fts-detail-body">
+        <div class="fts-person-block">
+          <div class="fts-person-role">🎖 車長</div>
+          <div class="fts-person-name">${rec.commanderRank || ''} ${rec.commanderName || '—'}</div>
+          ${emtBadge(rec.commanderEmt)}
+          ${rec.commanderPhone ? `<div class="fts-person-phone">📞 ${rec.commanderPhone}</div>` : ''}
+        </div>
+        <div class="fts-person-block">
+          <div class="fts-person-role">🚗 駕駛</div>
+          <div class="fts-person-name">${rec.driverRank || ''} ${rec.driverName || '—'}</div>
+          ${emtBadge(rec.driverEmt)}
+          ${rec.driverPhone ? `<div class="fts-person-phone">📞 ${rec.driverPhone}</div>` : ''}
+        </div>
+      </div>
+      ${rec.notes ? `<div class="fts-detail-notes">備註：${rec.notes}</div>` : ''}
+    </div>`;
+}
+
+// Calendar click
+document.getElementById('fts-calendar')?.addEventListener('click', e => {
+  const cell = e.target.closest('[data-fts-date]');
+  if (!cell) return;
+  ftsSelectedDate = cell.dataset.ftsDate;
+  renderFtStandbyCalendar();
+});
+
+document.getElementById('fts-prev-month')?.addEventListener('click', () => {
+  ftsMonth--;
+  if (ftsMonth < 0) { ftsMonth = 11; ftsYear--; }
+  renderFtStandbyCalendar();
+});
+document.getElementById('fts-next-month')?.addEventListener('click', () => {
+  ftsMonth++;
+  if (ftsMonth > 11) { ftsMonth = 0; ftsYear++; }
+  renderFtStandbyCalendar();
+});
+document.getElementById('fts-today-btn')?.addEventListener('click', () => {
+  const now = new Date();
+  ftsYear = now.getFullYear();
+  ftsMonth = now.getMonth();
+  ftsSelectedDate = now.toISOString().slice(0, 10);
+  renderFtStandbyCalendar();
+});
+
+window.openFtsEdit = function(dateStr) {
+  ftsEditingId = null;
+  const rec = ftStandbyRecords.find(r => r.date === dateStr);
+  if (rec) ftsEditingId = rec.id;
+  document.getElementById('fts-edit-title').textContent = rec ? '編輯派遣資料' : '新增派遣資料';
+  document.getElementById('fts-date').value       = dateStr;
+  document.getElementById('fts-vehicle').value    = rec?.vehicleNumber   || '';
+  document.getElementById('fts-cmd-rank').value   = rec?.commanderRank   || '';
+  document.getElementById('fts-cmd-name').value   = rec?.commanderName   || '';
+  document.getElementById('fts-cmd-emt').value    = rec?.commanderEmt    || '';
+  document.getElementById('fts-cmd-phone').value  = rec?.commanderPhone  || '';
+  document.getElementById('fts-drv-rank').value   = rec?.driverRank      || '';
+  document.getElementById('fts-drv-name').value   = rec?.driverName      || '';
+  document.getElementById('fts-drv-emt').value    = rec?.driverEmt       || '';
+  document.getElementById('fts-drv-phone').value  = rec?.driverPhone     || '';
+  document.getElementById('fts-notes').value      = rec?.notes           || '';
+  document.getElementById('ftsEditDelete').style.display = rec ? '' : 'none';
+  document.getElementById('ftsEditOverlay').classList.add('open');
+};
+
+document.getElementById('ftsEditClose')?.addEventListener('click',  () => document.getElementById('ftsEditOverlay').classList.remove('open'));
+document.getElementById('ftsEditCancel')?.addEventListener('click', () => document.getElementById('ftsEditOverlay').classList.remove('open'));
+
+document.getElementById('ftsEditSave')?.addEventListener('click', async () => {
+  const btn = document.getElementById('ftsEditSave');
+  const gv = id => document.getElementById(id)?.value?.trim() || '';
+  const date = gv('fts-date');
+  if (!date) { showToast('請選擇日期'); return; }
+  const data = {
+    date,
+    vehicleNumber:  gv('fts-vehicle'),
+    commanderRank:  gv('fts-cmd-rank'),
+    commanderName:  gv('fts-cmd-name'),
+    commanderEmt:   document.getElementById('fts-cmd-emt').value,
+    commanderPhone: gv('fts-cmd-phone'),
+    driverRank:     gv('fts-drv-rank'),
+    driverName:     gv('fts-drv-name'),
+    driverEmt:      document.getElementById('fts-drv-emt').value,
+    driverPhone:    gv('fts-drv-phone'),
+    notes:          gv('fts-notes'),
+    updatedAt:      serverTimestamp(),
+  };
+  btn.disabled = true; btn.textContent = '儲存中…';
+  try {
+    if (ftsEditingId) {
+      await updateDoc(doc(db, 'ftStandby', ftsEditingId), data);
+    } else {
+      await addDoc(COL_FT_STANDBY, data);
+    }
+    document.getElementById('ftsEditOverlay').classList.remove('open');
+    ftsSelectedDate = date;
+    showToast('已儲存');
+  } catch(e) { console.error(e); showToast('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '儲存'; }
+});
+
+document.getElementById('ftsEditDelete')?.addEventListener('click', () => {
+  if (!ftsEditingId) return;
+  showConfirm('確定要刪除此日期的派遣資料？', async () => {
+    try {
+      await deleteDoc(doc(db, 'ftStandby', ftsEditingId));
+      document.getElementById('ftsEditOverlay').classList.remove('open');
+      ftsSelectedDate = null;
+      showToast('已刪除');
+    } catch(e) { showToast('刪除失敗：' + e.message); }
+  });
 });
 
 // ── 證照管制 ───────────────────────────────────────────
