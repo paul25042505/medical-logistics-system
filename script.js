@@ -480,9 +480,16 @@ devBtn.addEventListener('click', () => {
 });
 
 // Google 登入
+let _loginInProgress = false;
 document.getElementById('google-login-btn').addEventListener('click', async () => {
+  if (_loginInProgress) return;
+  _loginInProgress = true;
+  const btn   = document.getElementById('google-login-btn');
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '登入中…';
   try { await signInWithPopup(auth, googleProvider); }
   catch (e) {
     console.error('[Google Login]', e.code, e.message);
@@ -498,6 +505,10 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
     };
     errEl.innerHTML = (m[e.code] || '登入失敗，請再試一次') +
       `<br><span style="font-size:11px;opacity:0.6">(${e.code || e.message})</span>`;
+  } finally {
+    _loginInProgress = false;
+    btn.disabled = false;
+    btn.textContent = origText;
   }
 });
 
