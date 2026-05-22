@@ -6549,47 +6549,118 @@ document.getElementById('fts-today-btn')?.addEventListener('click', () => {
   renderFtStandbyCalendar();
 });
 
+// ── helper: 取某人員最高 EMT 證照 ──
+function getBestEmt(personnelId) {
+  if (!personnelId) return '';
+  const emtCerts = certifications.filter(c => c.personnelId === personnelId && c.category === '緊急救護');
+  for (const level of ['EMT-P', 'EMT-2', 'EMT-1']) {
+    if (emtCerts.find(c => c.certType === level)) return level;
+  }
+  return '';
+}
+
+// ── 填充單位下拉 ──
+function populateFtsUnitSel(selId, selectedUnit = '') {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const units = [...new Set(personnel.map(p => p.unit).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">全部單位</option>' +
+    units.map(u => `<option value="${u}" ${u === selectedUnit ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+// ── 填充人員下拉（依單位過濾） ──
+function populateFtsPersonSel(selId, unit = '', selectedId = '') {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  let list = unit ? personnel.filter(p => p.unit === unit) : [...personnel];
+  list = list.sort((a, b) => rankWeight(a.rank) - rankWeight(b.rank) || (a.name||'').localeCompare(b.name||'', 'zh-TW'));
+  sel.innerHTML = '<option value="">請選擇人員</option>' +
+    list.map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${p.rank||''} ${p.name}</option>`).join('');
+}
+
+// ── 依選取人員自動填電話 & EMT ──
+function ftsAutoFill(personSelId, phoneId, emtDisplayId) {
+  const pid = document.getElementById(personSelId)?.value || '';
+  const p   = personnel.find(x => x.id === pid);
+  const phoneEl = document.getElementById(phoneId);
+  if (phoneEl) phoneEl.value = p?.phone || '';
+  const emtEl = document.getElementById(emtDisplayId);
+  if (!emtEl) return;
+  const emt = getBestEmt(pid);
+  emtEl.textContent = emt || '—';
+  emtEl.dataset.emt = emt;
+  emtEl.style.color = emt ? 'var(--primary)' : 'var(--text-muted)';
+  emtEl.style.fontWeight = emt ? '700' : '';
+}
+
 window.openFtsEdit = function(dateStr) {
   ftsEditingId = null;
   const rec = ftStandbyRecords.find(r => r.date === dateStr);
   if (rec) ftsEditingId = rec.id;
   document.getElementById('fts-edit-title').textContent = rec ? '編輯派遣資料' : '新增派遣資料';
-  document.getElementById('fts-date').value       = dateStr;
-  document.getElementById('fts-vehicle').value    = rec?.vehicleNumber   || '';
-  document.getElementById('fts-cmd-rank').value   = rec?.commanderRank   || '';
-  document.getElementById('fts-cmd-name').value   = rec?.commanderName   || '';
-  document.getElementById('fts-cmd-emt').value    = rec?.commanderEmt    || '';
-  document.getElementById('fts-cmd-phone').value  = rec?.commanderPhone  || '';
-  document.getElementById('fts-drv-rank').value   = rec?.driverRank      || '';
-  document.getElementById('fts-drv-name').value   = rec?.driverName      || '';
-  document.getElementById('fts-drv-emt').value    = rec?.driverEmt       || '';
-  document.getElementById('fts-drv-phone').value  = rec?.driverPhone     || '';
-  document.getElementById('fts-notes').value      = rec?.notes           || '';
+  document.getElementById('fts-date').value    = dateStr;
+  document.getElementById('fts-vehicle').value = rec?.vehicleNumber || '';
+  document.getElementById('fts-notes').value   = rec?.notes         || '';
+
+  // Commander — find the personnel record to get unit for preselect
+  const cmdPerson = rec?.commanderPersonnelId ? personnel.find(p => p.id === rec.commanderPersonnelId) : null;
+  const cmdUnit   = cmdPerson?.unit || '';
+  populateFtsUnitSel('fts-cmd-unit', cmdUnit);
+  populateFtsPersonSel('fts-cmd-person', cmdUnit, rec?.commanderPersonnelId || '');
+  ftsAutoFill('fts-cmd-person', 'fts-cmd-phone', 'fts-cmd-emt-display');
+
+  // Driver
+  const drvPerson = rec?.driverPersonnelId ? personnel.find(p => p.id === rec.driverPersonnelId) : null;
+  const drvUnit   = drvPerson?.unit || '';
+  populateFtsUnitSel('fts-drv-unit', drvUnit);
+  populateFtsPersonSel('fts-drv-person', drvUnit, rec?.driverPersonnelId || '');
+  ftsAutoFill('fts-drv-person', 'fts-drv-phone', 'fts-drv-emt-display');
+
   document.getElementById('ftsEditDelete').style.display = rec ? '' : 'none';
   document.getElementById('ftsEditOverlay').classList.add('open');
 };
+
+// Unit change → re-populate person list & reset auto-fill
+document.getElementById('fts-cmd-unit')?.addEventListener('change', () => {
+  populateFtsPersonSel('fts-cmd-person', document.getElementById('fts-cmd-unit').value, '');
+  ftsAutoFill('fts-cmd-person', 'fts-cmd-phone', 'fts-cmd-emt-display');
+});
+document.getElementById('fts-drv-unit')?.addEventListener('change', () => {
+  populateFtsPersonSel('fts-drv-person', document.getElementById('fts-drv-unit').value, '');
+  ftsAutoFill('fts-drv-person', 'fts-drv-phone', 'fts-drv-emt-display');
+});
+// Person change → auto-fill
+document.getElementById('fts-cmd-person')?.addEventListener('change', () => ftsAutoFill('fts-cmd-person', 'fts-cmd-phone', 'fts-cmd-emt-display'));
+document.getElementById('fts-drv-person')?.addEventListener('change', () => ftsAutoFill('fts-drv-person', 'fts-drv-phone', 'fts-drv-emt-display'));
 
 document.getElementById('ftsEditClose')?.addEventListener('click',  () => document.getElementById('ftsEditOverlay').classList.remove('open'));
 document.getElementById('ftsEditCancel')?.addEventListener('click', () => document.getElementById('ftsEditOverlay').classList.remove('open'));
 
 document.getElementById('ftsEditSave')?.addEventListener('click', async () => {
   const btn = document.getElementById('ftsEditSave');
-  const gv = id => document.getElementById(id)?.value?.trim() || '';
+  const gv  = id => document.getElementById(id)?.value?.trim() || '';
   const date = gv('fts-date');
   if (!date) { showToast('請選擇日期'); return; }
+
+  const cmdPid = document.getElementById('fts-cmd-person')?.value || '';
+  const drvPid = document.getElementById('fts-drv-person')?.value || '';
+  const cmdP   = personnel.find(p => p.id === cmdPid) || {};
+  const drvP   = personnel.find(p => p.id === drvPid) || {};
   const data = {
     date,
-    vehicleNumber:  gv('fts-vehicle'),
-    commanderRank:  gv('fts-cmd-rank'),
-    commanderName:  gv('fts-cmd-name'),
-    commanderEmt:   document.getElementById('fts-cmd-emt').value,
-    commanderPhone: gv('fts-cmd-phone'),
-    driverRank:     gv('fts-drv-rank'),
-    driverName:     gv('fts-drv-name'),
-    driverEmt:      document.getElementById('fts-drv-emt').value,
-    driverPhone:    gv('fts-drv-phone'),
-    notes:          gv('fts-notes'),
-    updatedAt:      serverTimestamp(),
+    vehicleNumber:        gv('fts-vehicle'),
+    commanderPersonnelId: cmdPid,
+    commanderRank:        cmdP.rank  || '',
+    commanderName:        cmdP.name  || '',
+    commanderPhone:       cmdP.phone || '',
+    commanderEmt:         document.getElementById('fts-cmd-emt-display')?.dataset.emt || '',
+    driverPersonnelId:    drvPid,
+    driverRank:           drvP.rank  || '',
+    driverName:           drvP.name  || '',
+    driverPhone:          drvP.phone || '',
+    driverEmt:            document.getElementById('fts-drv-emt-display')?.dataset.emt || '',
+    notes:                gv('fts-notes'),
+    updatedAt:            serverTimestamp(),
   };
   btn.disabled = true; btn.textContent = '儲存中…';
   try {
