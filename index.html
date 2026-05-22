@@ -527,22 +527,6 @@
         <div id="fts-detail-panel" style="margin-top:14px"></div>
       </section>
 
-      <!-- 體測駐點待命用車 -->
-      <section id="page-ft-standby" class="page">
-        <div class="recruit-header">
-          <h2 class="page-title">🚑 體測駐點待命用車</h2>
-          <a class="btn btn-secondary btn-sm" href="fitness-standby.html" target="_blank">🔗 外部查詢頁</a>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-          <button type="button" class="btn btn-secondary btn-sm" id="fts-prev-month">‹</button>
-          <span id="fts-month-label" style="font-weight:700;font-size:15px;min-width:80px;text-align:center"></span>
-          <button type="button" class="btn btn-secondary btn-sm" id="fts-next-month">›</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="fts-today-btn">今天</button>
-        </div>
-        <div class="fts-calendar" id="fts-calendar"></div>
-        <div id="fts-detail-panel" style="margin-top:14px"></div>
-      </section>
-
       <!-- 每日清點 -->
       <section id="page-daily-inventory" class="page">
         <div class="recruit-header">
@@ -1259,49 +1243,39 @@
         <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🎖 車長</div>
         <div class="form-grid" style="margin-bottom:14px">
           <div class="form-group">
-            <label>級職</label>
-            <input type="text" id="fts-cmd-rank" placeholder="例：中士" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <label>單位</label>
+            <select id="fts-cmd-unit" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px"></select>
           </div>
           <div class="form-group">
-            <label>姓名</label>
-            <input type="text" id="fts-cmd-name" placeholder="姓名" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <label>人員</label>
+            <select id="fts-cmd-person" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px"></select>
           </div>
           <div class="form-group">
-            <label>EMT 證照等級</label>
-            <select id="fts-cmd-emt" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
-              <option value="">無 / 不適用</option>
-              <option value="EMT-1">EMT-1</option>
-              <option value="EMT-2">EMT-2</option>
-              <option value="EMT-P">EMT-P（高級）</option>
-            </select>
+            <label>聯絡電話（自動帶入）</label>
+            <input type="tel" id="fts-cmd-phone" readonly placeholder="—" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text-muted)">
           </div>
           <div class="form-group">
-            <label>聯絡電話</label>
-            <input type="tel" id="fts-cmd-phone" placeholder="09xx-xxxxxx" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <label>EMT 證照（自動帶入）</label>
+            <div id="fts-cmd-emt-display" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text-muted);min-height:38px;display:flex;align-items:center">—</div>
           </div>
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🚗 駕駛</div>
         <div class="form-grid" style="margin-bottom:14px">
           <div class="form-group">
-            <label>級職</label>
-            <input type="text" id="fts-drv-rank" placeholder="例：下士" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <label>單位</label>
+            <select id="fts-drv-unit" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px"></select>
           </div>
           <div class="form-group">
-            <label>姓名</label>
-            <input type="text" id="fts-drv-name" placeholder="姓名" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <label>人員</label>
+            <select id="fts-drv-person" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px"></select>
           </div>
           <div class="form-group">
-            <label>EMT 證照等級</label>
-            <select id="fts-drv-emt" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
-              <option value="">無 / 不適用</option>
-              <option value="EMT-1">EMT-1</option>
-              <option value="EMT-2">EMT-2</option>
-              <option value="EMT-P">EMT-P（高級）</option>
-            </select>
+            <label>聯絡電話（自動帶入）</label>
+            <input type="tel" id="fts-drv-phone" readonly placeholder="—" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text-muted)">
           </div>
           <div class="form-group">
-            <label>聯絡電話</label>
-            <input type="tel" id="fts-drv-phone" placeholder="09xx-xxxxxx" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <label>EMT 證照（自動帶入）</label>
+            <div id="fts-drv-emt-display" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--text-muted);min-height:38px;display:flex;align-items:center">—</div>
           </div>
         </div>
         <div class="form-group">
