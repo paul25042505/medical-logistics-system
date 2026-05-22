@@ -1138,7 +1138,7 @@ const PAGE_INIT = {
   'recruiters':      () => renderRecruiters(),
   'contacts':        () => renderContacts(),
   'leads':           () => fetchLeadsFromSheets(),
-  'profile':         () => { renderProfilePage(); renderMyVehicles(); }, // renderMyUniformPoints 由 renderProfilePage 在 profileData 載入後呼叫
+  'profile':         () => { renderProfilePage(); renderMyVehicles(); renderMyCertifications(); }, // renderMyUniformPoints 由 renderProfilePage 在 profileData 載入後呼叫
   'admin':           () => { renderAdminPage(); },
   'personnel':       () => { renderPersonnelUnitFilters(); renderPersonnel(); },
   'applications':    () => renderApplications(),
@@ -2086,7 +2086,49 @@ async function renderProfilePage() {
   profileData = snap.exists() ? snap.data() : { uid };
   showProfileViewMode(profileData);
   renderMyUniformPoints(); // profileData 已設定完畢才呼叫
+  renderMyCertifications();
 }
+
+function renderMyCertifications() {
+  const container = document.getElementById('my-certs-list');
+  if (!container || !currentUser) return;
+  const uid = currentUser.uid;
+  const myCerts = certifications.filter(c => c.personnelId === uid);
+  if (!myCerts.length) {
+    container.innerHTML = '<div style="padding:12px 14px;color:var(--text-muted);font-size:14px">尚未登錄任何證照</div>';
+    return;
+  }
+  // Group by category
+  const byCategory = {};
+  myCerts.forEach(c => {
+    const cat = c.category || '其他';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(c);
+  });
+  container.innerHTML = Object.entries(byCategory).map(([cat, certs]) => `
+    <div style="padding:4px 0">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 14px 2px">${cat}</div>
+      ${certs.map(c => {
+        const st = certExpiryStatus(c.expiryDate);
+        return `<div class="cert-item-row" onclick="openCertEdit('${c.id}')">
+          <div class="cert-item-left">
+            <span class="cert-type-badge">${c.certType}</span>
+            ${c.notes ? `<span class="cert-note">${c.notes}</span>` : ''}
+          </div>
+          <div class="cert-item-right">
+            <span class="cert-status-badge" style="background:${st.bg};color:${st.color}">${st.label}</span>
+            <span class="cert-date">${[c.issueDate ? '取得：'+c.issueDate : '', c.expiryDate ? '到期：'+c.expiryDate : ''].filter(Boolean).join('　')}</span>
+            ${c.photoDataUrl ? `<button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewCertPhoto('${c.id}')">🖼</button>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+window.openMyCertAdd = function() {
+  if (!currentUser) return;
+  openCertAdd(currentUser.uid);
+};
 
 // 編輯按鈕
 document.getElementById('prof-edit-btn').addEventListener('click', () => {
@@ -2386,6 +2428,7 @@ function startApp() {
       certifications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       certifications.sort((a, b) => (b.issueDate || '').localeCompare(a.issueDate || ''));
       if (document.getElementById('page-certifications')?.classList.contains('active')) renderCertificationsPage();
+      if (document.getElementById('page-profile')?.classList.contains('active')) renderMyCertifications();
     } catch(e) { console.error('certifications snapshot error', e); }
     markLoaded('certifications');
   }, () => markLoaded('certifications'));
@@ -6443,34 +6486,43 @@ function renderCertificationsPage() {
   }
   if (empty) empty.style.display = 'none';
 
-  // Group by unit
+  // Group: unit → person → certs[]
   const byUnit = {};
   filtered.forEach(c => {
-    const u = c.unit || '未分配';
-    if (!byUnit[u]) byUnit[u] = [];
-    byUnit[u].push(c);
+    const u   = c.unit || '未分配';
+    const pid = c.personnelId || c.personnelName || '—';
+    if (!byUnit[u])       byUnit[u] = {};
+    if (!byUnit[u][pid])  byUnit[u][pid] = { personName: c.personName, pid, certs: [] };
+    byUnit[u][pid].certs.push(c);
   });
 
-  container.innerHTML = Object.entries(byUnit).map(([unit, certs]) => `
-    <div style="margin-bottom:20px">
-      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">${unit}</div>
-      ${certs.map(c => {
-        const st = certExpiryStatus(c.expiryDate);
-        return `
-        <div class="cert-row" onclick="openCertEdit('${c.id}')">
-          <div class="cert-row-left">
-            <span class="cert-name">${c.personName}</span>
-            <span class="cert-type-badge">${c.category} · ${c.certType}</span>
-            ${c.notes ? `<span class="cert-note">${c.notes}</span>` : ''}
-          </div>
-          <div class="cert-row-right">
-            <span class="cert-status-badge" style="background:${st.bg};color:${st.color}">${st.label}</span>
-            ${c.issueDate ? `<span class="cert-date">取得：${c.issueDate}</span>` : ''}
-            ${c.expiryDate ? `<span class="cert-date">到期：${c.expiryDate}</span>` : ''}
-            ${c.photoDataUrl ? `<button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewCertPhoto('${c.id}')">🖼 查看照片</button>` : ''}
-          </div>
-        </div>`;
-      }).join('')}
+  container.innerHTML = Object.entries(byUnit).map(([unit, persons]) => `
+    <div style="margin-bottom:24px">
+      <div class="cert-unit-label">${unit}</div>
+      ${Object.values(persons).map(({ personName, pid, certs }) => `
+      <div class="cert-person-card">
+        <div class="cert-person-header">
+          <span class="cert-name">${personName}</span>
+          <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation();openCertAddForPerson('${pid}')">＋ 新增</button>
+        </div>
+        <div class="cert-items">
+          ${certs.map(c => {
+            const st = certExpiryStatus(c.expiryDate);
+            return `
+            <div class="cert-item-row" onclick="openCertEdit('${c.id}')">
+              <div class="cert-item-left">
+                <span class="cert-type-badge">${c.category} · ${c.certType}</span>
+                ${c.notes ? `<span class="cert-note">${c.notes}</span>` : ''}
+              </div>
+              <div class="cert-item-right">
+                <span class="cert-status-badge" style="background:${st.bg};color:${st.color}">${st.label}</span>
+                <span class="cert-date">${[c.issueDate ? '取得：'+c.issueDate : '', c.expiryDate ? '到期：'+c.expiryDate : ''].filter(Boolean).join('　')}</span>
+                ${c.photoDataUrl ? `<button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewCertPhoto('${c.id}')">🖼</button>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`).join('')}
     </div>`).join('');
 }
 
@@ -6494,12 +6546,16 @@ window.openCertEdit = function(id) {
   document.getElementById('certModalOverlay').classList.add('open');
 };
 
-function openCertAdd() {
+window.openCertAddForPerson = function(personnelId) {
+  openCertAdd(personnelId);
+};
+
+function openCertAdd(preselectedPersonnelId = '') {
   editingCertId = null;
   _certPhotoDataUrl = null;
   document.getElementById('cert-modal-title').textContent = '新增證照';
   document.getElementById('certDeleteBtn').style.display = 'none';
-  populateCertPersonnelSel();
+  populateCertPersonnelSel(preselectedPersonnelId);
   document.getElementById('cert-category-sel').value = '';
   populateCertTypeSel('', '');
   document.getElementById('cert-issue-date').value  = '';

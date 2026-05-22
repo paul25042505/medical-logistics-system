@@ -477,6 +477,16 @@
             </div>
           </div>
 
+          <!-- 我的證照 -->
+          <div class="profile-card" id="my-certs-profile-card">
+            <div class="profile-card-header">
+              <span class="profile-card-icon">🪪</span>
+              <span class="profile-card-title">我的證照</span>
+              <button type="button" class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openMyCertAdd()">＋ 新增</button>
+            </div>
+            <div id="my-certs-list" style="padding:4px 0"></div>
+          </div>
+
         </div>
       </section>
 
@@ -684,6 +694,9 @@
           <h2 class="page-title">🪪 證照管制</h2>
           <button type="button" class="btn btn-primary" id="addCertBtn">＋ 新增證照</button>
         </div>
+        <div class="search-bar">
+          <input type="text" id="certSearch" placeholder="搜尋姓名…">
+        </div>
         <div class="filter-bar" style="margin-bottom:14px;gap:8px;flex-wrap:wrap">
           <select id="certUnitFilter" style="min-width:140px"><option value="">全部單位</option></select>
           <select id="certCategoryFilter" style="min-width:140px">
@@ -698,7 +711,6 @@
             <option value="expired">已過期</option>
             <option value="noexpiry">無效期</option>
           </select>
-          <input type="text" id="certSearch" placeholder="搜尋姓名…" style="min-width:160px;flex:1">
         </div>
         <div id="cert-stats" style="margin-bottom:12px"></div>
         <div id="cert-list"></div>
