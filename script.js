@@ -177,11 +177,11 @@ let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','certifications','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','certifications']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','medical-supplies','medical-equipment','certifications','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','medical-supplies','medical-equipment','certifications']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
-  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test','certifications']) },
-  training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test']) },
+  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test','ft-standby','certifications']) },
+  training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test','ft-standby']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points']) },
   medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment','certifications']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile','contacts','daily-inventory']) },
@@ -204,6 +204,7 @@ const FEATURE_GROUPS = [
   ]},
   { group: '訓練管理', icon: '🏃', features: [
     { id: 'fitness-test', label: '年度體測管理' },
+    { id: 'ft-standby',   label: '體測駐點待命用車' },
   ]},
   { group: '醫療軍品暨預防醫學管理', icon: '💊', features: [
     { id: 'medical-supplies',   label: '藥材清點' },
@@ -1156,6 +1157,7 @@ const PAGE_INIT = {
     populateFtUnitFilter();
     renderFitnessAdminPage();
   },
+  'ft-standby':        () => { renderFtStandbyCalendar(); },
 };
 
 document.querySelectorAll('.nav-link:not(.nav-coming)').forEach(link => {
@@ -2438,7 +2440,7 @@ function startApp() {
   onSnapshot(COL_FT_STANDBY, snap => {
     try {
       ftStandbyRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (ftAdminTab === 'standby' && document.getElementById('page-fitness-test')?.classList.contains('active')) {
+      if (document.getElementById('page-ft-standby')?.classList.contains('active')) {
         renderFtStandbyCalendar();
       }
     } catch(e) { console.error('ftStandby snapshot error', e); }
@@ -6063,13 +6065,7 @@ document.getElementById('page-fitness-test')?.addEventListener('click', e => {
   if (!btn) return;
   ftAdminTab = btn.dataset.ftTab;
   document.querySelectorAll('[data-ft-tab]').forEach(b => b.classList.toggle('active', b.dataset.ftTab === ftAdminTab));
-  const isStandby = ftAdminTab === 'standby';
-  document.getElementById('ft-standby-panel').style.display  = isStandby ? '' : 'none';
-  document.getElementById('ft-admin-list').style.display     = isStandby ? 'none' : '';
-  document.getElementById('ft-unit-filter-bar').style.display = isStandby ? 'none' : '';
-  document.getElementById('ft-stats-panel').style.display    = isStandby ? 'none' : '';
-  if (isStandby) renderFtStandbyCalendar();
-  else renderFitnessAdminPage();
+  renderFitnessAdminPage();
 });
 
 document.getElementById('ftUnitFilter')?.addEventListener('change', renderFitnessAdminPage);
