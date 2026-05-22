@@ -175,13 +175,13 @@ let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','certifications','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','vehicles','uniform-points','medical-supplies','medical-equipment','certifications']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
-  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test']) },
+  personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test','certifications']) },
   training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points']) },
-  medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment']) },
+  medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment','certifications']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile','contacts','daily-inventory']) },
 };
 const FEATURE_GROUPS = [
@@ -203,9 +203,10 @@ const FEATURE_GROUPS = [
   { group: '訓練管理', icon: '🏃', features: [
     { id: 'fitness-test', label: '年度體測管理' },
   ]},
-  { group: '醫療軍品管理', icon: '💊', features: [
+  { group: '醫療軍品暨預防醫學管理', icon: '💊', features: [
     { id: 'medical-supplies',   label: '藥材清點' },
     { id: 'medical-equipment',  label: '衛材裝備清點' },
+    { id: 'certifications',     label: '證照管制' },
   ]},
 ];
 
@@ -584,7 +585,7 @@ function hideLoadingScreen() {
 }
 function markLoaded(key) {
   loaded.add(key);
-  if (loaded.size >= 15) hideLoadingScreen();
+  if (loaded.size >= 16) hideLoadingScreen();
 }
 
 // ── Districts ─────────────────────────────────────────
@@ -1145,6 +1146,7 @@ const PAGE_INIT = {
   'uniform-points':    () => renderUniformPointsPage(),
   'medical-supplies':  () => renderMedicalSupplies(),
   'medical-equipment': () => { renderMedicalEquipment(); populateEquipTypeDropdowns(); },
+  'certifications':    () => renderCertificationsPage(),
   'daily-inventory':   () => renderDailyInventory(),
   'fitness-test':      () => {
     ftAdminTab = 'all';
@@ -2378,6 +2380,15 @@ function startApp() {
     } catch(e) { console.error('equipmentTypes snapshot error', e); }
     markLoaded('equipmentTypes');
   }, () => markLoaded('equipmentTypes'));
+
+  onSnapshot(COL_CERTS, snap => {
+    try {
+      certifications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      certifications.sort((a, b) => (b.issueDate || '').localeCompare(a.issueDate || ''));
+      if (document.getElementById('page-certifications')?.classList.contains('active')) renderCertificationsPage();
+    } catch(e) { console.error('certifications snapshot error', e); }
+    markLoaded('certifications');
+  }, () => markLoaded('certifications'));
 
   onSnapshot(COL_PERSONNEL_AUDIT, snap => {
     try {
@@ -6358,4 +6369,294 @@ document.getElementById('ftEditArchive')?.addEventListener('click', async () => 
     document.getElementById('ftEditOverlay').classList.remove('open');
   } catch(e) { console.error(e); alert('歸檔失敗：' + e.message); }
   finally { btn.disabled = false; }
+});
+
+// ── 證照管制 ───────────────────────────────────────────
+
+function certExpiryStatus(expiryDate) {
+  if (!expiryDate) return { status: 'noexpiry', label: '無效期', color: '#64748b', bg: '#f1f5f9' };
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp   = new Date(expiryDate + 'T00:00:00');
+  const days  = Math.round((exp - today) / 86400000);
+  if (days < 0)   return { status: 'expired',  label: `已過期 ${-days} 天`, color: '#dc2626', bg: '#fee2e2' };
+  if (days <= 60) return { status: 'expiring', label: `還剩 ${days} 天`, color: '#d97706', bg: '#fef3c7' };
+  return { status: 'valid', label: '有效', color: '#16a34a', bg: '#dcfce7' };
+}
+
+function populateCertPersonnelSel(selectedId = '') {
+  const sel = document.getElementById('cert-personnel-sel');
+  if (!sel) return;
+  const sorted = [...personnel].sort((a, b) =>
+    rankWeight(a.rank) - rankWeight(b.rank) || (a.name||'').localeCompare(b.name||'', 'zh-TW')
+  );
+  sel.innerHTML = '<option value="">請選擇人員</option>' +
+    sorted.map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${p.rank||''} ${p.name}（${p.unit||''}）</option>`).join('');
+}
+
+function renderCertificationsPage() {
+  const unitFilter     = document.getElementById('certUnitFilter')?.value || '';
+  const categoryFilter = document.getElementById('certCategoryFilter')?.value || '';
+  const statusFilter   = document.getElementById('certStatusFilter')?.value || '';
+  const search         = (document.getElementById('certSearch')?.value || '').trim().toLowerCase();
+
+  // Populate unit filter
+  const unitSel = document.getElementById('certUnitFilter');
+  if (unitSel) {
+    const currentVal = unitSel.value;
+    const units = [...new Set(personnel.map(p => p.unit).filter(Boolean))].sort();
+    unitSel.innerHTML = '<option value="">全部單位</option>' +
+      units.map(u => `<option value="${u}" ${u === currentVal ? 'selected' : ''}>${u}</option>`).join('');
+  }
+
+  let filtered = certifications.map(c => {
+    const p = personnel.find(p => p.id === c.personnelId);
+    return { ...c, personName: p ? `${p.rank||''} ${p.name}` : c.personnelName || '—', unit: p?.unit || c.unit || '' };
+  });
+
+  if (unitFilter)     filtered = filtered.filter(c => c.unit === unitFilter);
+  if (categoryFilter) filtered = filtered.filter(c => c.category === categoryFilter);
+  if (search)         filtered = filtered.filter(c => c.personName.toLowerCase().includes(search) || (c.notes||'').toLowerCase().includes(search));
+  if (statusFilter)   filtered = filtered.filter(c => certExpiryStatus(c.expiryDate).status === statusFilter);
+
+  // Stats
+  const statsEl = document.getElementById('cert-stats');
+  if (statsEl) {
+    const total    = filtered.length;
+    const expired  = filtered.filter(c => certExpiryStatus(c.expiryDate).status === 'expired').length;
+    const expiring = filtered.filter(c => certExpiryStatus(c.expiryDate).status === 'expiring').length;
+    statsEl.innerHTML = total ? `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px">
+        <span>共 <strong>${total}</strong> 筆</span>
+        ${expired  ? `<span style="color:#dc2626">⚠️ 已過期 <strong>${expired}</strong> 筆</span>` : ''}
+        ${expiring ? `<span style="color:#d97706">⏰ 即將到期 <strong>${expiring}</strong> 筆</span>` : ''}
+      </div>` : '';
+  }
+
+  const container = document.getElementById('cert-list');
+  const empty     = document.getElementById('cert-empty');
+  if (!container) return;
+
+  if (!filtered.length) {
+    container.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  // Group by unit
+  const byUnit = {};
+  filtered.forEach(c => {
+    const u = c.unit || '未分配';
+    if (!byUnit[u]) byUnit[u] = [];
+    byUnit[u].push(c);
+  });
+
+  container.innerHTML = Object.entries(byUnit).map(([unit, certs]) => `
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">${unit}</div>
+      ${certs.map(c => {
+        const st = certExpiryStatus(c.expiryDate);
+        return `
+        <div class="cert-row" onclick="openCertEdit('${c.id}')">
+          <div class="cert-row-left">
+            <span class="cert-name">${c.personName}</span>
+            <span class="cert-type-badge">${c.category} · ${c.certType}</span>
+            ${c.notes ? `<span class="cert-note">${c.notes}</span>` : ''}
+          </div>
+          <div class="cert-row-right">
+            <span class="cert-status-badge" style="background:${st.bg};color:${st.color}">${st.label}</span>
+            ${c.issueDate ? `<span class="cert-date">取得：${c.issueDate}</span>` : ''}
+            ${c.expiryDate ? `<span class="cert-date">到期：${c.expiryDate}</span>` : ''}
+            ${c.photoDataUrl ? `<button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewCertPhoto('${c.id}')">🖼 查看照片</button>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+let editingCertId = null;
+let _certPhotoDataUrl = null;
+
+window.openCertEdit = function(id) {
+  editingCertId = id;
+  const c = certifications.find(c => c.id === id);
+  if (!c) return;
+  document.getElementById('cert-modal-title').textContent = '編輯證照';
+  document.getElementById('certDeleteBtn').style.display = '';
+  populateCertPersonnelSel(c.personnelId);
+  document.getElementById('cert-category-sel').value = c.category || '';
+  populateCertTypeSel(c.category || '', c.certType || '');
+  document.getElementById('cert-issue-date').value  = c.issueDate  || '';
+  document.getElementById('cert-expiry-date').value = c.expiryDate || '';
+  document.getElementById('cert-notes').value       = c.notes      || '';
+  _certPhotoDataUrl = c.photoDataUrl || null;
+  updateCertPhotoPreview();
+  document.getElementById('certModalOverlay').classList.add('open');
+};
+
+function openCertAdd() {
+  editingCertId = null;
+  _certPhotoDataUrl = null;
+  document.getElementById('cert-modal-title').textContent = '新增證照';
+  document.getElementById('certDeleteBtn').style.display = 'none';
+  populateCertPersonnelSel();
+  document.getElementById('cert-category-sel').value = '';
+  populateCertTypeSel('', '');
+  document.getElementById('cert-issue-date').value  = '';
+  document.getElementById('cert-expiry-date').value = '';
+  document.getElementById('cert-notes').value       = '';
+  updateCertPhotoPreview();
+  document.getElementById('certModalOverlay').classList.add('open');
+}
+
+function closeCertModal() {
+  document.getElementById('certModalOverlay').classList.remove('open');
+  editingCertId = null;
+  _certPhotoDataUrl = null;
+}
+
+function populateCertTypeSel(category, selectedType = '') {
+  const sel = document.getElementById('cert-type-sel');
+  if (!sel) return;
+  const types = CERT_TYPES[category] || [];
+  sel.innerHTML = types.length
+    ? types.map(t => `<option value="${t}" ${t === selectedType ? 'selected' : ''}>${t}</option>`).join('')
+    : '<option value="">請先選類別</option>';
+}
+
+function updateCertPhotoPreview() {
+  const preview  = document.getElementById('cert-photo-preview');
+  const img      = document.getElementById('cert-photo-img');
+  const dropzone = document.getElementById('cert-photo-dropzone');
+  if (_certPhotoDataUrl) {
+    if (img) img.src = _certPhotoDataUrl;
+    if (preview)  preview.style.display  = '';
+    if (dropzone) dropzone.style.display = 'none';
+  } else {
+    if (preview)  preview.style.display  = 'none';
+    if (dropzone) dropzone.style.display = '';
+  }
+}
+
+async function compressImage(file, maxPx = 1200, quality = 0.82) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+window.viewCertPhoto = function(id) {
+  const c = certifications.find(c => c.id === id);
+  if (!c?.photoDataUrl) return;
+  const img = document.getElementById('certPhotoFull');
+  if (img) img.src = c.photoDataUrl;
+  document.getElementById('certPhotoOverlay').classList.add('open');
+};
+
+// Wire up cert modal events
+document.getElementById('addCertBtn')?.addEventListener('click', openCertAdd);
+document.getElementById('certCancelBtn')?.addEventListener('click', closeCertModal);
+document.getElementById('certModalClose')?.addEventListener('click', closeCertModal);
+document.getElementById('certModalOverlay')?.addEventListener('click', e => {
+  if (e.target.id === 'certModalOverlay') closeCertModal();
+});
+document.getElementById('certPhotoClose')?.addEventListener('click', () => document.getElementById('certPhotoOverlay').classList.remove('open'));
+document.getElementById('certPhotoOverlay')?.addEventListener('click', e => {
+  if (e.target.id === 'certPhotoOverlay') document.getElementById('certPhotoOverlay').classList.remove('open');
+});
+
+document.getElementById('cert-category-sel')?.addEventListener('change', function() {
+  populateCertTypeSel(this.value, '');
+});
+
+document.getElementById('cert-photo-input')?.addEventListener('change', async function() {
+  const file = this.files?.[0];
+  if (!file) return;
+  _certPhotoDataUrl = await compressImage(file);
+  updateCertPhotoPreview();
+  this.value = '';
+});
+
+document.getElementById('cert-photo-dropzone')?.addEventListener('dragover', e => e.preventDefault());
+document.getElementById('cert-photo-dropzone')?.addEventListener('drop', async e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files?.[0];
+  if (file && file.type.startsWith('image/')) {
+    _certPhotoDataUrl = await compressImage(file);
+    updateCertPhotoPreview();
+  }
+});
+
+document.getElementById('cert-photo-clear')?.addEventListener('click', () => {
+  _certPhotoDataUrl = null;
+  updateCertPhotoPreview();
+});
+
+document.getElementById('certUnitFilter')?.addEventListener('change', renderCertificationsPage);
+document.getElementById('certCategoryFilter')?.addEventListener('change', renderCertificationsPage);
+document.getElementById('certStatusFilter')?.addEventListener('change', renderCertificationsPage);
+document.getElementById('certSearch')?.addEventListener('input', renderCertificationsPage);
+
+document.getElementById('certDeleteBtn')?.addEventListener('click', () => {
+  if (!editingCertId) return;
+  showConfirm('確定刪除此證照紀錄？', async () => {
+    try {
+      await deleteDoc(doc(db, 'personnelCerts', editingCertId));
+      closeCertModal();
+    } catch(e) { showToast('刪除失敗：' + e.message); }
+  });
+});
+
+document.getElementById('certSaveBtn')?.addEventListener('click', async () => {
+  const personnelId = document.getElementById('cert-personnel-sel')?.value;
+  const category    = document.getElementById('cert-category-sel')?.value;
+  const certType    = document.getElementById('cert-type-sel')?.value;
+  if (!personnelId) { showToast('請選擇人員'); return; }
+  if (!category)    { showToast('請選擇證照類別'); return; }
+  if (!certType)    { showToast('請選擇證照等級'); return; }
+
+  const p = personnel.find(p => p.id === personnelId);
+  const data = {
+    personnelId,
+    personnelName: p ? `${p.rank||''} ${p.name}`.trim() : '',
+    unit:          p?.unit || '',
+    category,
+    certType,
+    issueDate:     document.getElementById('cert-issue-date')?.value  || '',
+    expiryDate:    document.getElementById('cert-expiry-date')?.value || '',
+    notes:         document.getElementById('cert-notes')?.value?.trim() || '',
+    photoDataUrl:  _certPhotoDataUrl || '',
+    updatedAt:     serverTimestamp(),
+  };
+
+  const btn = document.getElementById('certSaveBtn');
+  btn.disabled = true;
+  btn.textContent = '儲存中…';
+  try {
+    if (editingCertId) {
+      await updateDoc(doc(db, 'personnelCerts', editingCertId), data);
+    } else {
+      await addDoc(COL_CERTS, { ...data, createdAt: serverTimestamp() });
+    }
+    closeCertModal();
+    showToast('✓ 已儲存');
+  } catch(e) {
+    console.error(e);
+    showToast('儲存失敗：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 儲存';
+  }
 });
