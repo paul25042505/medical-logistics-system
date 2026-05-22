@@ -2822,3 +2822,79 @@ main {
   .cert-item-row { flex-direction: column; align-items: flex-start; }
   .cert-item-right { justify-content: flex-start; }
 }
+
+/* ── 體測駐點待命用車 月曆 ── */
+.fts-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.fts-cal-dow {
+  background: var(--navy);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 2px;
+}
+.fts-cal-cell {
+  background: #fff;
+  min-height: 54px;
+  padding: 4px 6px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fts-cal-cell:hover { background: #f0f6ff; }
+.fts-cal-cell.empty { background: var(--bg); cursor: default; }
+.fts-cal-cell.today .fts-cal-day { background: var(--primary); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.fts-cal-cell.selected { background: #eff6ff; outline: 2px solid var(--primary); outline-offset: -2px; }
+.fts-cal-day { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1; }
+.fts-cal-cell.empty .fts-cal-day { color: transparent; }
+.fts-cal-badge {
+  font-size: 10px; font-weight: 700;
+  background: #dcfce7; color: #166534;
+  border-radius: 4px; padding: 1px 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.fts-cal-cell.sunday .fts-cal-day { color: #dc2626; }
+.fts-cal-cell.saturday .fts-cal-day { color: #2563eb; }
+
+/* ── 駐點詳細資訊卡 ── */
+.fts-detail-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.fts-detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px;
+  background: var(--navy);
+  color: #fff;
+}
+.fts-detail-date { font-size: 15px; font-weight: 700; }
+.fts-detail-vehicle { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+.fts-detail-body { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 500px) { .fts-detail-body { grid-template-columns: 1fr; } }
+.fts-person-block { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.fts-person-role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 6px; }
+.fts-person-name { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.fts-person-emt { display: inline-block; font-size: 11px; font-weight: 700; background: #eff6ff; color: var(--primary); border-radius: 6px; padding: 2px 8px; margin-bottom: 6px; }
+.fts-person-phone { font-size: 13px; color: var(--text-muted); }
+.fts-detail-notes { padding: 10px 16px 14px; font-size: 13px; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+/* ── 駐點待命 — 外部頁 (fitness-standby.html) ── */
+.fsb-header { background: var(--navy, #0b1f3a); color: #fff; text-align: center; padding: 28px 20px 24px; }
+.fsb-header-logo { font-size: 40px; margin-bottom: 8px; }
+.fsb-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.fsb-header p { font-size: 13px; color: rgba(255,255,255,0.6); }

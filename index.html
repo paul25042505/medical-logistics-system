@@ -501,13 +501,30 @@
           <button type="button" class="tab-btn" data-ft-tab="upcoming">待體測</button>
           <button type="button" class="tab-btn" data-ft-tab="reported">今年已合格</button>
           <button type="button" class="tab-btn" data-ft-tab="unset">未設定</button>
+          <button type="button" class="tab-btn" data-ft-tab="standby">🚑 駐點待命用車</button>
         </div>
-        <div class="filter-bar" style="margin-bottom:14px">
+        <!-- 人員篩選（非 standby tab 顯示） -->
+        <div class="filter-bar" id="ft-unit-filter-bar" style="margin-bottom:14px">
           <select id="ftUnitFilter" style="flex:1;max-width:200px">
             <option value="">全部單位</option>
           </select>
         </div>
         <div id="ft-admin-list"></div>
+
+        <!-- ── 體測駐點待命用車 ── -->
+        <div id="ft-standby-panel" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <button type="button" class="btn btn-secondary btn-sm" id="fts-prev-month">‹</button>
+              <span id="fts-month-label" style="font-weight:700;font-size:15px;min-width:80px;text-align:center"></span>
+              <button type="button" class="btn btn-secondary btn-sm" id="fts-next-month">›</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="fts-today-btn">今天</button>
+            </div>
+            <a class="btn btn-secondary btn-sm" href="fitness-standby.html" target="_blank">🔗 外部查詢頁</a>
+          </div>
+          <div class="fts-calendar" id="fts-calendar"></div>
+          <div id="fts-detail-panel" style="margin-top:14px"></div>
+        </div>
       </section>
 
       <!-- 每日清點 -->
@@ -1203,6 +1220,83 @@
         <button type="button" class="btn btn-secondary" id="ftEditCancel">取消</button>
         <button type="button" class="btn btn-secondary" id="ftEditArchive" style="color:var(--text-muted)">📁 歸檔此次體測</button>
         <button type="button" class="btn btn-primary" id="ftEditSave">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 體測駐點待命用車 Modal ══ -->
+  <div class="modal-overlay" id="ftsEditOverlay">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <h3 id="fts-edit-title">駐點待命用車</h3>
+        <button type="button" class="modal-close" id="ftsEditClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:14px">
+          <label>日期</label>
+          <input type="date" id="fts-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>救護車號</label>
+          <input type="text" id="fts-vehicle" placeholder="例：AM-1234" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🎖 車長</div>
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="form-group">
+            <label>級職</label>
+            <input type="text" id="fts-cmd-rank" placeholder="例：中士" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+          <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="fts-cmd-name" placeholder="姓名" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+          <div class="form-group">
+            <label>EMT 證照等級</label>
+            <select id="fts-cmd-emt" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+              <option value="">無 / 不適用</option>
+              <option value="EMT-1">EMT-1</option>
+              <option value="EMT-2">EMT-2</option>
+              <option value="EMT-P">EMT-P（高級）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>聯絡電話</label>
+            <input type="tel" id="fts-cmd-phone" placeholder="09xx-xxxxxx" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🚗 駕駛</div>
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="form-group">
+            <label>級職</label>
+            <input type="text" id="fts-drv-rank" placeholder="例：下士" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+          <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="fts-drv-name" placeholder="姓名" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+          <div class="form-group">
+            <label>EMT 證照等級</label>
+            <select id="fts-drv-emt" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+              <option value="">無 / 不適用</option>
+              <option value="EMT-1">EMT-1</option>
+              <option value="EMT-2">EMT-2</option>
+              <option value="EMT-P">EMT-P（高級）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>聯絡電話</label>
+            <input type="tel" id="fts-drv-phone" placeholder="09xx-xxxxxx" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>備註</label>
+          <input type="text" id="fts-notes" placeholder="任何補充說明" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        </div>
+      </div>
+      <div class="modal-footer" style="gap:8px">
+        <button type="button" class="btn btn-secondary" id="ftsEditCancel">取消</button>
+        <button type="button" class="btn btn-danger" id="ftsEditDelete" style="display:none">刪除</button>
+        <button type="button" class="btn btn-primary" id="ftsEditSave">儲存</button>
       </div>
     </div>
   </div>
