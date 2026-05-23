@@ -2868,6 +2868,8 @@ main {
 }
 .fts-cal-cell.sunday .fts-cal-day { color: #dc2626; }
 .fts-cal-cell.saturday .fts-cal-day { color: #2563eb; }
+.fts-cal-cell.today.sunday .fts-cal-day,
+.fts-cal-cell.today.saturday .fts-cal-day { color: #fff; }
 
 /* ── 駐點詳細資訊卡 ── */
 .fts-detail-card {
