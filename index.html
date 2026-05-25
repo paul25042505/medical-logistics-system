@@ -1254,6 +1254,37 @@
     </div>
   </div>
 
+  <!-- ══ 醫官管理 Modal ══ -->
+  <div class="modal-overlay" id="ftsOfficerMgmtOverlay">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-header">
+        <h3>🔷 醫官管理</h3>
+        <button type="button" class="modal-close" id="ftsOfficerMgmtClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="ftsOfficerList" style="margin-bottom:16px"></div>
+        <div style="border-top:1px solid var(--border);padding-top:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px" id="ftsOfficerFormTitle">新增醫官</div>
+          <input type="hidden" id="ftsOfficerEditId">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>姓名</label>
+              <input type="text" id="ftsOfficerName" placeholder="醫官姓名" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            </div>
+            <div class="form-group">
+              <label>聯絡電話</label>
+              <input type="tel" id="ftsOfficerPhone" placeholder="醫官電話" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="gap:8px">
+        <button type="button" class="btn btn-secondary" id="ftsOfficerMgmtCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="ftsOfficerSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ 體測駐點待命用車 Modal ══ -->
   <div class="modal-overlay" id="ftsEditOverlay">
     <div class="modal" style="max-width:500px">
@@ -1272,17 +1303,13 @@
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🔷 醫官</div>
         <div class="form-grid" style="margin-bottom:14px">
-          <div class="form-group">
-            <label>級職</label>
-            <input type="text" id="fts-officer-rank" placeholder="例：中尉" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
-          </div>
-          <div class="form-group">
-            <label>姓名</label>
-            <input type="text" id="fts-officer-name" placeholder="醫官姓名" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>人員</label>
+            <select id="fts-officer-sel" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px"><option value="">— 請選擇醫官 —</option></select>
           </div>
           <div class="form-group" style="grid-column:1/-1">
-            <label>聯絡電話</label>
-            <input type="tel" id="fts-officer-phone" placeholder="醫官電話" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <label>聯絡電話（自動帶入）</label>
+            <input type="tel" id="fts-officer-phone-display" readonly placeholder="—" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg);color:var(--muted)">
           </div>
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🎖 車長</div>

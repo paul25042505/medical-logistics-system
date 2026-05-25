@@ -49,7 +49,8 @@ const COL_MED_INV_LOGS    = collection(db, 'medInventoryLogs');
 const COL_MED_EQUIPS      = collection(db, 'medEquipments');
 const COL_EQUIP_TYPES    = collection(db, 'equipmentTypes');
 const COL_CERTS = collection(db, 'personnelCerts');
-const COL_FT_STANDBY = collection(db, 'ftStandby');
+const COL_FT_STANDBY   = collection(db, 'ftStandby');
+const COL_FT_OFFICERS  = collection(db, 'ftOfficers');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -74,6 +75,7 @@ let personnelUnitFilter = [];
 let fitnessTests       = [];
 let certifications = [];
 let ftStandbyRecords = [];
+let ftOfficers = [];
 
 const FITNESS_CATS = [
   { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）', '屈臂懸垂（女性）'] },
@@ -2457,6 +2459,13 @@ function startApp() {
     } catch(e) { console.error('ftStandby snapshot error', e); }
     markLoaded('ftStandby');
   }, () => markLoaded('ftStandby'));
+
+  onSnapshot(COL_FT_OFFICERS, snap => {
+    ftOfficers = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    renderFtsOfficerList();
+    populateFtsOfficerSel(document.getElementById('fts-officer-sel')?.value || '');
+  }, () => {});
 
   onSnapshot(COL_PERSONNEL_AUDIT, snap => {
     try {
@@ -6693,23 +6702,99 @@ function ftsAutoFill(personSelId, phoneId, emtDisplayId) {
   emtEl.style.fontWeight = emt ? '700' : '';
 }
 
-window.openFtsOfficerBtn = function() {
-  const date = ftsSelectedDate || new Date().toISOString().slice(0, 10);
-  openFtsEdit(date);
-  setTimeout(() => document.getElementById('fts-officer-rank')?.focus(), 100);
+// ── 醫官管理 ────────────────────────────────────────────
+function populateFtsOfficerSel(selectedId) {
+  const sel = document.getElementById('fts-officer-sel');
+  if (!sel) return;
+  const prev = selectedId || sel.value;
+  sel.innerHTML = '<option value="">— 請選擇醫官 —</option>' +
+    ftOfficers.map(o => `<option value="${o.id}"${o.id === prev ? ' selected' : ''}>${o.name || '—'}</option>`).join('');
+  ftsOfficerAutoFill();
+}
+
+function ftsOfficerAutoFill() {
+  const sel = document.getElementById('fts-officer-sel');
+  const phoneEl = document.getElementById('fts-officer-phone-display');
+  if (!sel || !phoneEl) return;
+  const officer = ftOfficers.find(o => o.id === sel.value);
+  phoneEl.value = officer?.phone || '';
+  updateFtsPreview();
+}
+
+function renderFtsOfficerList() {
+  const el = document.getElementById('ftsOfficerList');
+  if (!el) return;
+  if (!ftOfficers.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:12px 0">尚無醫官資料</div>';
+    return;
+  }
+  el.innerHTML = ftOfficers.map(o => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px">${o.name || '—'}</div>
+        <div style="font-size:12px;color:var(--muted)">${o.phone || '—'}</div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="ftsOfficerEdit('${o.id}')">✏️</button>
+      <button type="button" class="btn btn-sm" style="background:#fee2e2;color:#dc2626" onclick="ftsOfficerDelete('${o.id}')">🗑</button>
+    </div>`).join('');
+}
+
+window.ftsOfficerEdit = function(id) {
+  const o = ftOfficers.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('ftsOfficerEditId').value = id;
+  document.getElementById('ftsOfficerName').value   = o.name  || '';
+  document.getElementById('ftsOfficerPhone').value  = o.phone || '';
+  document.getElementById('ftsOfficerFormTitle').textContent = '編輯醫官';
 };
+
+window.ftsOfficerDelete = function(id) {
+  showConfirm('確定刪除此醫官資料？', async () => {
+    try { await deleteDoc(doc(db, 'ftOfficers', id)); showToast('已刪除'); }
+    catch(e) { showToast('刪除失敗'); }
+  });
+};
+
+window.openFtsOfficerBtn = function() {
+  document.getElementById('ftsOfficerEditId').value = '';
+  document.getElementById('ftsOfficerName').value   = '';
+  document.getElementById('ftsOfficerPhone').value  = '';
+  document.getElementById('ftsOfficerFormTitle').textContent = '新增醫官';
+  renderFtsOfficerList();
+  document.getElementById('ftsOfficerMgmtOverlay').classList.add('open');
+};
+
+document.getElementById('ftsOfficerMgmtClose')?.addEventListener('click',  () => document.getElementById('ftsOfficerMgmtOverlay').classList.remove('open'));
+document.getElementById('ftsOfficerMgmtCancel')?.addEventListener('click', () => document.getElementById('ftsOfficerMgmtOverlay').classList.remove('open'));
+
+document.getElementById('ftsOfficerSaveBtn')?.addEventListener('click', async () => {
+  const name  = document.getElementById('ftsOfficerName').value.trim();
+  const phone = document.getElementById('ftsOfficerPhone').value.trim();
+  if (!name) { showToast('請填寫姓名'); return; }
+  const id = document.getElementById('ftsOfficerEditId').value;
+  try {
+    if (id) {
+      await updateDoc(doc(db, 'ftOfficers', id), { name, phone });
+    } else {
+      await addDoc(COL_FT_OFFICERS, { name, phone });
+    }
+    document.getElementById('ftsOfficerEditId').value = '';
+    document.getElementById('ftsOfficerName').value   = '';
+    document.getElementById('ftsOfficerPhone').value  = '';
+    document.getElementById('ftsOfficerFormTitle').textContent = '新增醫官';
+    showToast('已儲存');
+  } catch(e) { showToast('儲存失敗：' + e.message); }
+});
 
 window.openFtsEdit = function(dateStr) {
   ftsEditingId = null;
   const rec = ftStandbyRecords.find(r => r.date === dateStr);
   if (rec) ftsEditingId = rec.id;
   document.getElementById('fts-edit-title').textContent = rec ? '編輯派遣資料' : '新增派遣資料';
-  document.getElementById('fts-date').value         = dateStr;
-  document.getElementById('fts-vehicle').value      = rec?.vehicleNumber  || '';
-  document.getElementById('fts-officer-rank').value = rec?.officerRank    || '';
-  document.getElementById('fts-officer-name').value = rec?.officerName    || '';
-  document.getElementById('fts-officer-phone').value= rec?.officerPhone   || '';
-  document.getElementById('fts-notes').value        = rec?.notes          || '';
+  document.getElementById('fts-date').value    = dateStr;
+  document.getElementById('fts-vehicle').value = rec?.vehicleNumber || '';
+  document.getElementById('fts-notes').value   = rec?.notes         || '';
+  populateFtsOfficerSel(rec?.officerPersonnelId || '');
 
   // Commander — find the personnel record to get unit for preselect
   const cmdPerson = rec?.commanderPersonnelId ? personnel.find(p => p.id === rec.commanderPersonnelId) : null;
@@ -6744,9 +6829,10 @@ document.getElementById('fts-drv-unit')?.addEventListener('change', () => {
 // Person change → auto-fill
 document.getElementById('fts-cmd-person')?.addEventListener('change', () => { ftsAutoFill('fts-cmd-person', 'fts-cmd-phone', 'fts-cmd-emt-display'); updateFtsPreview(); });
 document.getElementById('fts-drv-person')?.addEventListener('change', () => { ftsAutoFill('fts-drv-person', 'fts-drv-phone', 'fts-drv-emt-display'); updateFtsPreview(); });
-['fts-date','fts-vehicle','fts-officer-rank','fts-officer-name','fts-officer-phone','fts-notes'].forEach(id => {
+['fts-date','fts-vehicle','fts-notes'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', updateFtsPreview);
 });
+document.getElementById('fts-officer-sel')?.addEventListener('change', ftsOfficerAutoFill);
 
 function buildFtsMessageText() {
   const gv  = id => document.getElementById(id)?.value?.trim() || '';
@@ -6757,9 +6843,10 @@ function buildFtsMessageText() {
     const rocYear = d.getFullYear() - 1911;
     dateLabel = `${rocYear}年${d.getMonth()+1}月${d.getDate()}日`;
   }
-  const officerRank  = gv('fts-officer-rank');
-  const officerName  = gv('fts-officer-name');
-  const officerPhone = gv('fts-officer-phone');
+  const officerSel   = document.getElementById('fts-officer-sel');
+  const officerObj   = ftOfficers.find(o => o.id === officerSel?.value);
+  const officerName  = officerObj?.name  || '';
+  const officerPhone = officerObj?.phone || '';
   const vehicle      = gv('fts-vehicle');
   const cmdPhone     = gv('fts-cmd-phone');
   const drvPhone     = gv('fts-drv-phone');
@@ -6771,7 +6858,6 @@ function buildFtsMessageText() {
   const lines = [];
   lines.push(`🟥${dateLabel}駐點資訊`);
   lines.push('🔷醫官');
-  if (officerRank)  lines.push(`🔺級職：${officerRank}`);
   if (officerName)  lines.push(`🔺姓名：${officerName}`);
   if (officerPhone) lines.push(`🔺聯絡電話：${officerPhone}`);
   lines.push('🔷救護車');
@@ -6818,9 +6904,9 @@ document.getElementById('ftsEditSave')?.addEventListener('click', async () => {
   const data = {
     date,
     vehicleNumber:        gv('fts-vehicle'),
-    officerRank:          gv('fts-officer-rank'),
-    officerName:          gv('fts-officer-name'),
-    officerPhone:         gv('fts-officer-phone'),
+    officerPersonnelId:   document.getElementById('fts-officer-sel')?.value || '',
+    officerName:          (() => { const o = ftOfficers.find(x => x.id === document.getElementById('fts-officer-sel')?.value); return o?.name  || ''; })(),
+    officerPhone:         (() => { const o = ftOfficers.find(x => x.id === document.getElementById('fts-officer-sel')?.value); return o?.phone || ''; })(),
     commanderPersonnelId: cmdPid,
     commanderRank:        cmdP.rank  || '',
     commanderName:        cmdP.name  || '',
