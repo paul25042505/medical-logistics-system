@@ -2761,11 +2761,18 @@ function renderPersonnelUnitFilters() {
   });
 }
 
+function isSeparated(p) {
+  if (!p.separationDate) return false;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return new Date(p.separationDate + 'T00:00:00') <= today;
+}
+
 function renderPersonnel() {
   const q      = document.getElementById('personnelSearch')?.value.trim().toLowerCase() || '';
   const sortBy = document.getElementById('personnelSortBy')?.value || 'rank';
 
   let filtered = filterByUnitScope(personnel).filter(p => {
+    if (isSeparated(p)) return false;  // 已離職退伍者不顯示於主列表
     if (personnelUnitFilter.length > 0 && !personnelUnitFilter.includes(p.unit)) return false;
     if (q && !(p.name + p.phone + p.idNumber + p.rank + p.unit).toLowerCase().includes(q)) return false;
     return true;
@@ -2873,6 +2880,12 @@ function clearPersonnelForm() {
   document.getElementById('pf-certExpiry-group').style.display = 'none';
   const acctSec = document.getElementById('pf-account-section');
   if (acctSec) acctSec.style.display = 'none';
+  document.getElementById('pf-isSeparated').checked = false;
+  document.getElementById('pf-separation-fields').style.display = 'none';
+  document.getElementById('pf-separationType').value = '離職';
+  document.getElementById('pf-separationDate').value = '';
+  document.getElementById('pf-separationUnitCode').value = '';
+  document.getElementById('pf-separationUnitFull').value = '';
 }
 
 function fillPersonnelForm(p) {
@@ -2888,6 +2901,13 @@ function fillPersonnelForm(p) {
   sv('pf-addr-detail', p.addrDetail);
   sv('pf-notes', p.notes);
   document.getElementById('pf-isRecruiter').checked = p.isRecruiter || false;
+  const isSep = !!(p.separationDate);
+  document.getElementById('pf-isSeparated').checked = isSep;
+  document.getElementById('pf-separation-fields').style.display = isSep ? '' : 'none';
+  document.getElementById('pf-separationType').value = p.separationType || '離職';
+  document.getElementById('pf-separationDate').value = p.separationDate || '';
+  document.getElementById('pf-separationUnitCode').value = p.separationUnitCode || '';
+  document.getElementById('pf-separationUnitFull').value = p.separationUnitFull || '';
   const expiryEl = document.getElementById('pf-certExpiry');
   if (expiryEl) expiryEl.value = p.certExpiry || '';
   document.getElementById('pf-certExpiry-group').style.display = p.isRecruiter ? '' : 'none';
@@ -2934,9 +2954,13 @@ function readPersonnelForm() {
     addrDistrict:   document.getElementById('pf-addr-district').value,
     addrDetail:     gv('pf-addr-detail'),
     notes:          gv('pf-notes'),
-    isRecruiter:    document.getElementById('pf-isRecruiter').checked,
-    certExpiry:     document.getElementById('pf-certExpiry')?.value || '',
-    email:          document.getElementById('pf-email')?.value?.trim() || '',
+    isRecruiter:        document.getElementById('pf-isRecruiter').checked,
+    certExpiry:         document.getElementById('pf-certExpiry')?.value || '',
+    email:              document.getElementById('pf-email')?.value?.trim() || '',
+    separationType:     document.getElementById('pf-isSeparated').checked ? (document.getElementById('pf-separationType').value || '離職') : '',
+    separationDate:     document.getElementById('pf-isSeparated').checked ? (document.getElementById('pf-separationDate').value || '') : '',
+    separationUnitCode: document.getElementById('pf-isSeparated').checked ? (document.getElementById('pf-separationUnitCode').value?.trim() || '') : '',
+    separationUnitFull: document.getElementById('pf-isSeparated').checked ? (document.getElementById('pf-separationUnitFull').value?.trim() || '') : '',
   };
 }
 
@@ -2953,6 +2977,9 @@ document.getElementById('pf-isRecruiter')?.addEventListener('change', function()
   const exp = document.getElementById('pf-certExpiry');
   if (grp) grp.style.display = this.checked ? '' : 'none';
   if (!this.checked && exp) exp.value = '';
+});
+document.getElementById('pf-isSeparated')?.addEventListener('change', function() {
+  document.getElementById('pf-separation-fields').style.display = this.checked ? '' : 'none';
 });
 document.getElementById('personnelCancelBtn').addEventListener('click', closePersonnelForm);
 document.getElementById('personnelModalClose').addEventListener('click', closePersonnelForm);
@@ -3050,11 +3077,43 @@ document.querySelectorAll('[data-personnel-tab]').forEach(btn => {
     document.querySelectorAll('[data-personnel-tab]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const tab = btn.dataset.personnelTab;
-    document.getElementById('personnel-pane-list').style.display  = tab === 'list'  ? '' : 'none';
-    document.getElementById('personnel-pane-audit').style.display = tab === 'audit' ? '' : 'none';
-    if (tab === 'audit') renderPersonnelAudit();
+    document.getElementById('personnel-pane-list').style.display      = tab === 'list'      ? '' : 'none';
+    document.getElementById('personnel-pane-audit').style.display     = tab === 'audit'     ? '' : 'none';
+    document.getElementById('personnel-pane-separated').style.display = tab === 'separated' ? '' : 'none';
+    if (tab === 'audit')     renderPersonnelAudit();
+    if (tab === 'separated') renderSeparatedPersonnel();
   });
 });
+
+function renderSeparatedPersonnel() {
+  const tbody   = document.getElementById('separatedTableBody');
+  const emptyEl = document.getElementById('separatedEmpty');
+  if (!tbody) return;
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const list = [...personnel]
+    .filter(p => p.separationDate && new Date(p.separationDate + 'T00:00:00') <= today)
+    .sort((a, b) => (b.separationDate || '').localeCompare(a.separationDate || ''));
+
+  if (!list.length) {
+    tbody.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  tbody.innerHTML = list.map((p, i) => `
+    <tr class="personnel-row" data-id="${p.id}" style="cursor:pointer" onclick="openPersonnelDetail('${p.id}')">
+      <td class="col-seq">${i + 1}</td>
+      <td class="col-unit"><span class="unit-tag">${p.unit || '—'}</span></td>
+      <td class="col-rank">${p.rank || '—'}</td>
+      <td>${p.name || '—'}</td>
+      <td><span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:8px;background:${p.separationType === '退伍' ? '#eff6ff' : '#fef3c7'};color:${p.separationType === '退伍' ? '#2563eb' : '#d97706'}">${p.separationType || '離職'}</span></td>
+      <td>${p.separationDate || '—'}</td>
+      <td>${p.separationUnitCode || '—'}</td>
+      <td>${p.separationUnitFull || '—'}</td>
+    </tr>`).join('');
+}
 
 window.openPersonnelEdit = function (id) {
   if (!confirmEdit()) return;
