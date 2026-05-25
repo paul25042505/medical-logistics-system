@@ -6693,14 +6693,23 @@ function ftsAutoFill(personSelId, phoneId, emtDisplayId) {
   emtEl.style.fontWeight = emt ? '700' : '';
 }
 
+window.openFtsOfficerBtn = function() {
+  const date = ftsSelectedDate || new Date().toISOString().slice(0, 10);
+  openFtsEdit(date);
+  setTimeout(() => document.getElementById('fts-officer-rank')?.focus(), 100);
+};
+
 window.openFtsEdit = function(dateStr) {
   ftsEditingId = null;
   const rec = ftStandbyRecords.find(r => r.date === dateStr);
   if (rec) ftsEditingId = rec.id;
   document.getElementById('fts-edit-title').textContent = rec ? '編輯派遣資料' : '新增派遣資料';
-  document.getElementById('fts-date').value    = dateStr;
-  document.getElementById('fts-vehicle').value = rec?.vehicleNumber || '';
-  document.getElementById('fts-notes').value   = rec?.notes         || '';
+  document.getElementById('fts-date').value         = dateStr;
+  document.getElementById('fts-vehicle').value      = rec?.vehicleNumber  || '';
+  document.getElementById('fts-officer-rank').value = rec?.officerRank    || '';
+  document.getElementById('fts-officer-name').value = rec?.officerName    || '';
+  document.getElementById('fts-officer-phone').value= rec?.officerPhone   || '';
+  document.getElementById('fts-notes').value        = rec?.notes          || '';
 
   // Commander — find the personnel record to get unit for preselect
   const cmdPerson = rec?.commanderPersonnelId ? personnel.find(p => p.id === rec.commanderPersonnelId) : null;
@@ -6718,20 +6727,80 @@ window.openFtsEdit = function(dateStr) {
 
   document.getElementById('ftsEditDelete').style.display = rec ? '' : 'none';
   document.getElementById('ftsEditOverlay').classList.add('open');
+  updateFtsPreview();
 };
 
 // Unit change → re-populate person list & reset auto-fill
 document.getElementById('fts-cmd-unit')?.addEventListener('change', () => {
   populateFtsPersonSel('fts-cmd-person', document.getElementById('fts-cmd-unit').value, '');
   ftsAutoFill('fts-cmd-person', 'fts-cmd-phone', 'fts-cmd-emt-display');
+  updateFtsPreview();
 });
 document.getElementById('fts-drv-unit')?.addEventListener('change', () => {
   populateFtsPersonSel('fts-drv-person', document.getElementById('fts-drv-unit').value, '');
   ftsAutoFill('fts-drv-person', 'fts-drv-phone', 'fts-drv-emt-display');
+  updateFtsPreview();
 });
 // Person change → auto-fill
-document.getElementById('fts-cmd-person')?.addEventListener('change', () => ftsAutoFill('fts-cmd-person', 'fts-cmd-phone', 'fts-cmd-emt-display'));
-document.getElementById('fts-drv-person')?.addEventListener('change', () => ftsAutoFill('fts-drv-person', 'fts-drv-phone', 'fts-drv-emt-display'));
+document.getElementById('fts-cmd-person')?.addEventListener('change', () => { ftsAutoFill('fts-cmd-person', 'fts-cmd-phone', 'fts-cmd-emt-display'); updateFtsPreview(); });
+document.getElementById('fts-drv-person')?.addEventListener('change', () => { ftsAutoFill('fts-drv-person', 'fts-drv-phone', 'fts-drv-emt-display'); updateFtsPreview(); });
+['fts-date','fts-vehicle','fts-officer-rank','fts-officer-name','fts-officer-phone','fts-notes'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updateFtsPreview);
+});
+
+function buildFtsMessageText() {
+  const gv  = id => document.getElementById(id)?.value?.trim() || '';
+  const dateStr = gv('fts-date');
+  let dateLabel = dateStr;
+  if (dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const rocYear = d.getFullYear() - 1911;
+    dateLabel = `${rocYear}年${d.getMonth()+1}月${d.getDate()}日`;
+  }
+  const officerRank  = gv('fts-officer-rank');
+  const officerName  = gv('fts-officer-name');
+  const officerPhone = gv('fts-officer-phone');
+  const vehicle      = gv('fts-vehicle');
+  const cmdPhone     = gv('fts-cmd-phone');
+  const drvPhone     = gv('fts-drv-phone');
+  const cmdSel  = document.getElementById('fts-cmd-person');
+  const drvSel  = document.getElementById('fts-drv-person');
+  const cmdText = cmdSel?.options[cmdSel.selectedIndex]?.text || '';
+  const drvText = drvSel?.options[drvSel.selectedIndex]?.text || '';
+
+  const lines = [];
+  lines.push(`🟥${dateLabel}駐點資訊`);
+  lines.push('🔷醫官');
+  if (officerRank)  lines.push(`🔺級職：${officerRank}`);
+  if (officerName)  lines.push(`🔺姓名：${officerName}`);
+  if (officerPhone) lines.push(`🔺聯絡電話：${officerPhone}`);
+  lines.push('🔷救護車');
+  if (vehicle)   lines.push(`🔺車號：${vehicle}`);
+  if (cmdText && cmdText !== '— 請選擇 —') {
+    lines.push(`🔺車長：${cmdText}`);
+    if (cmdPhone) lines.push(`🔺車長電話：${cmdPhone}`);
+  }
+  if (drvText && drvText !== '— 請選擇 —') {
+    lines.push(`🔺駕駛：${drvText}`);
+    if (drvPhone) lines.push(`🔺駕駛電話：${drvPhone}`);
+  }
+  return lines.join('\n');
+}
+
+function updateFtsPreview() {
+  const el = document.getElementById('fts-msg-preview');
+  if (el) el.textContent = buildFtsMessageText();
+}
+
+window.ftsCopyMessage = function() {
+  const text = buildFtsMessageText();
+  navigator.clipboard.writeText(text).then(() => showToast('已複製到剪貼簿')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); showToast('已複製到剪貼簿');
+  });
+};
 
 document.getElementById('ftsEditClose')?.addEventListener('click',  () => document.getElementById('ftsEditOverlay').classList.remove('open'));
 document.getElementById('ftsEditCancel')?.addEventListener('click', () => document.getElementById('ftsEditOverlay').classList.remove('open'));
@@ -6749,6 +6818,9 @@ document.getElementById('ftsEditSave')?.addEventListener('click', async () => {
   const data = {
     date,
     vehicleNumber:        gv('fts-vehicle'),
+    officerRank:          gv('fts-officer-rank'),
+    officerName:          gv('fts-officer-name'),
+    officerPhone:         gv('fts-officer-phone'),
     commanderPersonnelId: cmdPid,
     commanderRank:        cmdP.rank  || '',
     commanderName:        cmdP.name  || '',

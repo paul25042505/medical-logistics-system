@@ -515,7 +515,7 @@
       <section id="page-ft-standby" class="page">
         <div class="recruit-header">
           <h2 class="page-title">🚑 體測駐點待命用車</h2>
-          <a class="btn btn-secondary btn-sm" href="fitness-standby.html" target="_blank">🔗 外部查詢頁</a>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openFtsOfficerBtn()">🔷 設定醫官</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
           <button type="button" class="btn btn-secondary btn-sm" id="fts-prev-month">‹</button>
@@ -1270,6 +1270,21 @@
           <label>救護車號</label>
           <input type="text" id="fts-vehicle" placeholder="例：AM-1234" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
         </div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🔷 醫官</div>
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="form-group">
+            <label>級職</label>
+            <input type="text" id="fts-officer-rank" placeholder="例：中尉" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+          <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="fts-officer-name" placeholder="醫官姓名" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>聯絡電話</label>
+            <input type="tel" id="fts-officer-phone" placeholder="醫官電話" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+          </div>
+        </div>
         <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🎖 車長</div>
         <div class="form-grid" style="margin-bottom:14px">
           <div class="form-group">
@@ -1311,6 +1326,13 @@
         <div class="form-group">
           <label>備註</label>
           <input type="text" id="fts-notes" placeholder="任何補充說明" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+        </div>
+        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:700;color:var(--muted)">訊息預覽</span>
+            <button type="button" id="fts-copy-btn" class="btn btn-secondary btn-sm" onclick="ftsCopyMessage()">📋 一鍵複製</button>
+          </div>
+          <pre id="fts-msg-preview" style="font-size:12px;line-height:1.7;white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border);color:var(--text);font-family:inherit;margin:0"></pre>
         </div>
       </div>
       <div class="modal-footer" style="gap:8px">
