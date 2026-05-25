@@ -2886,6 +2886,7 @@ function clearPersonnelForm() {
   document.getElementById('pf-separationDate').value = '';
   document.getElementById('pf-separationUnitCode').value = '';
   document.getElementById('pf-separationUnitFull').value = '';
+  updateSeparationTypeUI('離職');
 }
 
 function fillPersonnelForm(p) {
@@ -2908,6 +2909,7 @@ function fillPersonnelForm(p) {
   document.getElementById('pf-separationDate').value = p.separationDate || '';
   document.getElementById('pf-separationUnitCode').value = p.separationUnitCode || '';
   document.getElementById('pf-separationUnitFull').value = p.separationUnitFull || '';
+  updateSeparationTypeUI(p.separationType || '離職');
   const expiryEl = document.getElementById('pf-certExpiry');
   if (expiryEl) expiryEl.value = p.certExpiry || '';
   document.getElementById('pf-certExpiry-group').style.display = p.isRecruiter ? '' : 'none';
@@ -2980,7 +2982,21 @@ document.getElementById('pf-isRecruiter')?.addEventListener('change', function()
 });
 document.getElementById('pf-isSeparated')?.addEventListener('change', function() {
   document.getElementById('pf-separation-fields').style.display = this.checked ? '' : 'none';
+  if (this.checked) updateSeparationTypeUI(document.getElementById('pf-separationType').value);
 });
+document.getElementById('pf-separationType')?.addEventListener('change', function() {
+  updateSeparationTypeUI(this.value);
+});
+function updateSeparationTypeUI(type) {
+  const isResign = type === '離職';
+  document.getElementById('pf-separationDate-label').textContent = isResign ? '離職日期' : '退伍日期';
+  document.getElementById('pf-separation-unit-group').style.display    = isResign ? '' : 'none';
+  document.getElementById('pf-separation-unitfull-group').style.display = isResign ? '' : 'none';
+  if (!isResign) {
+    document.getElementById('pf-separationUnitCode').value = '';
+    document.getElementById('pf-separationUnitFull').value = '';
+  }
+}
 document.getElementById('personnelCancelBtn').addEventListener('click', closePersonnelForm);
 document.getElementById('personnelModalClose').addEventListener('click', closePersonnelForm);
 document.getElementById('personnelModalOverlay').addEventListener('click', e => {
