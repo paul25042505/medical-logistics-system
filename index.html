@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260525f">
+  <link rel="stylesheet" href="style.css?v=20260525g">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -123,7 +123,6 @@
         <div class="nav-section-label" id="nav-section-recruit" style="margin-top:12px">招募管理</div>
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="trainee-list">👥 訓員列表</a></li>
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="batch-sched">📅 梯次期程</a></li>
-        <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="interview-query">📋 約談紀錄查詢</a></li>
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="recruiters">🪖 招募員管理</a></li>
         <li data-roles="admin,manager,recruit"><a href="#" class="nav-link" data-page="leads">📝 問卷填答</a></li>
         <div class="nav-section-label" id="nav-section-personnel" style="margin-top:12px">人事管理</div>
@@ -197,37 +196,6 @@
           <button type="button" class="btn btn-primary" id="addBatchBtn">＋ 新增梯次</button>
         </div>
         <div id="batch-sched-content"></div>
-      </section>
-
-      <!-- 約談紀錄查詢 -->
-      <section id="page-interview-query" class="page">
-        <h2 class="page-title">📋 約談紀錄查詢</h2>
-        <div class="toolbar">
-          <div class="search-bar">
-            <input type="text" id="ivqSearch" placeholder="搜尋姓名、內容…">
-          </div>
-          <div class="filter-bar">
-            <select id="ivqIntention">
-              <option value="">全部意願</option>
-              <option value="高">高意願</option>
-              <option value="中">中意願</option>
-              <option value="低">低意願</option>
-            </select>
-            <div class="ivq-date-range">
-              <span class="ivq-date-icon">📅</span>
-              <div class="ivq-date-field">
-                <span class="ivq-date-lbl">起</span>
-                <input type="date" id="ivqDateFrom">
-              </div>
-              <span class="ivq-date-sep">～</span>
-              <div class="ivq-date-field">
-                <span class="ivq-date-lbl">迄</span>
-                <input type="date" id="ivqDateTo">
-              </div>
-            </div>
-          </div>
-        </div>
-        <div id="interview-query-list" class="recruit-list"></div>
       </section>
 
       <!-- 招募員管理 -->
@@ -1118,7 +1086,24 @@
       <section id="page-comms-equipment" class="page">
         <div class="recruit-header">
           <h2 class="page-title">📡 通信裝備</h2>
-          <button type="button" class="btn btn-primary btn-sm" id="addCommsEquipBtn">＋ 新增裝備</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button type="button" class="btn btn-secondary btn-sm" id="commsNameTabBtn">📋 品名管理</button>
+            <button type="button" class="btn btn-primary btn-sm" id="addCommsEquipBtn">＋ 新增裝備</button>
+          </div>
+        </div>
+
+        <!-- 品名管理面板 -->
+        <div id="commsNamePanel" style="display:none;background:var(--white);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px">📋 裝備品名管理</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input type="text" id="commsNameInput" placeholder="輸入新品名，例：步話機" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+            <button type="button" class="btn btn-primary btn-sm" id="addCommsNameBtn">＋ 新增</button>
+          </div>
+          <div id="commsNameList" class="me-type-list"></div>
+          <div id="commsNameEmpty" class="empty-state" style="display:none">
+            <div class="icon">📋</div>
+            <p>尚無品名，請輸入後點「＋ 新增」</p>
+          </div>
         </div>
 
         <!-- Tabs -->
@@ -2431,7 +2416,7 @@
           </div>
           <div class="form-group">
             <label>裝備品名 <span style="color:red">*</span></label>
-            <input type="text" id="ce-name" placeholder="例：無線電臺">
+            <select id="ce-name"><option value="">— 請選擇品名 —</option></select>
           </div>
           <div class="form-group">
             <label>裝備序號 <span style="color:red">*</span></label>
@@ -2588,6 +2573,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260525f"></script>
+  <script type="module" src="script.js?v=20260525g"></script>
 </body>
 </html>

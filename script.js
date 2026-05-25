@@ -54,6 +54,7 @@ const COL_FT_OFFICERS  = collection(db, 'ftOfficers');
 const COL_COMMS_EQUIP  = collection(db, 'commsEquipment');
 const COL_COMMS_SCHED  = collection(db, 'commsMaintSched');
 const COL_COMMS_LOG    = collection(db, 'commsMaintLog');
+const COL_COMMS_NAMES  = collection(db, 'commsEquipNames');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -82,6 +83,7 @@ let ftOfficers = [];
 let commsEquipment = [];
 let commsMaintSched = [];
 let commsMaintLog = [];
+let commsEquipNames = [];
 
 const FITNESS_CATS = [
   { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）', '屈臂懸垂（女性）'] },
@@ -185,9 +187,9 @@ let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','comms-equipment','medical-supplies','medical-equipment','certifications','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','comms-equipment','medical-supplies','medical-equipment','certifications']) },
-  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','comms-equipment','medical-supplies','medical-equipment','certifications','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','comms-equipment','medical-supplies','medical-equipment','certifications']) },
+  recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','recruiters','leads']) },
   personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test','ft-standby','certifications']) },
   training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test','ft-standby']) },
   logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points','comms-equipment']) },
@@ -198,7 +200,6 @@ const FEATURE_GROUPS = [
   { group: '招募管理', icon: '📋', features: [
     { id: 'trainee-list',    label: '訓員列表' },
     { id: 'batch-sched',     label: '梯次期程' },
-    { id: 'interview-query', label: '約談紀錄查詢' },
     { id: 'recruiters',      label: '招募員管理' },
     { id: 'leads',           label: '問卷填答' },
   ]},
@@ -1159,7 +1160,6 @@ const PAGE_INIT = {
   'home':            () => {},
   'trainee-list':    () => renderList(),
   'batch-sched':     () => renderBatchSched(),
-  'interview-query': () => renderInterviewQuery(),
   'recruiters':      () => renderRecruiters(),
   'contacts':        () => renderContacts(),
   'leads':           () => fetchLeadsFromSheets(),
@@ -1677,53 +1677,6 @@ window.deleteBatch = async function (id) {
   if (!b || !confirm(`確定要刪除梯次「${b.name}」嗎？`)) return;
   try { await deleteDoc(doc(db, 'batches', id)); } catch (e) { console.error(e); }
 };
-
-// ── 約談紀錄查詢 ──────────────────────────────────────
-document.getElementById('ivqSearch').addEventListener('input', renderInterviewQuery);
-document.getElementById('ivqIntention').addEventListener('change', renderInterviewQuery);
-document.getElementById('ivqDateFrom').addEventListener('change', renderInterviewQuery);
-document.getElementById('ivqDateTo').addEventListener('change', renderInterviewQuery);
-
-function renderInterviewQuery() {
-  const q  = document.getElementById('ivqSearch').value.trim().toLowerCase();
-  const fi = document.getElementById('ivqIntention').value;
-  const df = document.getElementById('ivqDateFrom').value;
-  const dt = document.getElementById('ivqDateTo').value;
-
-  const results = [];
-  records.forEach(r => {
-    (r.interviews || []).forEach((iv, idx) => {
-      if (fi && iv.intention !== fi) return;
-      if (df && iv.date < df) return;
-      if (dt && iv.date > dt) return;
-      if (q && !(r.name + iv.content + iv.handler + iv.issues).toLowerCase().includes(q)) return;
-      results.push({ r, iv, idx });
-    });
-  });
-  results.sort((a, b) => b.iv.date.localeCompare(a.iv.date));
-
-  const c = document.getElementById('interview-query-list');
-  if (!results.length) {
-    c.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>沒有符合條件的約談紀錄</p></div>`;
-    return;
-  }
-  c.innerHTML = results.map(({ r, iv }) => `
-    <div class="ivq-card">
-      <div class="ivq-header">
-        <div class="ivq-who">
-          <span class="ivq-name">${r.name}</span>
-          <span class="tag tag-default" style="font-size:11px">${r.type === 'civilian' ? '社會青年' : '新訓轉服'}</span>
-          ${iv.intention ? `<span class="tag ${intentionClass(iv.intention)}">${iv.intention}意願</span>` : ''}
-        </div>
-        <span class="ivq-date">${formatDate(iv.date)}</span>
-      </div>
-      <div class="ivq-body">
-        ${iv.content ? `<div class="interview-field"><span>內容：</span>${iv.content}</div>` : ''}
-        ${iv.issues ? `<div class="interview-field"><span>猶豫原因：</span>${iv.issues}</div>` : ''}
-        ${iv.handler ? `<div class="interview-field"><span>負責招募員：</span>${iv.handler}</div>` : ''}
-      </div>
-    </div>`).join('');
-}
 
 // ── 招募員管理 ────────────────────────────────────────
 function renderRecruiters() {
@@ -2268,7 +2221,6 @@ function startApp() {
       records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       records.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
       if (document.getElementById('page-trainee-list').classList.contains('active')) renderList();
-      if (document.getElementById('page-interview-query').classList.contains('active')) renderInterviewQuery();
       if (detailId && document.getElementById('detailOverlay').classList.contains('open')) {
         const r = records.find(x => x.id === detailId);
         if (r) renderDetail(r);
@@ -2494,6 +2446,13 @@ function startApp() {
     commsMaintLog = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.logDate || '').localeCompare(a.logDate || ''));
     if (document.getElementById('page-comms-equipment')?.classList.contains('active')) renderCommsLogList();
+  }, () => {});
+
+  onSnapshot(COL_COMMS_NAMES, snap => {
+    commsEquipNames = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
+    renderCommsNames();
+    populateCommsNameSel();
   }, () => {});
 
   onSnapshot(COL_PERSONNEL_AUDIT, snap => {
@@ -7505,10 +7464,43 @@ function populateCommsEquipSelects() {
 function populateCommsUnitSel(selId) {
   const sel = document.getElementById(selId);
   if (!sel) return;
-  const units = adminSettings.units || [];
+  const units = adminSettings.medUnits || [];
   sel.innerHTML = '<option value="">— 請選擇單位 —</option>' +
     units.map(u => `<option value="${u}">${u}</option>`).join('');
 }
+
+function populateCommsNameSel() {
+  const sel = document.getElementById('ce-name');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— 請選擇品名 —</option>' +
+    commsEquipNames.map(n => `<option value="${n.name}">${n.name}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
+function renderCommsNames() {
+  const listEl = document.getElementById('commsNameList');
+  const empty  = document.getElementById('commsNameEmpty');
+  if (!listEl) return;
+  if (!commsEquipNames.length) {
+    listEl.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  listEl.innerHTML = commsEquipNames.map(n => `
+    <div class="me-type-item">
+      <span class="me-type-name">${n.name}</span>
+      <button class="btn-icon danger" onclick="deleteCommsName('${n.id}','${(n.name||'').replace(/'/g,"\\'")}')">🗑</button>
+    </div>`).join('');
+}
+
+window.deleteCommsName = async function(id, name) {
+  showConfirm(`確定刪除品名「${name}」？`, async () => {
+    try { await deleteDoc(doc(db, 'commsEquipNames', id)); showToast('已刪除'); }
+    catch(e) { showToast('刪除失敗：' + e.message); }
+  });
+};
 
 // ── 裝備 Modal ────────────────────────────────────────
 window.openCommsEquipModal = function(id = null) {
@@ -7517,7 +7509,8 @@ window.openCommsEquipModal = function(id = null) {
   document.getElementById('comms-equip-modal-title').textContent = e ? '編輯裝備' : '新增裝備';
   populateCommsUnitSel('ce-unit');
   if (e?.unit) document.getElementById('ce-unit').value = e.unit;
-  document.getElementById('ce-name').value    = e?.name         || '';
+  populateCommsNameSel();
+  if (e?.name) document.getElementById('ce-name').value = e.name;
   document.getElementById('ce-serial').value  = e?.serialNumber || '';
   document.getElementById('ce-status').value  = e?.status       || '堪用';
   document.getElementById('ce-notes').value   = e?.notes        || '';
@@ -7527,6 +7520,47 @@ window.openCommsEquipModal = function(id = null) {
 
 document.getElementById('commsEquipModalClose')?.addEventListener('click',  () => document.getElementById('commsEquipModalOverlay').classList.remove('open'));
 document.getElementById('commsEquipModalCancel')?.addEventListener('click', () => document.getElementById('commsEquipModalOverlay').classList.remove('open'));
+
+// 品名管理面板 toggle
+let commsNamePanelOpen = false;
+document.getElementById('commsNameTabBtn')?.addEventListener('click', () => {
+  commsNamePanelOpen = !commsNamePanelOpen;
+  const panel    = document.getElementById('commsNamePanel');
+  const tabsBar  = document.querySelector('#page-comms-equipment .tabs');
+  const addBtn   = document.getElementById('addCommsEquipBtn');
+  const panes    = ['comms-pane-list','comms-pane-schedule','comms-pane-logs'];
+  const tabBtn   = document.getElementById('commsNameTabBtn');
+  if (commsNamePanelOpen) {
+    if (panel)   panel.style.display = '';
+    if (tabsBar) tabsBar.style.display = 'none';
+    if (addBtn)  addBtn.style.display = 'none';
+    panes.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    tabBtn.textContent = '← 裝備清單';
+    renderCommsNames();
+  } else {
+    if (panel)   panel.style.display = 'none';
+    if (tabsBar) tabsBar.style.display = '';
+    if (addBtn)  addBtn.style.display = '';
+    tabBtn.textContent = '📋 品名管理';
+    switchCommsTab(commsTab);
+  }
+});
+
+document.getElementById('addCommsNameBtn')?.addEventListener('click', async () => {
+  const inp  = document.getElementById('commsNameInput');
+  const name = inp?.value.trim();
+  if (!name) { showToast('請輸入品名'); return; }
+  if (commsEquipNames.some(n => n.name === name)) { showToast('品名已存在'); return; }
+  try {
+    await addDoc(COL_COMMS_NAMES, { name, createdAt: serverTimestamp() });
+    inp.value = '';
+    showToast('✓ 已新增');
+  } catch(e) { showToast('新增失敗：' + e.message); }
+});
+
+document.getElementById('commsNameInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addCommsNameBtn')?.click();
+});
 
 document.getElementById('commsEquipDeleteBtn')?.addEventListener('click', () => {
   showConfirm('確定刪除此裝備？相關排程與紀錄不會自動刪除。', async () => {
@@ -7539,9 +7573,9 @@ document.getElementById('commsEquipDeleteBtn')?.addEventListener('click', () => 
 });
 
 document.getElementById('commsEquipSaveBtn')?.addEventListener('click', async () => {
-  const name   = document.getElementById('ce-name').value.trim();
+  const name   = document.getElementById('ce-name').value;
   const serial = document.getElementById('ce-serial').value.trim();
-  if (!name)   { showToast('請填寫裝備品名'); return; }
+  if (!name)   { showToast('請選擇裝備品名'); return; }
   if (!serial) { showToast('請填寫裝備序號'); return; }
   const data = {
     name,
