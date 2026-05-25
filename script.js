@@ -6709,7 +6709,12 @@ function populateFtsOfficerSel(selectedId) {
   const prev = selectedId || sel.value;
   sel.innerHTML = '<option value="">— 請選擇醫官 —</option>' +
     ftOfficers.map(o => `<option value="${o.id}"${o.id === prev ? ' selected' : ''}>${o.name || '—'}</option>`).join('');
-  ftsOfficerAutoFill();
+  // auto-fill phone after populating list
+  const phoneEl = document.getElementById('fts-officer-phone-display');
+  if (phoneEl) {
+    const officer = ftOfficers.find(o => o.id === sel.value);
+    phoneEl.value = officer?.phone || '';
+  }
 }
 
 function ftsOfficerAutoFill() {
@@ -6718,7 +6723,7 @@ function ftsOfficerAutoFill() {
   if (!sel || !phoneEl) return;
   const officer = ftOfficers.find(o => o.id === sel.value);
   phoneEl.value = officer?.phone || '';
-  updateFtsPreview();
+  try { updateFtsPreview(); } catch(e) { console.error('ftsPreview error', e); }
 }
 
 function renderFtsOfficerList() {
@@ -6756,12 +6761,16 @@ window.ftsOfficerDelete = function(id) {
 };
 
 window.openFtsOfficerBtn = function() {
-  document.getElementById('ftsOfficerEditId').value = '';
-  document.getElementById('ftsOfficerName').value   = '';
-  document.getElementById('ftsOfficerPhone').value  = '';
-  document.getElementById('ftsOfficerFormTitle').textContent = '新增醫官';
-  renderFtsOfficerList();
-  document.getElementById('ftsOfficerMgmtOverlay').classList.add('open');
+  try {
+    const overlay = document.getElementById('ftsOfficerMgmtOverlay');
+    if (!overlay) { showToast('錯誤：找不到醫官管理視窗'); return; }
+    document.getElementById('ftsOfficerEditId').value = '';
+    document.getElementById('ftsOfficerName').value   = '';
+    document.getElementById('ftsOfficerPhone').value  = '';
+    document.getElementById('ftsOfficerFormTitle').textContent = '新增醫官';
+    renderFtsOfficerList();
+    overlay.classList.add('open');
+  } catch(e) { console.error('openFtsOfficerBtn error', e); showToast('開啟失敗：' + e.message); }
 };
 
 document.getElementById('ftsOfficerMgmtClose')?.addEventListener('click',  () => document.getElementById('ftsOfficerMgmtOverlay').classList.remove('open'));
@@ -6787,6 +6796,7 @@ document.getElementById('ftsOfficerSaveBtn')?.addEventListener('click', async ()
 });
 
 window.openFtsEdit = function(dateStr) {
+  try {
   ftsEditingId = null;
   const rec = ftStandbyRecords.find(r => r.date === dateStr);
   if (rec) ftsEditingId = rec.id;
@@ -6812,7 +6822,8 @@ window.openFtsEdit = function(dateStr) {
 
   document.getElementById('ftsEditDelete').style.display = rec ? '' : 'none';
   document.getElementById('ftsEditOverlay').classList.add('open');
-  updateFtsPreview();
+  try { updateFtsPreview(); } catch(e) { console.error('ftsPreview error', e); }
+  } catch(e) { console.error('openFtsEdit error', e); showToast('開啟失敗：' + e.message); }
 };
 
 // Unit change → re-populate person list & reset auto-fill
@@ -6874,8 +6885,10 @@ function buildFtsMessageText() {
 }
 
 function updateFtsPreview() {
-  const el = document.getElementById('fts-msg-preview');
-  if (el) el.textContent = buildFtsMessageText();
+  try {
+    const el = document.getElementById('fts-msg-preview');
+    if (el) el.textContent = buildFtsMessageText();
+  } catch(e) { console.error('updateFtsPreview error', e); }
 }
 
 window.ftsCopyMessage = function() {
