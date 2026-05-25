@@ -4672,6 +4672,7 @@ window.switchPharmacyTab = function(id) {
   currentMedPharmacyId = id;
   renderPharmacyTabs();
   renderMedicalSupplies();
+  renderInventoryLogs();
 };
 
 // ── 藥材清點 ───────────────────────────────────────────
@@ -5576,14 +5577,18 @@ function renderInventoryLogs() {
   const empty     = document.getElementById('med-inv-log-empty');
   if (!container) return;
 
-  if (!medInventoryLogs.length) {
+  const logs = currentMedPharmacyId
+    ? medInventoryLogs.filter(l => l.pharmacyId === currentMedPharmacyId)
+    : medInventoryLogs;
+
+  if (!logs.length) {
     container.innerHTML = '';
     if (empty) empty.style.display = '';
     return;
   }
   if (empty) empty.style.display = 'none';
 
-  container.innerHTML = medInventoryLogs.map(log => {
+  container.innerHTML = logs.map(log => {
     // Find the previous log for the same pharmacy (for 帳面 comparison)
     const sortedLogs = [...medInventoryLogs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     const logIdx = sortedLogs.findIndex(l => l.id === log.id);
