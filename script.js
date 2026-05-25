@@ -6605,6 +6605,12 @@ function renderFtStandbyDetail(dateStr) {
   }
 
   const emtBadge = emt => emt ? `<span class="fts-person-emt">${emt}</span>` : '';
+  const officerBlock = rec.officerName ? `
+        <div class="fts-person-block">
+          <div class="fts-person-role">🔷 醫官</div>
+          <div class="fts-person-name">${rec.officerName}</div>
+          ${rec.officerPhone ? `<div class="fts-person-phone">📞 ${rec.officerPhone}</div>` : ''}
+        </div>` : '';
   panel.innerHTML = `
     <div class="fts-detail-card">
       <div class="fts-detail-header">
@@ -6615,6 +6621,7 @@ function renderFtStandbyDetail(dateStr) {
         <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3)" onclick="openFtsEdit('${dateStr}')">✏️ 編輯</button>
       </div>
       <div class="fts-detail-body">
+        ${officerBlock}
         <div class="fts-person-block">
           <div class="fts-person-role">🎖 車長</div>
           <div class="fts-person-name">${rec.commanderRank || ''} ${rec.commanderName || '—'}</div>
