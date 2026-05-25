@@ -6711,15 +6711,27 @@ function certExpiryStatus(expiryDate) {
   return { status: 'valid', label: '有效', color: '#16a34a', bg: '#dcfce7' };
 }
 
-function populateCertPersonnelSel(selectedId = '') {
-  const sel = document.getElementById('cert-personnel-sel');
+function populateCertUnitSel(selectedUnit = '') {
+  const sel = document.getElementById('cert-unit-sel');
   if (!sel) return;
-  const sorted = [...personnel].sort((a, b) =>
+  const units = [...new Set(personnel.map(p => p.unit).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">全部單位</option>' +
+    units.map(u => `<option value="${u}" ${u === selectedUnit ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+function populateCertPersonnelSel(selectedId = '') {
+  const unit = document.getElementById('cert-unit-sel')?.value || '';
+  const sel  = document.getElementById('cert-personnel-sel');
+  if (!sel) return;
+  let list = unit ? personnel.filter(p => p.unit === unit) : [...personnel];
+  list = list.sort((a, b) =>
     rankWeight(a.rank) - rankWeight(b.rank) || (a.name||'').localeCompare(b.name||'', 'zh-TW')
   );
   sel.innerHTML = '<option value="">請選擇人員</option>' +
-    sorted.map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${p.rank||''} ${p.name}（${p.unit||''}）</option>`).join('');
+    list.map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${p.rank||''} ${p.name}${unit ? '' : '（'+(p.unit||'')+'）'}</option>`).join('');
 }
+
+document.getElementById('cert-unit-sel')?.addEventListener('change', () => populateCertPersonnelSel(''));
 
 function renderCertificationsPage() {
   const unitFilter     = document.getElementById('certUnitFilter')?.value || '';
@@ -6820,6 +6832,8 @@ window.openCertEdit = function(id) {
   if (!c) return;
   document.getElementById('cert-modal-title').textContent = '編輯證照';
   document.getElementById('certDeleteBtn').style.display = '';
+  const person = personnel.find(p => p.id === c.personnelId);
+  populateCertUnitSel(person?.unit || '');
   populateCertPersonnelSel(c.personnelId);
   document.getElementById('cert-category-sel').value = c.category || '';
   populateCertTypeSel(c.category || '', c.certType || '');
@@ -6840,6 +6854,8 @@ function openCertAdd(preselectedPersonnelId = '') {
   _certPhotoDataUrl = null;
   document.getElementById('cert-modal-title').textContent = '新增證照';
   document.getElementById('certDeleteBtn').style.display = 'none';
+  const person = personnel.find(p => p.id === preselectedPersonnelId);
+  populateCertUnitSel(person?.unit || '');
   populateCertPersonnelSel(preselectedPersonnelId);
   document.getElementById('cert-category-sel').value = '';
   populateCertTypeSel('', '');
