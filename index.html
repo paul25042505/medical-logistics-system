@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260525d">
+  <link rel="stylesheet" href="style.css?v=20260525e">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -135,6 +135,8 @@
         <div class="nav-section-label" id="nav-section-logistics" style="margin-top:12px">後勤管理</div>
         <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="vehicles">🚗 車輛資訊管理</a></li>
         <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="uniform-points">👕 服裝供售點數</a></li>
+        <div class="nav-section-label" id="nav-section-comms-equip" style="margin-top:12px">後勤裝備管理</div>
+        <li data-roles="admin,manager,logistics"><a href="#" class="nav-link" data-page="comms-equipment">📡 通信裝備</a></li>
         <div class="nav-section-label" id="nav-section-medical" style="margin-top:12px">醫療軍品暨預防醫學管理</div>
         <li data-roles="admin,manager,medical"><a href="#" class="nav-link" data-page="medical-supplies">💊 藥材清點</a></li>
         <li data-roles="admin,manager,medical"><a href="#" class="nav-link" data-page="medical-equipment">🩺 衛材裝備清點</a></li>
@@ -1110,6 +1112,65 @@
           <div id="upNotSubmittedList"></div>
         </div>
 
+      </section>
+
+      <!-- 通信裝備 -->
+      <section id="page-comms-equipment" class="page">
+        <div class="recruit-header">
+          <h2 class="page-title">📡 通信裝備</h2>
+          <button type="button" class="btn btn-primary btn-sm" id="addCommsEquipBtn">＋ 新增裝備</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs" style="margin-bottom:16px">
+          <button type="button" class="tab-btn active" data-comms-tab="list">📡 裝備清單</button>
+          <button type="button" class="tab-btn" data-comms-tab="schedule">📅 進廠排程</button>
+          <button type="button" class="tab-btn" data-comms-tab="logs">📋 保養紀錄</button>
+        </div>
+
+        <!-- 裝備清單 -->
+        <div id="comms-pane-list">
+          <div class="filter-bar" style="margin-bottom:14px">
+            <input type="text" id="comms-search" placeholder="搜尋序號、型號、廠牌…" style="flex:2">
+            <select id="comms-status-filter">
+              <option value="">全部狀態</option>
+              <option value="堪用">堪用</option>
+              <option value="維修中">維修中</option>
+              <option value="報廢">報廢</option>
+            </select>
+          </div>
+          <div id="comms-equip-list"></div>
+          <div id="comms-equip-empty" class="empty-state" style="display:none">
+            <div class="icon">📡</div>
+            <p>尚無通信裝備資料，請點「＋ 新增裝備」開始建立</p>
+          </div>
+        </div>
+
+        <!-- 進廠排程 -->
+        <div id="comms-pane-schedule" style="display:none">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button type="button" class="btn btn-primary btn-sm" id="addCommsSchedBtn">＋ 新增排程</button>
+          </div>
+          <div id="comms-sched-list"></div>
+          <div id="comms-sched-empty" class="empty-state" style="display:none">
+            <div class="icon">📅</div>
+            <p>尚無進廠排程，請點「＋ 新增排程」</p>
+          </div>
+        </div>
+
+        <!-- 保養紀錄 -->
+        <div id="comms-pane-logs" style="display:none">
+          <div class="filter-bar" style="margin-bottom:14px">
+            <select id="comms-log-equip-filter" style="flex:1">
+              <option value="">全部裝備</option>
+            </select>
+          </div>
+          <div id="comms-log-list"></div>
+          <div id="comms-log-empty" class="empty-state" style="display:none">
+            <div class="icon">📋</div>
+            <p>尚無保養紀錄</p>
+          </div>
+        </div>
       </section>
 
       <!-- 入職申請 -->
@@ -2355,9 +2416,182 @@
     </div>
   </div>
 
+  <!-- ══ 通信裝備 新增／編輯 Modal ══ -->
+  <div class="modal-overlay" id="commsEquipModalOverlay">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h3 id="comms-equip-modal-title">新增裝備</h3>
+        <button type="button" class="modal-close" id="commsEquipModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>裝備序號 <span style="color:red">*</span></label>
+            <input type="text" id="ce-serial" placeholder="例：0123456789">
+          </div>
+          <div class="form-group">
+            <label>型號</label>
+            <input type="text" id="ce-model" placeholder="例：PRC-119">
+          </div>
+          <div class="form-group">
+            <label>廠牌</label>
+            <input type="text" id="ce-brand" placeholder="例：Harris">
+          </div>
+          <div class="form-group">
+            <label>所屬單位</label>
+            <select id="ce-unit"></select>
+          </div>
+          <div class="form-group">
+            <label>裝備狀態</label>
+            <select id="ce-status">
+              <option value="堪用">堪用</option>
+              <option value="維修中">維修中</option>
+              <option value="報廢">報廢</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>備註</label>
+            <textarea id="ce-notes" rows="2" placeholder="其他說明…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="commsEquipModalCancel">取消</button>
+        <button type="button" class="btn btn-danger" id="commsEquipDeleteBtn" style="display:none">刪除</button>
+        <button type="button" class="btn btn-primary" id="commsEquipSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 通信裝備 進廠排程 Modal ══ -->
+  <div class="modal-overlay" id="commsSchedModalOverlay">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-header">
+        <h3 id="comms-sched-modal-title">新增進廠排程</h3>
+        <button type="button" class="modal-close" id="commsSchedModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>選擇裝備序號 <span style="color:red">*</span></label>
+            <select id="cs-equip-sel"><option value="">— 請選擇裝備 —</option></select>
+          </div>
+          <div class="form-group">
+            <label>進廠日期 <span style="color:red">*</span></label>
+            <input type="date" id="cs-date">
+          </div>
+          <div class="form-group">
+            <label>保養等級</label>
+            <select id="cs-level">
+              <option value="一級保養（使用級）">一級保養（使用級）</option>
+              <option value="二級保養（單位級）">二級保養（單位級）</option>
+              <option value="三級保養（野戰修護）">三級保養（野戰修護）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>保養類型</label>
+            <select id="cs-type">
+              <option value="定期">定期</option>
+              <option value="不定期">不定期</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>狀態</label>
+            <select id="cs-status">
+              <option value="待保養">待保養</option>
+              <option value="完成">完成</option>
+              <option value="取消">取消</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>備註</label>
+            <input type="text" id="cs-notes" placeholder="其他說明…">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="commsSchedModalCancel">取消</button>
+        <button type="button" class="btn btn-danger" id="commsSchedDeleteBtn" style="display:none">刪除</button>
+        <button type="button" class="btn btn-primary" id="commsSchedSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 通信裝備 保養紀錄 Modal ══ -->
+  <div class="modal-overlay" id="commsLogModalOverlay">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <h3 id="comms-log-modal-title">新增保養紀錄</h3>
+        <button type="button" class="modal-close" id="commsLogModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>裝備序號 <span style="color:red">*</span></label>
+            <select id="cl-equip-sel"><option value="">— 請選擇裝備 —</option></select>
+          </div>
+          <div class="form-group">
+            <label>保養日期 <span style="color:red">*</span></label>
+            <input type="date" id="cl-date">
+          </div>
+          <div class="form-group">
+            <label>保養等級</label>
+            <select id="cl-level">
+              <option value="一級保養（使用級）">一級保養（使用級）</option>
+              <option value="二級保養（單位級）">二級保養（單位級）</option>
+              <option value="三級保養（野戰修護）">三級保養（野戰修護）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>保養類型</label>
+            <select id="cl-type">
+              <option value="定期">定期</option>
+              <option value="不定期">不定期</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>保養人員</label>
+            <input type="text" id="cl-technician" placeholder="姓名或單位">
+          </div>
+        </div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">零附件檢查</div>
+        <div id="cl-parts-list" style="margin-bottom:16px"></div>
+
+        <div id="cl-deficiency-section" style="display:none;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠️ 缺失處理</div>
+          <div class="form-group">
+            <label>處理流程</label>
+            <select id="cl-deficiency-process">
+              <option value="自行修復">自行修復</option>
+              <option value="申請補件">申請補件</option>
+              <option value="送廠維修">送廠維修</option>
+              <option value="建請報廢">建請報廢</option>
+              <option value="持續追蹤">持續追蹤</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>缺失說明</label>
+            <textarea id="cl-deficiency-notes" rows="2" placeholder="描述缺失情況…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical"></textarea>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>整體備註</label>
+          <textarea id="cl-notes" rows="2" placeholder="其他說明…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="commsLogModalCancel">取消</button>
+        <button type="button" class="btn btn-danger" id="commsLogDeleteBtn" style="display:none">刪除</button>
+        <button type="button" class="btn btn-primary" id="commsLogSaveBtn">儲存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260525d"></script>
+  <script type="module" src="script.js?v=20260525e"></script>
 </body>
 </html>

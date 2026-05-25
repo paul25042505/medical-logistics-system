@@ -51,6 +51,9 @@ const COL_EQUIP_TYPES    = collection(db, 'equipmentTypes');
 const COL_CERTS = collection(db, 'personnelCerts');
 const COL_FT_STANDBY   = collection(db, 'ftStandby');
 const COL_FT_OFFICERS  = collection(db, 'ftOfficers');
+const COL_COMMS_EQUIP  = collection(db, 'commsEquipment');
+const COL_COMMS_SCHED  = collection(db, 'commsMaintSched');
+const COL_COMMS_LOG    = collection(db, 'commsMaintLog');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -76,6 +79,9 @@ let fitnessTests       = [];
 let certifications = [];
 let ftStandbyRecords = [];
 let ftOfficers = [];
+let commsEquipment = [];
+let commsMaintSched = [];
+let commsMaintLog = [];
 
 const FITNESS_CATS = [
   { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）', '屈臂懸垂（女性）'] },
@@ -179,12 +185,12 @@ let registeredUsers   = [];
 
 // ── Roles ─────────────────────────────────────────────
 const ROLES = {
-  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','medical-supplies','medical-equipment','certifications','admin']) },
-  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','medical-supplies','medical-equipment','certifications']) },
+  admin:     { label: '系統管理員',   pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','comms-equipment','medical-supplies','medical-equipment','certifications','admin']) },
+  manager:   { label: '業務主管',     pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads','personnel','applications','fitness-test','ft-standby','vehicles','uniform-points','comms-equipment','medical-supplies','medical-equipment','certifications']) },
   recruit:   { label: '招募管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','trainee-list','batch-sched','interview-query','recruiters','leads']) },
   personnel: { label: '人事管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','personnel','applications','fitness-test','ft-standby','certifications']) },
   training:  { label: '訓練管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','fitness-test','ft-standby']) },
-  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points']) },
+  logistics: { label: '後勤管理承辦', pages: new Set(['home','profile','contacts','daily-inventory','vehicles','uniform-points','comms-equipment']) },
   medical:   { label: '醫療軍品承辦', pages: new Set(['home','profile','contacts','daily-inventory','medical-supplies','medical-equipment','certifications']) },
   member:    { label: '一般成員',     pages: new Set(['home','profile','contacts','daily-inventory']) },
 };
@@ -203,6 +209,9 @@ const FEATURE_GROUPS = [
   { group: '後勤管理', icon: '🚚', features: [
     { id: 'vehicles',       label: '車輛資訊管理' },
     { id: 'uniform-points', label: '服裝供售點數' },
+  ]},
+  { group: '後勤裝備管理', icon: '📡', features: [
+    { id: 'comms-equipment', label: '通信裝備' },
   ]},
   { group: '訓練管理', icon: '🏃', features: [
     { id: 'fitness-test', label: '年度體測管理' },
@@ -242,16 +251,16 @@ function applyRolePermissions(role) {
   });
   // Section labels
   const show = {
-    admin:     ['recruit','personnel','training','logistics','medical','system'],
-    manager:   ['recruit','personnel','training','logistics','medical'],
+    admin:     ['recruit','personnel','training','logistics','comms-equip','medical','system'],
+    manager:   ['recruit','personnel','training','logistics','comms-equip','medical'],
     recruit:   ['recruit'],
     personnel: ['personnel','training'],
     training:  ['training'],
-    logistics: ['logistics'],
+    logistics: ['logistics','comms-equip'],
     medical:   ['medical'],
     member:    [],
   }[role] || [];
-  ['recruit','personnel','training','logistics','medical','system'].forEach(s => {
+  ['recruit','personnel','training','logistics','comms-equip','medical','system'].forEach(s => {
     const el = document.getElementById(`nav-section-${s}`);
     if (el) el.style.display = show.includes(s) ? '' : 'none';
   });
@@ -1162,6 +1171,7 @@ const PAGE_INIT = {
   'uniform-points':    () => renderUniformPointsPage(),
   'medical-supplies':  () => renderMedicalSupplies(),
   'medical-equipment': () => { switchMedEquipTab('list'); populateEquipTypeDropdowns(); },
+  'comms-equipment':   () => { renderCommsEquipPage(); },
   'certifications':    () => renderCertificationsPage(),
   'daily-inventory':   () => renderDailyInventory(),
   'fitness-test':      () => {
@@ -2465,6 +2475,25 @@ function startApp() {
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     renderFtsOfficerList();
     populateFtsOfficerSel(document.getElementById('fts-officer-sel')?.value || '');
+  }, () => {});
+
+  onSnapshot(COL_COMMS_EQUIP, snap => {
+    commsEquipment = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.serialNumber || '').localeCompare(b.serialNumber || ''));
+    if (document.getElementById('page-comms-equipment')?.classList.contains('active')) renderCommsEquipList();
+    populateCommsEquipSelects();
+  }, () => {});
+
+  onSnapshot(COL_COMMS_SCHED, snap => {
+    commsMaintSched = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.scheduledDate || '').localeCompare(b.scheduledDate || ''));
+    if (document.getElementById('page-comms-equipment')?.classList.contains('active')) renderCommsSchedList();
+  }, () => {});
+
+  onSnapshot(COL_COMMS_LOG, snap => {
+    commsMaintLog = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.logDate || '').localeCompare(a.logDate || ''));
+    if (document.getElementById('page-comms-equipment')?.classList.contains('active')) renderCommsLogList();
   }, () => {});
 
   onSnapshot(COL_PERSONNEL_AUDIT, snap => {
@@ -7284,3 +7313,450 @@ document.getElementById('certSaveBtn')?.addEventListener('click', async () => {
     btn.textContent = '💾 儲存';
   }
 });
+
+// ══════════════════════════════════════════════════════
+// ── 通信裝備管理 ───────────────────────────────────────
+// ══════════════════════════════════════════════════════
+
+const COMMS_PARTS = [
+  '天線', '電池組', '充電器', '耳機麥克風',
+  '機殼（前殼）', '機殼（後殼）', '螢幕／顯示器',
+  '旋鈕／按鍵', '電源開關', '接頭／插槽', '防水封條', '揹帶／配件',
+];
+
+let commsTab = 'list'; // 'list' | 'schedule' | 'logs'
+let editingCommsEquipId  = null;
+let editingCommsSchedId  = null;
+let editingCommsLogId    = null;
+
+// ── 頁面入口 ──────────────────────────────────────────
+function renderCommsEquipPage() {
+  switchCommsTab(commsTab);
+}
+
+function switchCommsTab(tab) {
+  commsTab = tab;
+  document.querySelectorAll('[data-comms-tab]').forEach(b =>
+    b.classList.toggle('active', b.dataset.commsTab === tab));
+  document.getElementById('comms-pane-list').style.display     = tab === 'list'     ? '' : 'none';
+  document.getElementById('comms-pane-schedule').style.display = tab === 'schedule' ? '' : 'none';
+  document.getElementById('comms-pane-logs').style.display     = tab === 'logs'     ? '' : 'none';
+  document.getElementById('addCommsEquipBtn').style.display    = tab === 'list'     ? '' : 'none';
+  if (tab === 'list')     renderCommsEquipList();
+  if (tab === 'schedule') renderCommsSchedList();
+  if (tab === 'logs')     renderCommsLogList();
+}
+
+// ── 裝備清單 渲染 ─────────────────────────────────────
+function renderCommsEquipList() {
+  const search = (document.getElementById('comms-search')?.value || '').toLowerCase();
+  const statusF = document.getElementById('comms-status-filter')?.value || '';
+  let list = commsEquipment.filter(e => {
+    const matchSearch = !search ||
+      (e.serialNumber || '').toLowerCase().includes(search) ||
+      (e.model || '').toLowerCase().includes(search) ||
+      (e.brand || '').toLowerCase().includes(search);
+    const matchStatus = !statusF || e.status === statusF;
+    return matchSearch && matchStatus;
+  });
+
+  const el = document.getElementById('comms-equip-list');
+  const empty = document.getElementById('comms-equip-empty');
+  if (!el) return;
+
+  if (!list.length) { el.innerHTML = ''; if (empty) empty.style.display = ''; return; }
+  if (empty) empty.style.display = 'none';
+
+  const statusColor = { '堪用': '#16a34a', '維修中': '#d97706', '報廢': '#dc2626' };
+  el.innerHTML = list.map(e => {
+    const lastLog = [...commsMaintLog].filter(l => l.equipmentId === e.id)
+      .sort((a,b) => (b.logDate||'').localeCompare(a.logDate||''))[0];
+    const nextSched = [...commsMaintSched].filter(s => s.equipmentId === e.id && s.status === '待保養')
+      .sort((a,b) => (a.scheduledDate||'').localeCompare(b.scheduledDate||''))[0];
+    return `
+    <div style="background:var(--white);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-weight:700;font-size:15px;font-family:monospace">#${e.serialNumber || '—'}</span>
+            <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${statusColor[e.status]||'#6b7280'}22;color:${statusColor[e.status]||'#6b7280'}">${e.status || '堪用'}</span>
+          </div>
+          ${e.model ? `<div style="font-size:13px;color:var(--text-muted)">${e.brand ? e.brand + '　' : ''}${e.model}</div>` : ''}
+          ${e.unit  ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${e.unit}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn-icon" onclick="openCommsEquipModal('${e.id}')">✏️</button>
+          <button class="btn-icon" onclick="openCommsSchedModal(null,'${e.id}')">📅</button>
+          <button class="btn-icon" onclick="openCommsLogModal(null,'${e.id}')">📋</button>
+        </div>
+      </div>
+      ${nextSched ? `<div style="margin-top:8px;font-size:12px;padding:5px 10px;background:#eff6ff;border-radius:8px;color:#1d4ed8">📅 下次進廠：${nextSched.scheduledDate}　${nextSched.maintenanceLevel}　${nextSched.maintenanceType}</div>` : ''}
+      ${lastLog  ? `<div style="margin-top:4px;font-size:12px;padding:5px 10px;background:#f0fdf4;border-radius:8px;color:#15803d">📋 上次保養：${lastLog.logDate}　${lastLog.maintenanceLevel}　結果：${lastLog.overallResult || '—'}</div>` : ''}
+      ${e.notes  ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">備註：${e.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── 進廠排程 渲染 ─────────────────────────────────────
+function renderCommsSchedList() {
+  const el    = document.getElementById('comms-sched-list');
+  const empty = document.getElementById('comms-sched-empty');
+  if (!el) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const statusColor = { '待保養': '#d97706', '完成': '#16a34a', '取消': '#6b7280' };
+
+  if (!commsMaintSched.length) { el.innerHTML = ''; if (empty) empty.style.display = ''; return; }
+  if (empty) empty.style.display = 'none';
+
+  // Group: upcoming first, then completed
+  const upcoming  = commsMaintSched.filter(s => s.status === '待保養');
+  const others    = commsMaintSched.filter(s => s.status !== '待保養');
+  const sorted    = [...upcoming, ...others];
+
+  el.innerHTML = sorted.map(s => {
+    const equip = commsEquipment.find(e => e.id === s.equipmentId);
+    const isOverdue = s.status === '待保養' && s.scheduledDate < today;
+    return `
+    <div style="background:var(--white);border-radius:12px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);${isOverdue ? 'border-left:3px solid #dc2626' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-family:monospace">#${equip?.serialNumber || s.serialNumber || '—'}</span>
+            <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${statusColor[s.status]||'#6b7280'}22;color:${statusColor[s.status]||'#6b7280'}">${s.status}</span>
+            ${isOverdue ? '<span style="font-size:11px;color:#dc2626;font-weight:700">已逾期</span>' : ''}
+          </div>
+          <div style="font-size:13px;margin-top:4px">
+            📅 ${s.scheduledDate || '—'}
+            　<span style="color:var(--primary);font-weight:600">${s.maintenanceLevel || ''}</span>
+            　${s.maintenanceType || ''}
+          </div>
+          ${s.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">備註：${s.notes}</div>` : ''}
+        </div>
+        <button class="btn-icon" onclick="openCommsSchedModal('${s.id}')">✏️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 保養紀錄 渲染 ─────────────────────────────────────
+function renderCommsLogList() {
+  const filterEquipId = document.getElementById('comms-log-equip-filter')?.value || '';
+  const el    = document.getElementById('comms-log-list');
+  const empty = document.getElementById('comms-log-empty');
+  if (!el) return;
+
+  let list = filterEquipId
+    ? commsMaintLog.filter(l => l.equipmentId === filterEquipId)
+    : [...commsMaintLog];
+
+  if (!list.length) { el.innerHTML = ''; if (empty) empty.style.display = ''; return; }
+  if (empty) empty.style.display = 'none';
+
+  el.innerHTML = list.map(l => {
+    const equip = commsEquipment.find(e => e.id === l.equipmentId);
+    const hasDeficiency = l.overallResult === '有缺失';
+    const goodParts = (l.parts || []).filter(p => p.condition === '良好').length;
+    const badParts  = (l.parts || []).filter(p => p.condition === '缺失').length;
+    return `
+    <div style="background:var(--white);border-radius:12px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08)${hasDeficiency ? ';border-left:3px solid #f59e0b' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-family:monospace">#${equip?.serialNumber || l.serialNumber || '—'}</span>
+            <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${hasDeficiency?'#fef3c7':'#f0fdf4'};color:${hasDeficiency?'#d97706':'#16a34a'}">${l.overallResult || '良好'}</span>
+          </div>
+          <div style="font-size:13px;margin-top:4px">
+            📅 ${l.logDate || '—'}
+            　<span style="color:var(--primary);font-weight:600">${l.maintenanceLevel || ''}</span>
+            　${l.maintenanceType || ''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">
+            零附件：良好 ${goodParts} 項　${badParts ? `⚠️ 缺失 ${badParts} 項` : ''}
+            ${l.technician ? `　保養人：${l.technician}` : ''}
+          </div>
+          ${hasDeficiency && l.deficiencyProcess ? `<div style="font-size:12px;color:#d97706;margin-top:2px">處理流程：${l.deficiencyProcess}</div>` : ''}
+          ${l.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">備註：${l.notes}</div>` : ''}
+        </div>
+        <button class="btn-icon" onclick="openCommsLogModal('${l.id}')">✏️</button>
+      </div>
+      ${badParts ? `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border-radius:8px">
+        <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:4px">缺失零附件：</div>
+        ${(l.parts||[]).filter(p=>p.condition==='缺失').map(p=>`<div style="font-size:12px;color:#92400e">• ${p.name}${p.notes?' — '+p.notes:''}</div>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── 下拉選單填充 ──────────────────────────────────────
+function populateCommsEquipSelects() {
+  ['cs-equip-sel', 'cl-equip-sel', 'comms-log-equip-filter'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const isFilter = id === 'comms-log-equip-filter';
+    const prev = sel.value;
+    sel.innerHTML = (isFilter ? '<option value="">全部裝備</option>' : '<option value="">— 請選擇裝備 —</option>') +
+      commsEquipment.map(e => `<option value="${e.id}"${e.id===prev?' selected':''}>${e.serialNumber}${e.model?' ('+e.model+')':''}</option>`).join('');
+  });
+}
+
+function populateCommsUnitSel(selId) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const units = adminSettings.units || [];
+  sel.innerHTML = '<option value="">— 請選擇單位 —</option>' +
+    units.map(u => `<option value="${u}">${u}</option>`).join('');
+}
+
+// ── 裝備 Modal ────────────────────────────────────────
+window.openCommsEquipModal = function(id = null) {
+  editingCommsEquipId = id;
+  const e = id ? commsEquipment.find(x => x.id === id) : null;
+  document.getElementById('comms-equip-modal-title').textContent = e ? '編輯裝備' : '新增裝備';
+  document.getElementById('ce-serial').value  = e?.serialNumber || '';
+  document.getElementById('ce-model').value   = e?.model        || '';
+  document.getElementById('ce-brand').value   = e?.brand        || '';
+  document.getElementById('ce-notes').value   = e?.notes        || '';
+  document.getElementById('ce-status').value  = e?.status       || '堪用';
+  populateCommsUnitSel('ce-unit');
+  if (e?.unit) document.getElementById('ce-unit').value = e.unit;
+  document.getElementById('commsEquipDeleteBtn').style.display = e ? '' : 'none';
+  document.getElementById('commsEquipModalOverlay').classList.add('open');
+};
+
+document.getElementById('commsEquipModalClose')?.addEventListener('click',  () => document.getElementById('commsEquipModalOverlay').classList.remove('open'));
+document.getElementById('commsEquipModalCancel')?.addEventListener('click', () => document.getElementById('commsEquipModalOverlay').classList.remove('open'));
+
+document.getElementById('commsEquipDeleteBtn')?.addEventListener('click', () => {
+  showConfirm('確定刪除此裝備？相關排程與紀錄不會自動刪除。', async () => {
+    try {
+      await deleteDoc(doc(db, 'commsEquipment', editingCommsEquipId));
+      document.getElementById('commsEquipModalOverlay').classList.remove('open');
+      showToast('已刪除');
+    } catch(e) { showToast('刪除失敗：' + e.message); }
+  });
+});
+
+document.getElementById('commsEquipSaveBtn')?.addEventListener('click', async () => {
+  const serial = document.getElementById('ce-serial').value.trim();
+  if (!serial) { showToast('請填寫裝備序號'); return; }
+  const data = {
+    serialNumber: serial,
+    model:  document.getElementById('ce-model').value.trim(),
+    brand:  document.getElementById('ce-brand').value.trim(),
+    unit:   document.getElementById('ce-unit').value,
+    status: document.getElementById('ce-status').value,
+    notes:  document.getElementById('ce-notes').value.trim(),
+    updatedAt: serverTimestamp(),
+  };
+  const btn = document.getElementById('commsEquipSaveBtn');
+  btn.disabled = true;
+  try {
+    if (editingCommsEquipId) {
+      await updateDoc(doc(db, 'commsEquipment', editingCommsEquipId), data);
+    } else {
+      await addDoc(COL_COMMS_EQUIP, { ...data, createdAt: serverTimestamp() });
+    }
+    document.getElementById('commsEquipModalOverlay').classList.remove('open');
+    showToast('✓ 已儲存');
+  } catch(e) { showToast('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+// ── 進廠排程 Modal ────────────────────────────────────
+window.openCommsSchedModal = function(id = null, preEquipId = null) {
+  editingCommsSchedId = id;
+  const s = id ? commsMaintSched.find(x => x.id === id) : null;
+  document.getElementById('comms-sched-modal-title').textContent = s ? '編輯進廠排程' : '新增進廠排程';
+  populateCommsEquipSelects();
+  document.getElementById('cs-equip-sel').value   = s?.equipmentId   || preEquipId || '';
+  document.getElementById('cs-date').value         = s?.scheduledDate  || '';
+  document.getElementById('cs-level').value        = s?.maintenanceLevel || '一級保養（使用級）';
+  document.getElementById('cs-type').value         = s?.maintenanceType  || '定期';
+  document.getElementById('cs-status').value       = s?.status           || '待保養';
+  document.getElementById('cs-notes').value        = s?.notes            || '';
+  document.getElementById('commsSchedDeleteBtn').style.display = s ? '' : 'none';
+  document.getElementById('commsSchedModalOverlay').classList.add('open');
+};
+
+document.getElementById('commsSchedModalClose')?.addEventListener('click',  () => document.getElementById('commsSchedModalOverlay').classList.remove('open'));
+document.getElementById('commsSchedModalCancel')?.addEventListener('click', () => document.getElementById('commsSchedModalOverlay').classList.remove('open'));
+
+document.getElementById('commsSchedDeleteBtn')?.addEventListener('click', () => {
+  showConfirm('確定刪除此排程？', async () => {
+    try {
+      await deleteDoc(doc(db, 'commsMaintSched', editingCommsSchedId));
+      document.getElementById('commsSchedModalOverlay').classList.remove('open');
+      showToast('已刪除');
+    } catch(e) { showToast('刪除失敗：' + e.message); }
+  });
+});
+
+document.getElementById('commsSchedSaveBtn')?.addEventListener('click', async () => {
+  const equipId = document.getElementById('cs-equip-sel').value;
+  const date    = document.getElementById('cs-date').value;
+  if (!equipId) { showToast('請選擇裝備'); return; }
+  if (!date)    { showToast('請選擇進廠日期'); return; }
+  const equip = commsEquipment.find(e => e.id === equipId);
+  const data = {
+    equipmentId:      equipId,
+    serialNumber:     equip?.serialNumber || '',
+    scheduledDate:    date,
+    maintenanceLevel: document.getElementById('cs-level').value,
+    maintenanceType:  document.getElementById('cs-type').value,
+    status:           document.getElementById('cs-status').value,
+    notes:            document.getElementById('cs-notes').value.trim(),
+    updatedAt:        serverTimestamp(),
+  };
+  const btn = document.getElementById('commsSchedSaveBtn');
+  btn.disabled = true;
+  try {
+    if (editingCommsSchedId) {
+      await updateDoc(doc(db, 'commsMaintSched', editingCommsSchedId), data);
+    } else {
+      await addDoc(COL_COMMS_SCHED, { ...data, createdAt: serverTimestamp() });
+    }
+    document.getElementById('commsSchedModalOverlay').classList.remove('open');
+    showToast('✓ 已儲存');
+  } catch(e) { showToast('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+// ── 保養紀錄 Modal ────────────────────────────────────
+function buildCommsPartsForm(savedParts = []) {
+  const el = document.getElementById('cl-parts-list');
+  if (!el) return;
+  el.innerHTML = COMMS_PARTS.map(name => {
+    const saved = savedParts.find(p => p.name === name);
+    const good  = saved ? saved.condition === '良好' : true;
+    const bad   = saved ? saved.condition === '缺失' : false;
+    const pnotes = saved?.notes || '';
+    return `
+    <div class="comms-part-row" data-part="${name}" style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-size:13px;font-weight:500;flex:1">${name}</span>
+        <div style="display:flex;gap:6px">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px">
+            <input type="radio" name="part-${name.replace(/[^\w]/g,'_')}" value="良好" ${good?'checked':''}
+              onchange="commsPartChange('${name}')"> 良好
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px">
+            <input type="radio" name="part-${name.replace(/[^\w]/g,'_')}" value="缺失" ${bad?'checked':''}
+              onchange="commsPartChange('${name}')"> 缺失
+          </label>
+        </div>
+      </div>
+      <div class="part-deficiency-note" style="display:${bad?'':'none'};margin-top:4px">
+        <input type="text" placeholder="缺失說明（選填）" value="${pnotes}"
+          style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"
+          data-part-note="${name}">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.commsPartChange = function(name) {
+  const row    = document.querySelector(`.comms-part-row[data-part="${name}"]`);
+  if (!row) return;
+  const isBad  = row.querySelector('input[value="缺失"]')?.checked;
+  const noteEl = row.querySelector('.part-deficiency-note');
+  if (noteEl) noteEl.style.display = isBad ? '' : 'none';
+  // Show/hide deficiency section
+  const anyBad = COMMS_PARTS.some(p => {
+    const r = document.querySelector(`.comms-part-row[data-part="${p}"]`);
+    return r?.querySelector('input[value="缺失"]')?.checked;
+  });
+  const defSec = document.getElementById('cl-deficiency-section');
+  if (defSec) defSec.style.display = anyBad ? '' : 'none';
+};
+
+function readCommsPartsList() {
+  return COMMS_PARTS.map(name => {
+    const row   = document.querySelector(`.comms-part-row[data-part="${name}"]`);
+    const isBad = row?.querySelector('input[value="缺失"]')?.checked;
+    const notes = row?.querySelector(`[data-part-note="${name}"]`)?.value?.trim() || '';
+    return { name, condition: isBad ? '缺失' : '良好', notes };
+  });
+}
+
+window.openCommsLogModal = function(id = null, preEquipId = null) {
+  editingCommsLogId = id;
+  const l = id ? commsMaintLog.find(x => x.id === id) : null;
+  document.getElementById('comms-log-modal-title').textContent = l ? '編輯保養紀錄' : '新增保養紀錄';
+  populateCommsEquipSelects();
+  document.getElementById('cl-equip-sel').value    = l?.equipmentId   || preEquipId || '';
+  document.getElementById('cl-date').value          = l?.logDate        || new Date().toISOString().slice(0, 10);
+  document.getElementById('cl-level').value         = l?.maintenanceLevel || '一級保養（使用級）';
+  document.getElementById('cl-type').value          = l?.maintenanceType  || '定期';
+  document.getElementById('cl-technician').value    = l?.technician       || '';
+  document.getElementById('cl-deficiency-process').value = l?.deficiencyProcess || '自行修復';
+  document.getElementById('cl-deficiency-notes').value   = l?.deficiencyNotes   || '';
+  document.getElementById('cl-notes').value               = l?.notes             || '';
+  buildCommsPartsForm(l?.parts || []);
+  const anyBad = (l?.parts || []).some(p => p.condition === '缺失');
+  document.getElementById('cl-deficiency-section').style.display = anyBad ? '' : 'none';
+  document.getElementById('commsLogDeleteBtn').style.display = l ? '' : 'none';
+  document.getElementById('commsLogModalOverlay').classList.add('open');
+};
+
+document.getElementById('commsLogModalClose')?.addEventListener('click',  () => document.getElementById('commsLogModalOverlay').classList.remove('open'));
+document.getElementById('commsLogModalCancel')?.addEventListener('click', () => document.getElementById('commsLogModalOverlay').classList.remove('open'));
+
+document.getElementById('commsLogDeleteBtn')?.addEventListener('click', () => {
+  showConfirm('確定刪除此保養紀錄？', async () => {
+    try {
+      await deleteDoc(doc(db, 'commsMaintLog', editingCommsLogId));
+      document.getElementById('commsLogModalOverlay').classList.remove('open');
+      showToast('已刪除');
+    } catch(e) { showToast('刪除失敗：' + e.message); }
+  });
+});
+
+document.getElementById('commsLogSaveBtn')?.addEventListener('click', async () => {
+  const equipId = document.getElementById('cl-equip-sel').value;
+  const date    = document.getElementById('cl-date').value;
+  if (!equipId) { showToast('請選擇裝備'); return; }
+  if (!date)    { showToast('請選擇保養日期'); return; }
+  const parts   = readCommsPartsList();
+  const anyBad  = parts.some(p => p.condition === '缺失');
+  const equip   = commsEquipment.find(e => e.id === equipId);
+  const data = {
+    equipmentId:      equipId,
+    serialNumber:     equip?.serialNumber || '',
+    logDate:          date,
+    maintenanceLevel: document.getElementById('cl-level').value,
+    maintenanceType:  document.getElementById('cl-type').value,
+    technician:       document.getElementById('cl-technician').value.trim(),
+    parts,
+    overallResult:       anyBad ? '有缺失' : '良好',
+    deficiencyProcess:   anyBad ? document.getElementById('cl-deficiency-process').value : '',
+    deficiencyNotes:     anyBad ? document.getElementById('cl-deficiency-notes').value.trim() : '',
+    notes:               document.getElementById('cl-notes').value.trim(),
+    updatedAt:           serverTimestamp(),
+  };
+  const btn = document.getElementById('commsLogSaveBtn');
+  btn.disabled = true;
+  try {
+    if (editingCommsLogId) {
+      await updateDoc(doc(db, 'commsMaintLog', editingCommsLogId), data);
+    } else {
+      await addDoc(COL_COMMS_LOG, { ...data, createdAt: serverTimestamp() });
+    }
+    document.getElementById('commsLogModalOverlay').classList.remove('open');
+    showToast('✓ 已儲存');
+  } catch(e) { showToast('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+// ── Tab / Filter 事件 ─────────────────────────────────
+document.getElementById('page-comms-equipment')?.addEventListener('click', e => {
+  const btn = e.target.closest('[data-comms-tab]');
+  if (btn) switchCommsTab(btn.dataset.commsTab);
+});
+
+document.getElementById('addCommsEquipBtn')?.addEventListener('click', () => openCommsEquipModal(null));
+document.getElementById('addCommsSchedBtn')?.addEventListener('click', () => openCommsSchedModal(null));
+
+document.getElementById('comms-search')?.addEventListener('input', renderCommsEquipList);
+document.getElementById('comms-status-filter')?.addEventListener('change', renderCommsEquipList);
+document.getElementById('comms-log-equip-filter')?.addEventListener('change', renderCommsLogList);
