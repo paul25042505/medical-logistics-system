@@ -7354,8 +7354,8 @@ function renderCommsEquipList() {
   let list = commsEquipment.filter(e => {
     const matchSearch = !search ||
       (e.serialNumber || '').toLowerCase().includes(search) ||
-      (e.model || '').toLowerCase().includes(search) ||
-      (e.brand || '').toLowerCase().includes(search);
+      (e.name || '').toLowerCase().includes(search) ||
+      (e.unit || '').toLowerCase().includes(search);
     const matchStatus = !statusF || e.status === statusF;
     return matchSearch && matchStatus;
   });
@@ -7378,10 +7378,10 @@ function renderCommsEquipList() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="font-weight:700;font-size:15px;font-family:monospace">#${e.serialNumber || '—'}</span>
+            <span style="font-weight:700;font-size:15px">${e.name || '—'}</span>
             <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${statusColor[e.status]||'#6b7280'}22;color:${statusColor[e.status]||'#6b7280'}">${e.status || '堪用'}</span>
           </div>
-          ${e.model ? `<div style="font-size:13px;color:var(--text-muted)">${e.brand ? e.brand + '　' : ''}${e.model}</div>` : ''}
+          <div style="font-size:13px;color:var(--text-muted);font-family:monospace">序號：${e.serialNumber || '—'}</div>
           ${e.unit  ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${e.unit}</div>` : ''}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
@@ -7422,7 +7422,8 @@ function renderCommsSchedList() {
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-weight:700;font-family:monospace">#${equip?.serialNumber || s.serialNumber || '—'}</span>
+            <span style="font-weight:700">${equip?.name || '—'}</span>
+            <span style="font-size:12px;color:var(--muted);font-family:monospace">#${equip?.serialNumber || s.serialNumber || '—'}</span>
             <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${statusColor[s.status]||'#6b7280'}22;color:${statusColor[s.status]||'#6b7280'}">${s.status}</span>
             ${isOverdue ? '<span style="font-size:11px;color:#dc2626;font-weight:700">已逾期</span>' : ''}
           </div>
@@ -7463,7 +7464,8 @@ function renderCommsLogList() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-weight:700;font-family:monospace">#${equip?.serialNumber || l.serialNumber || '—'}</span>
+            <span style="font-weight:700">${equip?.name || '—'}</span>
+            <span style="font-size:12px;color:var(--muted);font-family:monospace">#${equip?.serialNumber || l.serialNumber || '—'}</span>
             <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${hasDeficiency?'#fef3c7':'#f0fdf4'};color:${hasDeficiency?'#d97706':'#16a34a'}">${l.overallResult || '良好'}</span>
           </div>
           <div style="font-size:13px;margin-top:4px">
@@ -7496,7 +7498,7 @@ function populateCommsEquipSelects() {
     const isFilter = id === 'comms-log-equip-filter';
     const prev = sel.value;
     sel.innerHTML = (isFilter ? '<option value="">全部裝備</option>' : '<option value="">— 請選擇裝備 —</option>') +
-      commsEquipment.map(e => `<option value="${e.id}"${e.id===prev?' selected':''}>${e.serialNumber}${e.model?' ('+e.model+')':''}</option>`).join('');
+      commsEquipment.map(e => `<option value="${e.id}"${e.id===prev?' selected':''}>${e.name ? e.name + '　' : ''}#${e.serialNumber || '—'}</option>`).join('');
   });
 }
 
@@ -7513,13 +7515,12 @@ window.openCommsEquipModal = function(id = null) {
   editingCommsEquipId = id;
   const e = id ? commsEquipment.find(x => x.id === id) : null;
   document.getElementById('comms-equip-modal-title').textContent = e ? '編輯裝備' : '新增裝備';
-  document.getElementById('ce-serial').value  = e?.serialNumber || '';
-  document.getElementById('ce-model').value   = e?.model        || '';
-  document.getElementById('ce-brand').value   = e?.brand        || '';
-  document.getElementById('ce-notes').value   = e?.notes        || '';
-  document.getElementById('ce-status').value  = e?.status       || '堪用';
   populateCommsUnitSel('ce-unit');
   if (e?.unit) document.getElementById('ce-unit').value = e.unit;
+  document.getElementById('ce-name').value    = e?.name         || '';
+  document.getElementById('ce-serial').value  = e?.serialNumber || '';
+  document.getElementById('ce-status').value  = e?.status       || '堪用';
+  document.getElementById('ce-notes').value   = e?.notes        || '';
   document.getElementById('commsEquipDeleteBtn').style.display = e ? '' : 'none';
   document.getElementById('commsEquipModalOverlay').classList.add('open');
 };
@@ -7538,12 +7539,13 @@ document.getElementById('commsEquipDeleteBtn')?.addEventListener('click', () => 
 });
 
 document.getElementById('commsEquipSaveBtn')?.addEventListener('click', async () => {
+  const name   = document.getElementById('ce-name').value.trim();
   const serial = document.getElementById('ce-serial').value.trim();
+  if (!name)   { showToast('請填寫裝備品名'); return; }
   if (!serial) { showToast('請填寫裝備序號'); return; }
   const data = {
+    name,
     serialNumber: serial,
-    model:  document.getElementById('ce-model').value.trim(),
-    brand:  document.getElementById('ce-brand').value.trim(),
     unit:   document.getElementById('ce-unit').value,
     status: document.getElementById('ce-status').value,
     notes:  document.getElementById('ce-notes').value.trim(),
