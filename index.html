@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260525g">
+  <link rel="stylesheet" href="style.css?v=20260525h">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -1111,6 +1111,7 @@
           <button type="button" class="tab-btn active" data-comms-tab="list">📡 裝備清單</button>
           <button type="button" class="tab-btn" data-comms-tab="schedule">📅 進廠排程</button>
           <button type="button" class="tab-btn" data-comms-tab="logs">📋 保養紀錄</button>
+          <button type="button" class="tab-btn" data-comms-tab="monthly">📊 月檢回報</button>
         </div>
 
         <!-- 裝備清單 -->
@@ -1154,6 +1155,26 @@
           <div id="comms-log-empty" class="empty-state" style="display:none">
             <div class="icon">📋</div>
             <p>尚無保養紀錄</p>
+          </div>
+        </div>
+
+        <!-- 月檢回報 -->
+        <div id="comms-pane-monthly" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <input type="month" id="comms-monthly-picker" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+            <span id="comms-monthly-progress" style="font-size:13px;color:var(--text-muted)"></span>
+          </div>
+          <div id="comms-monthly-cards"></div>
+          <div id="comms-monthly-empty" class="empty-state" style="display:none">
+            <div class="icon">📡</div>
+            <p>尚無裝備資料，請先至「裝備清單」新增裝備</p>
+          </div>
+          <!-- 彙總矩陣 -->
+          <div id="comms-monthly-matrix-wrap" style="display:none;margin-top:20px">
+            <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px">📋 本月零附件彙總</div>
+            <div style="overflow-x:auto">
+              <table id="comms-monthly-matrix" style="border-collapse:collapse;font-size:12px;min-width:100%"></table>
+            </div>
           </div>
         </div>
       </section>
@@ -2570,9 +2591,34 @@
     </div>
   </div>
 
+  <!-- ══ 通信裝備 月檢回報 Modal ══ -->
+  <div class="modal-overlay" id="commsMonthlyModalOverlay">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <div>
+          <h3 id="comms-monthly-modal-title">月檢回報</h3>
+          <div id="comms-monthly-modal-sub" style="font-size:12px;color:var(--text-muted);margin-top:2px"></div>
+        </div>
+        <button type="button" class="modal-close" id="commsMonthlyModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">逐項勾選零附件狀況，缺失項目將列入彙總報告。</div>
+        <div id="comms-monthly-parts-list" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div class="form-group" style="margin-top:14px">
+          <label>備註</label>
+          <textarea id="cm-notes" rows="2" placeholder="其他說明…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="commsMonthlyModalCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="commsMonthlyReportSaveBtn">✓ 送出回報</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260525g"></script>
+  <script type="module" src="script.js?v=20260525h"></script>
 </body>
 </html>

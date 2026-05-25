@@ -2901,3 +2901,55 @@ main {
 .fsb-header-logo { font-size: 40px; margin-bottom: 8px; }
 .fsb-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 .fsb-header p { font-size: 13px; color: rgba(255,255,255,0.6); }
+
+/* ── 通信裝備 月檢回報 ── */
+.comms-monthly-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--white);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.comms-monthly-info { flex: 1; min-width: 0; }
+.comms-monthly-name { font-size: 14px; font-weight: 700; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comms-monthly-serial { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.comms-monthly-missing { font-size: 12px; color: #d97706; margin-top: 4px; line-height: 1.5; }
+.comms-part-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+.comms-part-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.comms-part-toggle { display: flex; gap: 4px; }
+.comms-part-toggle button {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--white);
+  color: var(--text-muted);
+  transition: all .15s;
+}
+.comms-part-toggle button.ok-active  { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+.comms-part-toggle button.bad-active { background: #fee2e2; border-color: #dc2626; color: #dc2626; }
+/* 矩陣表格 */
+#comms-monthly-matrix th, #comms-monthly-matrix td {
+  border: 1px solid var(--border);
+  padding: 5px 8px;
+  text-align: center;
+  font-size: 11px;
+  white-space: nowrap;
+}
+#comms-monthly-matrix th { background: #f1f5f9; font-weight: 600; color: var(--navy); }
+#comms-monthly-matrix td.cell-ok  { background: #dcfce7; color: #16a34a; font-weight: 700; }
+#comms-monthly-matrix td.cell-bad { background: #fee2e2; color: #dc2626; font-weight: 700; }
+#comms-monthly-matrix td.cell-none { color: #cbd5e1; }
+#comms-monthly-matrix td.cell-part { text-align: left; font-weight: 500; color: var(--text); background: #f8fafc; }

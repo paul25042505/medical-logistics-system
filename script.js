@@ -54,7 +54,8 @@ const COL_FT_OFFICERS  = collection(db, 'ftOfficers');
 const COL_COMMS_EQUIP  = collection(db, 'commsEquipment');
 const COL_COMMS_SCHED  = collection(db, 'commsMaintSched');
 const COL_COMMS_LOG    = collection(db, 'commsMaintLog');
-const COL_COMMS_NAMES  = collection(db, 'commsEquipNames');
+const COL_COMMS_NAMES    = collection(db, 'commsEquipNames');
+const COL_COMMS_MONTHLY  = collection(db, 'commsMonthlyReports');
 const DOC_ADMIN      = doc(db, 'settings', 'admin');
 
 // ── State ─────────────────────────────────────────────
@@ -84,6 +85,7 @@ let commsEquipment = [];
 let commsMaintSched = [];
 let commsMaintLog = [];
 let commsEquipNames = [];
+let commsMonthlyReports = [];
 
 const FITNESS_CATS = [
   { id: 'upperBody', label: '上肢肌力及肌耐力（擇一）', items: ['兩分鐘俯地挺身', '壺鈴平舉', '引體向上（單槓）', '屈臂懸垂（女性）'] },
@@ -2453,6 +2455,13 @@ function startApp() {
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW'));
     renderCommsNames();
     populateCommsNameSel();
+  }, () => {});
+
+  onSnapshot(COL_COMMS_MONTHLY, snap => {
+    commsMonthlyReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (document.getElementById('page-comms-equipment')?.classList.contains('active') && commsTab === 'monthly') {
+      renderCommsMonthly();
+    }
   }, () => {});
 
   onSnapshot(COL_PERSONNEL_AUDIT, snap => {
@@ -7300,10 +7309,12 @@ function switchCommsTab(tab) {
   document.getElementById('comms-pane-list').style.display     = tab === 'list'     ? '' : 'none';
   document.getElementById('comms-pane-schedule').style.display = tab === 'schedule' ? '' : 'none';
   document.getElementById('comms-pane-logs').style.display     = tab === 'logs'     ? '' : 'none';
+  document.getElementById('comms-pane-monthly').style.display  = tab === 'monthly'  ? '' : 'none';
   document.getElementById('addCommsEquipBtn').style.display    = tab === 'list'     ? '' : 'none';
   if (tab === 'list')     renderCommsEquipList();
   if (tab === 'schedule') renderCommsSchedList();
   if (tab === 'logs')     renderCommsLogList();
+  if (tab === 'monthly')  renderCommsMonthly();
 }
 
 // ── 裝備清單 渲染 ─────────────────────────────────────
@@ -7449,6 +7460,197 @@ function renderCommsLogList() {
   }).join('');
 }
 
+// ── 月檢回報 ──────────────────────────────────────────
+let commsMonthlyEquipId = null; // modal 正在回報的裝備 id
+let commsMonthlyMonth   = '';   // modal 正在回報的月份
+
+function getCommsMonthlyPickerValue() {
+  const picker = document.getElementById('comms-monthly-picker');
+  if (!picker) return '';
+  if (!picker.value) {
+    const now = new Date();
+    const m = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    picker.value = m;
+  }
+  return picker.value;
+}
+
+function renderCommsMonthly() {
+  const month   = getCommsMonthlyPickerValue();
+  const cardsEl = document.getElementById('comms-monthly-cards');
+  const emptyEl = document.getElementById('comms-monthly-empty');
+  const progEl  = document.getElementById('comms-monthly-progress');
+  const matWrap = document.getElementById('comms-monthly-matrix-wrap');
+  if (!cardsEl) return;
+
+  const equips = commsEquipment.filter(e => e.status !== '報廢');
+  if (!equips.length) {
+    cardsEl.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = '';
+    if (progEl)  progEl.textContent = '';
+    if (matWrap) matWrap.style.display = 'none';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  const reports = commsMonthlyReports.filter(r => r.month === month);
+  const reported = equips.filter(e => reports.some(r => r.equipmentId === e.id));
+  if (progEl) progEl.textContent = `已回報 ${reported.length} / ${equips.length} 台`;
+
+  cardsEl.innerHTML = equips.map(e => {
+    const rep = reports.find(r => r.equipmentId === e.id);
+    const missingParts = rep ? (rep.parts || []).filter(p => !p.ok) : [];
+    const hasReport = !!rep;
+    const hasMissing = missingParts.length > 0;
+
+    let badgeHtml, statusText;
+    if (!hasReport) {
+      badgeHtml = `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:#f1f5f9;color:#64748b">未回報</span>`;
+    } else if (hasMissing) {
+      badgeHtml = `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:#fef3c7;color:#d97706">⚠️ 有缺失</span>`;
+    } else {
+      badgeHtml = `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#16a34a">✓ 良好</span>`;
+    }
+
+    const missingHtml = hasMissing
+      ? `<div class="comms-monthly-missing">缺失：${missingParts.map(p => p.name).join('、')}</div>`
+      : '';
+
+    return `
+    <div class="comms-monthly-card">
+      <div class="comms-monthly-info">
+        <div class="comms-monthly-name">${e.name || '—'}</div>
+        <div class="comms-monthly-serial">#${e.serialNumber || '—'}${e.unit ? '　'+e.unit : ''}</div>
+        ${missingHtml}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        ${badgeHtml}
+        <button class="btn btn-sm ${hasReport ? 'btn-secondary' : 'btn-primary'}" onclick="openCommsMonthlyModal('${e.id}','${month}')">
+          ${hasReport ? '重新回報' : '回報'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 矩陣：只要至少一台已回報就顯示
+  if (reported.length > 0) {
+    renderCommsMonthlyMatrix(equips, reports, month);
+    if (matWrap) matWrap.style.display = '';
+  } else {
+    if (matWrap) matWrap.style.display = 'none';
+  }
+}
+
+function renderCommsMonthlyMatrix(equips, reports, month) {
+  const table = document.getElementById('comms-monthly-matrix');
+  if (!table) return;
+
+  // header row: 裝備序號
+  const headerCells = equips.map(e => `<th title="${e.name}">${e.serialNumber || '—'}</th>`).join('');
+  // rows: one per part
+  const rows = COMMS_PARTS.map(partName => {
+    const cells = equips.map(e => {
+      const rep = reports.find(r => r.equipmentId === e.id);
+      if (!rep) return `<td class="cell-none">—</td>`;
+      const p = (rep.parts || []).find(x => x.name === partName);
+      if (!p) return `<td class="cell-none">—</td>`;
+      return p.ok
+        ? `<td class="cell-ok">✓</td>`
+        : `<td class="cell-bad">✗</td>`;
+    }).join('');
+    return `<tr><td class="cell-part">${partName}</td>${cells}</tr>`;
+  }).join('');
+
+  table.innerHTML = `
+    <thead><tr><th style="text-align:left">零附件 \\ 裝備</th>${headerCells}</tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
+window.openCommsMonthlyModal = function(equipId, month) {
+  commsMonthlyEquipId = equipId;
+  commsMonthlyMonth   = month;
+  const equip = commsEquipment.find(e => e.id === equipId);
+  document.getElementById('comms-monthly-modal-title').textContent = `月檢回報 — ${month}`;
+  document.getElementById('comms-monthly-modal-sub').textContent =
+    equip ? `${equip.name}　#${equip.serialNumber || '—'}` : '';
+
+  // 載入既有回報（若有）
+  const existing = commsMonthlyReports.find(r => r.equipmentId === equipId && r.month === month);
+  const savedParts = existing?.parts || [];
+
+  const listEl = document.getElementById('comms-monthly-parts-list');
+  listEl.innerHTML = COMMS_PARTS.map(name => {
+    const saved = savedParts.find(p => p.name === name);
+    const isOk  = saved ? saved.ok : true; // 預設良好
+    return `
+    <div class="comms-part-row" id="cmp-row-${name.replace(/[^a-zA-Z0-9]/g,'_')}">
+      <span class="comms-part-name">${name}</span>
+      <div class="comms-part-toggle">
+        <button type="button" class="${isOk ? 'ok-active' : ''}" onclick="commsPartToggle('${name.replace(/'/g,"\\'")}', true)">良好</button>
+        <button type="button" class="${!isOk ? 'bad-active' : ''}" onclick="commsPartToggle('${name.replace(/'/g,"\\'")}', false)">缺失</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('cm-notes').value = existing?.notes || '';
+  document.getElementById('commsMonthlyModalOverlay').classList.add('open');
+};
+
+window.commsPartToggle = function(name, isOk) {
+  const rowId = 'cmp-row-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+  const row   = document.getElementById(rowId);
+  if (!row) return;
+  const [okBtn, badBtn] = row.querySelectorAll('.comms-part-toggle button');
+  okBtn.className  = isOk  ? 'ok-active'  : '';
+  badBtn.className = !isOk ? 'bad-active' : '';
+};
+
+function readCommsMonthlyParts() {
+  return COMMS_PARTS.map(name => {
+    const rowId = 'cmp-row-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+    const row   = document.getElementById(rowId);
+    const okBtn = row?.querySelector('.comms-part-toggle button:first-child');
+    const isOk  = okBtn ? okBtn.classList.contains('ok-active') : true;
+    return { name, ok: isOk };
+  });
+}
+
+document.getElementById('commsMonthlyModalClose')?.addEventListener('click',  () => document.getElementById('commsMonthlyModalOverlay').classList.remove('open'));
+document.getElementById('commsMonthlyModalCancel')?.addEventListener('click', () => document.getElementById('commsMonthlyModalOverlay').classList.remove('open'));
+
+document.getElementById('commsMonthlyReportSaveBtn')?.addEventListener('click', async () => {
+  const parts = readCommsMonthlyParts();
+  const notes = document.getElementById('cm-notes').value.trim();
+  const equip = commsEquipment.find(e => e.id === commsMonthlyEquipId);
+  const data = {
+    equipmentId:   commsMonthlyEquipId,
+    equipmentName: equip?.name || '',
+    serialNumber:  equip?.serialNumber || '',
+    unit:          equip?.unit || '',
+    month:         commsMonthlyMonth,
+    parts,
+    notes,
+    submittedAt: serverTimestamp(),
+  };
+
+  const btn = document.getElementById('commsMonthlyReportSaveBtn');
+  btn.disabled = true;
+  try {
+    // 找是否已有同月同裝備紀錄
+    const existing = commsMonthlyReports.find(r => r.equipmentId === commsMonthlyEquipId && r.month === commsMonthlyMonth);
+    if (existing) {
+      await updateDoc(doc(db, 'commsMonthlyReports', existing.id), data);
+    } else {
+      await addDoc(COL_COMMS_MONTHLY, { ...data, createdAt: serverTimestamp() });
+    }
+    document.getElementById('commsMonthlyModalOverlay').classList.remove('open');
+    showToast('✓ 回報成功');
+  } catch(e) { showToast('儲存失敗：' + e.message); }
+  finally { btn.disabled = false; }
+});
+
+document.getElementById('comms-monthly-picker')?.addEventListener('change', renderCommsMonthly);
+
 // ── 下拉選單填充 ──────────────────────────────────────
 function populateCommsEquipSelects() {
   ['cs-equip-sel', 'cl-equip-sel', 'comms-log-equip-filter'].forEach(id => {
@@ -7528,7 +7730,7 @@ document.getElementById('commsNameTabBtn')?.addEventListener('click', () => {
   const panel    = document.getElementById('commsNamePanel');
   const tabsBar  = document.querySelector('#page-comms-equipment .tabs');
   const addBtn   = document.getElementById('addCommsEquipBtn');
-  const panes    = ['comms-pane-list','comms-pane-schedule','comms-pane-logs'];
+  const panes    = ['comms-pane-list','comms-pane-schedule','comms-pane-logs','comms-pane-monthly'];
   const tabBtn   = document.getElementById('commsNameTabBtn');
   if (commsNamePanelOpen) {
     if (panel)   panel.style.display = '';
