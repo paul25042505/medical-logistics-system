@@ -3108,8 +3108,8 @@ function renderSeparatedPersonnel() {
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const list = [...personnel]
-    .filter(p => p.separationDate && new Date(p.separationDate + 'T00:00:00') <= today)
-    .sort((a, b) => (b.separationDate || '').localeCompare(a.separationDate || ''));
+    .filter(p => p.separationDate)
+    .sort((a, b) => (a.separationDate || '').localeCompare(b.separationDate || ''));
 
   if (!list.length) {
     tbody.innerHTML = '';
@@ -3118,17 +3118,26 @@ function renderSeparatedPersonnel() {
   }
   if (emptyEl) emptyEl.style.display = 'none';
 
-  tbody.innerHTML = list.map((p, i) => `
+  tbody.innerHTML = list.map((p, i) => {
+    const effectDate = new Date(p.separationDate + 'T00:00:00');
+    const effective  = effectDate <= today;
+    const statusBadge = effective
+      ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:#f1f5f9;color:#64748b">已生效</span>`
+      : `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:#fef9c3;color:#ca8a04">待生效</span>`;
+    const typeBadge = `<span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:8px;background:${p.separationType === '退伍' ? '#eff6ff' : '#fef3c7'};color:${p.separationType === '退伍' ? '#2563eb' : '#d97706'}">${p.separationType || '離職'}</span>`;
+    return `
     <tr class="personnel-row" data-id="${p.id}" style="cursor:pointer" onclick="openPersonnelDetail('${p.id}')">
       <td class="col-seq">${i + 1}</td>
       <td class="col-unit"><span class="unit-tag">${p.unit || '—'}</span></td>
       <td class="col-rank">${p.rank || '—'}</td>
       <td>${p.name || '—'}</td>
-      <td><span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:8px;background:${p.separationType === '退伍' ? '#eff6ff' : '#fef3c7'};color:${p.separationType === '退伍' ? '#2563eb' : '#d97706'}">${p.separationType || '離職'}</span></td>
+      <td>${typeBadge}</td>
+      <td>${statusBadge}</td>
       <td>${p.separationDate || '—'}</td>
       <td>${p.separationUnitCode || '—'}</td>
       <td>${p.separationUnitFull || '—'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 window.openPersonnelEdit = function (id) {
