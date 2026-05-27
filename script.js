@@ -338,20 +338,30 @@ function showAuthScreen(screen) {
   ['login', 'register', 'pending'].forEach(s => {
     document.getElementById(`auth-screen-${s}`).style.display = s === screen ? '' : 'none';
   });
-  // 顯示申請表時：從 Firestore 載入單位清單
+  // 顯示申請表時：從 Firestore 載入單位清單 + 開放期間設定
   if (screen === 'register') {
     const unitSel = document.getElementById('reg-unit');
-    if (unitSel && unitSel.options.length <= 1) {
-      getDoc(doc(db, 'settings', 'admin')).then(snap => {
-        // 申請表用衛生營單位（medUnits），若無則用預設值
-        const data  = snap.exists() ? snap.data() : {};
+    getDoc(doc(db, 'settings', 'admin')).then(snap => {
+      const data  = snap.exists() ? snap.data() : {};
+      // 單位清單
+      if (unitSel && unitSel.options.length <= 1) {
         const units = data.medUnits?.length
           ? data.medUnits
           : ['衛生營營部', '衛生營第一連', '衛生營第二連'];
         unitSel.innerHTML = '<option value="">— 請選擇單位 —</option>' +
           units.map(u => `<option value="${u}">${u}</option>`).join('');
-      }).catch(() => {});
-    }
+      }
+      // 開放期間判斷
+      const today = new Date().toISOString().slice(0, 10);
+      const start = data.openRegStart || '';
+      const end   = data.openRegEnd   || '';
+      const isOpen = start && end && today >= start && today <= end;
+      const noticeEl = document.getElementById('open-reg-notice');
+      const submitBtn = document.getElementById('submit-register-btn');
+      if (noticeEl) noticeEl.style.display = isOpen ? '' : 'none';
+      if (submitBtn) submitBtn.textContent = isOpen ? '立即進入系統' : '提交申請';
+      submitBtn?.setAttribute('data-open-reg', isOpen ? '1' : '0');
+    }).catch(() => {});
   }
 }
 
@@ -538,9 +548,13 @@ document.getElementById('submit-register-btn').addEventListener('click', async (
   if (!name) { errEl.textContent = '請填寫姓名';        return; }
   if (!unit) { errEl.textContent = '請選擇所屬單位';    return; }
 
+  const isOpenReg = document.getElementById('submit-register-btn')?.getAttribute('data-open-reg') === '1';
   try {
     // 更新 users/{uid}
-    await updateDoc(doc(db, 'users', currentUser.uid), { name, unit, rank, phone });
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+      name, unit, rank, phone,
+      ...(isOpenReg ? { approved: true } : {}),
+    });
 
     // 立即建立 personnel/{uid}，核准後即在人員管理出現
     await setDoc(doc(db, 'personnel', currentUser.uid), {
@@ -552,8 +566,13 @@ document.getElementById('submit-register-btn').addEventListener('click', async (
       createdFrom: 'googleRegister',
     }, { merge: true });
 
-    document.getElementById('pending-email-display').textContent = currentUser.email;
-    showAuthScreen('pending');
+    if (isOpenReg) {
+      showApp(currentUser, { name, admin: false, role: 'member' });
+      if (!appStarted) { appStarted = true; startApp(); }
+    } else {
+      document.getElementById('pending-email-display').textContent = currentUser.email;
+      showAuthScreen('pending');
+    }
   } catch (e) { console.error(e); errEl.textContent = '送出失敗，請再試一次'; }
 });
 
@@ -781,6 +800,30 @@ function renderAdminPage() {
 
   // ── 角色業務設定 ──
   renderRoleConfig();
+
+  // ── 開放自助註冊期間 ──
+  const today     = new Date().toISOString().slice(0, 10);
+  const regStart  = adminSettings.openRegStart || '';
+  const regEnd    = adminSettings.openRegEnd   || '';
+  const startInp  = document.getElementById('admin-openreg-start');
+  const endInp    = document.getElementById('admin-openreg-end');
+  const currentEl = document.getElementById('open-reg-current');
+  if (startInp) startInp.value = regStart;
+  if (endInp)   endInp.value   = regEnd;
+  if (currentEl) {
+    if (regStart && regEnd) {
+      const isActive = today >= regStart && today <= regEnd;
+      currentEl.style.display = '';
+      currentEl.textContent = isActive
+        ? `🟢 目前開放中：${regStart} ～ ${regEnd}`
+        : `⏸ 設定期間：${regStart} ～ ${regEnd}（目前非開放期間）`;
+      currentEl.style.background = isActive ? '#f0fdf4' : '#fafafa';
+      currentEl.style.borderColor = isActive ? '#86efac' : '#e2e8f0';
+      currentEl.style.color = isActive ? '#166534' : '#64748b';
+    } else {
+      currentEl.style.display = 'none';
+    }
+  }
 }
 
 // ── 整合帳號申請 + 已登入帳號 ─────────────────────────
@@ -1859,6 +1902,29 @@ function renderAdminSheetsSettings() {
   if (el1) el1.value = adminSettings.sheetsApiKey  || '';
   if (el2) el2.value = adminSettings.sheetsSheetId || '';
 }
+
+// ── 開放自助註冊期間 設定 ─────────────────────────────
+document.getElementById('admin-openreg-save')?.addEventListener('click', async () => {
+  const start = document.getElementById('admin-openreg-start')?.value;
+  const end   = document.getElementById('admin-openreg-end')?.value;
+  if (!start || !end) { showToast('請填寫開始與結束日期'); return; }
+  if (start > end)    { showToast('結束日期不能早於開始日期'); return; }
+  try {
+    await setDoc(DOC_ADMIN, { ...adminSettings, openRegStart: start, openRegEnd: end });
+    showToast('✓ 已儲存開放期間');
+    renderAdminPage();
+  } catch(e) { showToast('儲存失敗：' + e.message); }
+});
+
+document.getElementById('admin-openreg-clear')?.addEventListener('click', async () => {
+  showConfirm('確定關閉開放自助註冊？', async () => {
+    try {
+      await setDoc(DOC_ADMIN, { ...adminSettings, openRegStart: '', openRegEnd: '' });
+      showToast('✓ 已關閉開放期間');
+      renderAdminPage();
+    } catch(e) { showToast('操作失敗：' + e.message); }
+  });
+});
 
 document.getElementById('admin-sheets-save')?.addEventListener('click', async () => {
   const apiKey  = document.getElementById('admin-sheets-apikey').value.trim();
