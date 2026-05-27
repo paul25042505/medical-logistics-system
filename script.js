@@ -802,27 +802,44 @@ function renderAdminPage() {
   renderRoleConfig();
 
   // ── 開放自助註冊期間 ──
-  const today     = new Date().toISOString().slice(0, 10);
-  const regStart  = adminSettings.openRegStart || '';
-  const regEnd    = adminSettings.openRegEnd   || '';
-  const startInp  = document.getElementById('admin-openreg-start');
-  const endInp    = document.getElementById('admin-openreg-end');
-  const currentEl = document.getElementById('open-reg-current');
-  if (startInp) startInp.value = regStart;
-  if (endInp)   endInp.value   = regEnd;
-  if (currentEl) {
-    if (regStart && regEnd) {
-      const isActive = today >= regStart && today <= regEnd;
-      currentEl.style.display = '';
-      currentEl.textContent = isActive
+  const today    = new Date().toISOString().slice(0, 10);
+  const regStart = adminSettings.openRegStart || '';
+  const regEnd   = adminSettings.openRegEnd   || '';
+  const hasPeriod = !!(regStart && regEnd);
+  const isActive  = hasPeriod && today >= regStart && today <= regEnd;
+
+  const currentEl  = document.getElementById('open-reg-current');
+  const formEl     = document.getElementById('open-reg-form');
+  const badgeEl    = document.getElementById('open-reg-status-badge');
+  const startInp   = document.getElementById('admin-openreg-start');
+  const endInp     = document.getElementById('admin-openreg-end');
+  const cancelBtn  = document.getElementById('admin-openreg-cancel');
+  const endNowBtn  = document.getElementById('admin-openreg-endnow');
+
+  if (hasPeriod) {
+    // 有設定：顯示狀態，隱藏表單
+    if (currentEl) currentEl.style.display = '';
+    if (formEl)    formEl.style.display    = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    if (badgeEl) {
+      badgeEl.textContent   = isActive
         ? `🟢 目前開放中：${regStart} ～ ${regEnd}`
-        : `⏸ 設定期間：${regStart} ～ ${regEnd}（目前非開放期間）`;
-      currentEl.style.background = isActive ? '#f0fdf4' : '#fafafa';
-      currentEl.style.borderColor = isActive ? '#86efac' : '#e2e8f0';
-      currentEl.style.color = isActive ? '#166534' : '#64748b';
-    } else {
-      currentEl.style.display = 'none';
+        : `⏸ 已設定期間：${regStart} ～ ${regEnd}（目前非開放期間）`;
+      badgeEl.style.background   = isActive ? '#f0fdf4' : '#f8fafc';
+      badgeEl.style.border       = isActive ? '1px solid #86efac' : '1px solid #e2e8f0';
+      badgeEl.style.color        = isActive ? '#166534' : '#64748b';
     }
+    // 已過期就隱藏「提早結束」
+    if (endNowBtn) endNowBtn.style.display = (isActive || today < regStart) ? '' : 'none';
+    if (startInp) startInp.value = regStart;
+    if (endInp)   endInp.value   = regEnd;
+  } else {
+    // 無設定：直接顯示空白表單
+    if (currentEl) currentEl.style.display = 'none';
+    if (formEl)    formEl.style.display    = '';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    if (startInp)  startInp.value = '';
+    if (endInp)    endInp.value   = '';
   }
 }
 
@@ -1904,6 +1921,28 @@ function renderAdminSheetsSettings() {
 }
 
 // ── 開放自助註冊期間 設定 ─────────────────────────────
+// 編輯按鈕：顯示表單（預填現有值），顯示取消按鈕
+document.getElementById('admin-openreg-edit-btn')?.addEventListener('click', () => {
+  const formEl    = document.getElementById('open-reg-form');
+  const cancelBtn = document.getElementById('admin-openreg-cancel');
+  if (formEl)    formEl.style.display    = '';
+  if (cancelBtn) cancelBtn.style.display = '';
+});
+
+// 取消編輯：隱藏表單
+document.getElementById('admin-openreg-cancel')?.addEventListener('click', () => {
+  const formEl    = document.getElementById('open-reg-form');
+  const cancelBtn = document.getElementById('admin-openreg-cancel');
+  if (formEl)    formEl.style.display    = 'none';
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  // 還原原始值
+  const startInp = document.getElementById('admin-openreg-start');
+  const endInp   = document.getElementById('admin-openreg-end');
+  if (startInp) startInp.value = adminSettings.openRegStart || '';
+  if (endInp)   endInp.value   = adminSettings.openRegEnd   || '';
+});
+
+// 儲存設定（新增或編輯）
 document.getElementById('admin-openreg-save')?.addEventListener('click', async () => {
   const start = document.getElementById('admin-openreg-start')?.value;
   const end   = document.getElementById('admin-openreg-end')?.value;
@@ -1916,11 +1955,24 @@ document.getElementById('admin-openreg-save')?.addEventListener('click', async (
   } catch(e) { showToast('儲存失敗：' + e.message); }
 });
 
+// 提早結束：將結束日期改為今日
+document.getElementById('admin-openreg-endnow')?.addEventListener('click', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  showConfirm(`確定將開放期間提早結束至今日（${today}）？`, async () => {
+    try {
+      await setDoc(DOC_ADMIN, { ...adminSettings, openRegEnd: today });
+      showToast('✓ 開放期間已設為今日截止');
+      renderAdminPage();
+    } catch(e) { showToast('操作失敗：' + e.message); }
+  });
+});
+
+// 刪除設定：完全移除
 document.getElementById('admin-openreg-clear')?.addEventListener('click', async () => {
-  showConfirm('確定關閉開放自助註冊？', async () => {
+  showConfirm('確定刪除開放自助註冊設定？', async () => {
     try {
       await setDoc(DOC_ADMIN, { ...adminSettings, openRegStart: '', openRegEnd: '' });
-      showToast('✓ 已關閉開放期間');
+      showToast('✓ 已刪除開放期間設定');
       renderAdminPage();
     } catch(e) { showToast('操作失敗：' + e.message); }
   });

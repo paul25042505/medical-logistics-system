@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260527a">
+  <link rel="stylesheet" href="style.css?v=20260527b">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -845,20 +845,31 @@
           <div class="admin-card">
             <div class="admin-card-title">🔓 開放自助註冊期間</div>
             <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px">設定後，在此期間內新成員填完資料即可直接進入系統，不需等待管理員審核。</p>
-            <div id="open-reg-current" style="display:none;margin-bottom:10px;padding:8px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:13px;color:#166534"></div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>開始日期</label>
-                <input type="date" id="admin-openreg-start">
-              </div>
-              <div class="form-group">
-                <label>結束日期</label>
-                <input type="date" id="admin-openreg-end">
+            <!-- 已設定：顯示狀態 + 操作按鈕 -->
+            <div id="open-reg-current" style="display:none;margin-bottom:14px">
+              <div id="open-reg-status-badge" style="padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:10px"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary btn-sm" id="admin-openreg-edit-btn">✏️ 編輯日期</button>
+                <button type="button" class="btn btn-warning btn-sm" id="admin-openreg-endnow">⏹ 提早結束（今日截止）</button>
+                <button type="button" class="btn btn-danger btn-sm" id="admin-openreg-clear">🗑 刪除設定</button>
               </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:10px">
-              <button type="button" class="btn btn-primary btn-sm" id="admin-openreg-save">儲存設定</button>
-              <button type="button" class="btn btn-danger btn-sm" id="admin-openreg-clear">清除（關閉開放）</button>
+            <!-- 新增 / 編輯表單 -->
+            <div id="open-reg-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>開始日期</label>
+                  <input type="date" id="admin-openreg-start">
+                </div>
+                <div class="form-group">
+                  <label>結束日期</label>
+                  <input type="date" id="admin-openreg-end">
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button type="button" class="btn btn-primary btn-sm" id="admin-openreg-save">儲存設定</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="admin-openreg-cancel" style="display:none">取消</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2647,6 +2658,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260527a"></script>
+  <script type="module" src="script.js?v=20260527b"></script>
 </body>
 </html>
