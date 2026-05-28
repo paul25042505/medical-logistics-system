@@ -123,7 +123,7 @@ const UP_UNITS = ['衛生營營部', '衛生營第一連', '衛生營第二連']
 // ── 台灣熱門汽機車廠牌（中英對照）────────────────────
 const CAR_BRANDS  = [
   'Toyota 豐田','Honda 本田','Nissan 日產','Mazda 馬自達','Ford 福特',
-  'Mitsubishi 三菱','Hyundai 現代','Kia 起亞','Volkswagen 福斯',
+  'Mitsubishi 三菱','Hyundai 現代','Kia 起亞','Volkswagen 福斯','Škoda 斯柯達',
   'BMW 寶馬','Mercedes-Benz 賓士','Lexus 凌志','Subaru 速霸陸',
   'Suzuki 鈴木','Isuzu 五十鈴','Tesla 特斯拉','Volvo 富豪',
   'Audi 奧迪','LUXGEN 納智捷',
