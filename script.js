@@ -6553,10 +6553,16 @@ function renderFitnessAdminPage() {
 // ── 承辦人編輯體測 Modal ──────────────────────────────
 let ftEditPersonnelId = null;
 
+// Handles the case where older records were saved using p.uid as personnelId instead of p.id
+function findFitnessTestFor(personnelId) {
+  const p = personnel.find(x => x.id === personnelId);
+  return fitnessTests.find(t => t.personnelId === personnelId || (p?.uid && t.personnelId === p.uid));
+}
+
 window.openFtEdit = function(personnelId) {
   ftEditPersonnelId = personnelId;
   const p    = personnel.find(x => x.id === personnelId);
-  const test = fitnessTests.find(t => t.personnelId === personnelId);
+  const test = findFitnessTestFor(personnelId);
 
   document.getElementById('ft-edit-title').textContent =
     `編輯體測計畫 — ${p?.rank||''} ${p?.name||''}`;
@@ -6620,13 +6626,15 @@ document.getElementById('ftEditSave')?.addEventListener('click', async () => {
   });
 
   const results = {};
-  document.querySelectorAll('#ft-admin-results-form [data-cat-id]').forEach(row => {
-    if (row.dataset.catId) results[row.dataset.catId] = row.dataset.result || '';
+  document.querySelectorAll('#ft-admin-results-form div[data-cat-id]').forEach(row => {
+    const activeBtn = row.querySelector('.ft-btn-result.active-pass, .ft-btn-result.active-fail');
+    results[row.dataset.catId] = activeBtn
+      ? (activeBtn.classList.contains('active-pass') ? 'pass' : 'fail')
+      : (row.dataset.result || '');
   });
-  // 也讀取沒被點過的（原始值）
-  const existing = fitnessTests.find(t => t.personnelId === ftEditPersonnelId);
+  const existing = findFitnessTestFor(ftEditPersonnelId);
   FITNESS_CATS.forEach(cat => {
-    if (!(cat.id in results)) results[cat.id] = existing?.results?.[cat.id] || '';
+    if (!results[cat.id]) results[cat.id] = existing?.results?.[cat.id] || '';
   });
 
   const p = personnel.find(x => x.id === ftEditPersonnelId);
@@ -6665,12 +6673,15 @@ document.getElementById('ftEditArchive')?.addEventListener('click', async () => 
   });
 
   const results = {};
-  document.querySelectorAll('#ft-admin-results-form [data-cat-id]').forEach(row => {
-    if (row.dataset.catId) results[row.dataset.catId] = row.dataset.result || '';
+  document.querySelectorAll('#ft-admin-results-form div[data-cat-id]').forEach(row => {
+    const activeBtn = row.querySelector('.ft-btn-result.active-pass, .ft-btn-result.active-fail');
+    results[row.dataset.catId] = activeBtn
+      ? (activeBtn.classList.contains('active-pass') ? 'pass' : 'fail')
+      : (row.dataset.result || '');
   });
-  const existing = fitnessTests.find(t => t.personnelId === ftEditPersonnelId);
+  const existing = findFitnessTestFor(ftEditPersonnelId);
   FITNESS_CATS.forEach(cat => {
-    if (!(cat.id in results)) results[cat.id] = existing?.results?.[cat.id] || '';
+    if (!results[cat.id]) results[cat.id] = existing?.results?.[cat.id] || '';
   });
 
   const hasResult = Object.values(results).some(v => v === 'pass' || v === 'fail');
