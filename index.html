@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260527g">
+  <link rel="stylesheet" href="style.css?v=20260527h">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -84,6 +84,15 @@
             <label>聯絡電話</label>
             <input type="tel" id="reg-phone" placeholder="手機或軍線">
           </div>
+        </div>
+        <!-- 自動比對現有帳號 -->
+        <div id="reg-match-section" style="display:none;margin-top:14px;padding:12px;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe">
+          <div style="font-size:13px;font-weight:600;color:#1d4ed8;margin-bottom:8px">🔗 找到以下可能相符的帳號，請確認是否為您</div>
+          <div id="reg-match-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-top:8px">
+            <input type="radio" name="reg-match" id="reg-match-new" value="" checked>
+            以上都不是，建立全新帳號
+          </label>
         </div>
         <div class="auth-error" id="reg-error"></div>
         <button type="button" class="btn btn-primary btn-full" id="submit-register-btn" style="margin-top:14px">提交申請</button>
@@ -2669,6 +2678,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260527g"></script>
+  <script type="module" src="script.js?v=20260527h"></script>
 </body>
 </html>

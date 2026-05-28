@@ -338,12 +338,18 @@ function showAuthScreen(screen) {
   ['login', 'register', 'pending'].forEach(s => {
     document.getElementById(`auth-screen-${s}`).style.display = s === screen ? '' : 'none';
   });
-  // 顯示申請表時：從 Firestore 載入單位清單 + 開放期間設定
+  // 顯示申請表時：載入單位清單 + 開放期間 + 自動比對現有帳號
   if (screen === 'register') {
     const unitSel = document.getElementById('reg-unit');
+    // 重置比對區塊
+    const matchSec = document.getElementById('reg-match-section');
+    if (matchSec) matchSec.style.display = 'none';
+    const newRadio = document.getElementById('reg-match-new');
+    if (newRadio) newRadio.checked = true;
+
+    // ① 載入 admin 設定（單位清單 + 開放期間）
     getDoc(doc(db, 'settings', 'admin')).then(snap => {
       const data  = snap.exists() ? snap.data() : {};
-      // 單位清單
       if (unitSel && unitSel.options.length <= 1) {
         const units = data.medUnits?.length
           ? data.medUnits
@@ -351,17 +357,35 @@ function showAuthScreen(screen) {
         unitSel.innerHTML = '<option value="">— 請選擇單位 —</option>' +
           units.map(u => `<option value="${u}">${u}</option>`).join('');
       }
-      // 開放期間判斷
       const today = new Date().toISOString().slice(0, 10);
-      const start = data.openRegStart || '';
-      const end   = data.openRegEnd   || '';
-      const isOpen = start && end && today >= start && today <= end;
+      const isOpen = (data.openRegStart && data.openRegEnd &&
+        today >= data.openRegStart && today <= data.openRegEnd);
       const noticeEl = document.getElementById('open-reg-notice');
       const submitBtn = document.getElementById('submit-register-btn');
       if (noticeEl) noticeEl.style.display = isOpen ? '' : 'none';
       if (submitBtn) submitBtn.textContent = isOpen ? '立即進入系統' : '提交申請';
       submitBtn?.setAttribute('data-open-reg', isOpen ? '1' : '0');
     }).catch(() => {});
+
+    // ② 以 Google 顯示名稱搜尋未連結的人員資料
+    const displayName = currentUser?.displayName || '';
+    if (displayName) {
+      getDocs(query(collection(db, 'personnel'), where('name', '==', displayName)))
+        .then(snap => {
+          const unlinked = snap.docs
+            .filter(d => !d.data().uid)
+            .map(d => ({ id: d.id, ...d.data() }));
+          if (!unlinked.length) return;
+          const listEl = document.getElementById('reg-match-list');
+          if (!listEl || !matchSec) return;
+          listEl.innerHTML = unlinked.map(p => `
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 10px;background:white;border-radius:8px;border:1px solid #bfdbfe">
+              <input type="radio" name="reg-match" value="${p.id}" style="flex-shrink:0">
+              <span>${p.rank ? p.rank + '　' : ''}${p.name}${p.unit ? '　' + p.unit : ''}${p.phone ? '　📞' + p.phone : ''}</span>
+            </label>`).join('');
+          matchSec.style.display = '';
+        }).catch(() => {});
+    }
   }
 }
 
@@ -549,22 +573,41 @@ document.getElementById('submit-register-btn').addEventListener('click', async (
   if (!unit) { errEl.textContent = '請選擇所屬單位';    return; }
 
   const isOpenReg = document.getElementById('submit-register-btn')?.getAttribute('data-open-reg') === '1';
-  try {
-    // 更新 users/{uid}
-    await updateDoc(doc(db, 'users', currentUser.uid), {
-      name, unit, rank, phone,
-      ...(isOpenReg ? { approved: true } : {}),
-    });
+  const selectedPersonnelId = document.querySelector('input[name="reg-match"]:checked')?.value || '';
 
-    // 立即建立 personnel/{uid}，核准後即在人員管理出現
-    await setDoc(doc(db, 'personnel', currentUser.uid), {
-      uid:         currentUser.uid,
-      name, unit, rank, phone,
-      email:       currentUser.email || '',
-      createdAt:   serverTimestamp(),
-      updatedAt:   serverTimestamp(),
-      createdFrom: 'googleRegister',
-    }, { merge: true });
+  try {
+    if (selectedPersonnelId) {
+      // ── 連結現有人員資料 ──
+      await updateDoc(doc(db, 'personnel', selectedPersonnelId), {
+        uid:       currentUser.uid,
+        email:     currentUser.email || '',
+        updatedAt: serverTimestamp(),
+        // 若欄位有填寫則覆蓋，否則保留原值
+        ...(name  ? { name }  : {}),
+        ...(unit  ? { unit }  : {}),
+        ...(rank  ? { rank }  : {}),
+        ...(phone ? { phone } : {}),
+      });
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        name, unit, rank, phone,
+        personnelId: selectedPersonnelId,
+        ...(isOpenReg ? { approved: true } : {}),
+      });
+    } else {
+      // ── 建立全新人員資料 ──
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        name, unit, rank, phone,
+        ...(isOpenReg ? { approved: true } : {}),
+      });
+      await setDoc(doc(db, 'personnel', currentUser.uid), {
+        uid:         currentUser.uid,
+        name, unit, rank, phone,
+        email:       currentUser.email || '',
+        createdAt:   serverTimestamp(),
+        updatedAt:   serverTimestamp(),
+        createdFrom: 'googleRegister',
+      }, { merge: true });
+    }
 
     if (isOpenReg) {
       showApp(currentUser, { name, admin: false, role: 'member' });
