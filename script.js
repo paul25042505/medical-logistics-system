@@ -131,7 +131,7 @@ const CAR_BRANDS  = [
 const MOTO_BRANDS = [
   'Yamaha 山葉','Honda 本田','光陽 Kymco','三陽 SYM',
   'Suzuki 鈴木','Kawasaki 川崎','PGO','Aeon Motor 宏佳騰',
-  '台鈴 Suzuki TW','Harley-Davidson 哈雷','BMW 寶馬',
+  '台鈴 Suzuki TW','Gogoro','Harley-Davidson 哈雷','BMW 寶馬',
 ];
 const OTHER_BRAND = '其他（手動輸入）';
 
