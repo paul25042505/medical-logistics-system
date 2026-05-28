@@ -2846,6 +2846,7 @@ main {
 .fts-cal-cell {
   background: #fff;
   min-height: 54px;
+  min-width: 0;
   padding: 4px 6px;
   cursor: pointer;
   position: relative;
@@ -2853,6 +2854,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow: hidden;
 }
 .fts-cal-cell:hover { background: #f0f6ff; }
 .fts-cal-cell.empty { background: var(--bg); cursor: default; }
