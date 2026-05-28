@@ -2954,3 +2954,23 @@ main {
 #comms-monthly-matrix td.cell-bad { background: #fee2e2; color: #dc2626; font-weight: 700; }
 #comms-monthly-matrix td.cell-none { color: #cbd5e1; }
 #comms-monthly-matrix td.cell-part { text-align: left; font-weight: 500; color: var(--text); background: #f8fafc; }
+
+/* ── 車色快速選色 ── */
+.color-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .15s;
+  touch-action: manipulation;
+}
+.color-chip:hover { border-color: #94a3b8; background: #f8fafc; }
+.color-chip.selected { border-color: var(--primary); background: #eff6ff; color: var(--primary); font-weight: 700; }
+.chip-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }

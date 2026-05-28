@@ -3661,6 +3661,10 @@ window.openVehicleModal = function(id = null) {
   document.getElementById('v-type').value  = type;
   document.getElementById('v-plate').value = v?.plate || '';
   document.getElementById('v-color').value = v?.color || '';
+  // 同步選色 chip
+  document.querySelectorAll('#v-color-chips .color-chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.color === (v?.color || ''));
+  });
 
   // 廠牌下拉（未選車種時 disabled）
   const brandSel    = document.getElementById('v-brand-select');
@@ -3893,6 +3897,18 @@ document.getElementById('vehicleModalClose').addEventListener('click',  closeVeh
 document.getElementById('vehicleCancelBtn').addEventListener('click',   closeVehicleModal);
 document.getElementById('vehicleModalOverlay').addEventListener('click', e => { if (e.target.id === 'vehicleModalOverlay') closeVehicleModal(); });
 document.getElementById('v-plate')?.addEventListener('input', function() { const s = this.selectionStart, e = this.selectionEnd; this.value = this.value.toUpperCase(); this.setSelectionRange(s, e); });
+
+// 車色快速選色
+document.getElementById('v-color-chips')?.addEventListener('click', e => {
+  const chip = e.target.closest('.color-chip');
+  if (!chip) return;
+  document.querySelectorAll('#v-color-chips .color-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+  document.getElementById('v-color').value = chip.dataset.color;
+});
+document.getElementById('v-color')?.addEventListener('input', () => {
+  document.querySelectorAll('#v-color-chips .color-chip').forEach(c => c.classList.remove('selected'));
+});
 
 // ── Save vehicle ──────────────────────────────────────
 document.getElementById('vehicleSaveBtn').addEventListener('click', async () => {

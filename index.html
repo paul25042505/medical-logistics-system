@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>衛生營後勤資訊管理系統</title>
-  <link rel="stylesheet" href="style.css?v=20260527c">
+  <link rel="stylesheet" href="style.css?v=20260527d">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -2127,7 +2127,18 @@
             </div>
             <div class="form-group">
               <label>顏色</label>
-              <input type="text" id="v-color" placeholder="白、黑、銀、紅…">
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="v-color-chips">
+                <button type="button" class="color-chip" data-color="白"  data-dot="#cbd5e1"><span class="chip-dot" style="background:#e2e8f0"></span>白</button>
+                <button type="button" class="color-chip" data-color="黑"  data-dot="#1e293b"><span class="chip-dot" style="background:#1e293b"></span>黑</button>
+                <button type="button" class="color-chip" data-color="銀"  data-dot="#94a3b8"><span class="chip-dot" style="background:#94a3b8"></span>銀</button>
+                <button type="button" class="color-chip" data-color="灰"  data-dot="#6b7280"><span class="chip-dot" style="background:#6b7280"></span>灰</button>
+                <button type="button" class="color-chip" data-color="紅"  data-dot="#dc2626"><span class="chip-dot" style="background:#dc2626"></span>紅</button>
+                <button type="button" class="color-chip" data-color="藍"  data-dot="#2563eb"><span class="chip-dot" style="background:#2563eb"></span>藍</button>
+                <button type="button" class="color-chip" data-color="綠"  data-dot="#16a34a"><span class="chip-dot" style="background:#16a34a"></span>綠</button>
+                <button type="button" class="color-chip" data-color="黃"  data-dot="#ca8a04"><span class="chip-dot" style="background:#eab308"></span>黃</button>
+                <button type="button" class="color-chip" data-color="卡其" data-dot="#92400e"><span class="chip-dot" style="background:#92400e"></span>卡其</button>
+              </div>
+              <input type="text" id="v-color" placeholder="或直接輸入顏色…">
             </div>
           </div>
         </div>
@@ -2658,6 +2669,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260527c"></script>
+  <script type="module" src="script.js?v=20260527d"></script>
 </body>
 </html>
