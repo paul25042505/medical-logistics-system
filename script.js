@@ -3892,6 +3892,7 @@ document.getElementById('vehicleBatchSave').addEventListener('click', async () =
 document.getElementById('vehicleModalClose').addEventListener('click',  closeVehicleModal);
 document.getElementById('vehicleCancelBtn').addEventListener('click',   closeVehicleModal);
 document.getElementById('vehicleModalOverlay').addEventListener('click', e => { if (e.target.id === 'vehicleModalOverlay') closeVehicleModal(); });
+document.getElementById('v-plate')?.addEventListener('input', function() { const s = this.selectionStart, e = this.selectionEnd; this.value = this.value.toUpperCase(); this.setSelectionRange(s, e); });
 
 // ── Save vehicle ──────────────────────────────────────
 document.getElementById('vehicleSaveBtn').addEventListener('click', async () => {
