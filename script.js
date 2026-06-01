@@ -4796,38 +4796,255 @@ document.getElementById('appDetailOverlay').addEventListener('click', e => {
   if (e.target.id === 'appDetailOverlay') document.getElementById('appDetailOverlay').classList.remove('open');
 });
 
-// ── Print ─────────────────────────────────────────────
+// ── Print military form ───────────────────────────────
 document.getElementById('appPrintBtn').addEventListener('click', () => {
-  const body   = document.getElementById('app-detail-body').innerHTML;
-  const title  = document.getElementById('app-detail-title').textContent;
-  const win    = window.open('', '_blank');
+  const a = applications.find(x => x.id === viewingAppId);
+  if (!a) return;
+  printApplicationMilitaryForm(a);
+});
+
+function printApplicationMilitaryForm(a) {
+  const v  = s => s || '';
+  const vl = arr => Array.isArray(arr) ? arr.join('、') : (arr || '');
+
+  const addr    = [a.addrCity, a.addrDistrict, a.addrDetail].filter(Boolean).join('');
+  const curAddr = [a.curAddrCity, a.curAddrDistrict, a.curAddrDetail].filter(Boolean).join('') || addr;
+
+  const fmRows = Array.isArray(a.familyMembers) && a.familyMembers.length
+    ? a.familyMembers.map(m => `
+        <tr>
+          <td style="text-align:center">${v(m.relation)}</td>
+          <td>${v(m.name)}</td>
+          <td style="text-align:center">${v(m.age)}</td>
+          <td>${v(m.job)}</td>
+          <td>${v(m.phone)}</td>
+        </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:#999">（無）</td></tr>';
+
+  const css = `
+    @page { size: A4; margin: 15mm 18mm; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'標楷體','DFKai-SB','BiauKai',serif; font-size:11pt; color:#000; }
+    .page { page-break-after: always; }
+    .page:last-child { page-break-after: avoid; }
+    h2 { font-size:16pt; font-weight:bold; text-align:center; margin-bottom:2mm; letter-spacing:2px; }
+    .sub-header { font-size:10pt; text-align:center; margin-bottom:4mm; }
+    table.form { width:100%; border-collapse:collapse; }
+    table.form td, table.form th {
+      border:1px solid #000; padding:3px 5px; vertical-align:middle; font-size:10.5pt;
+    }
+    .lbl { background:#f0f0f0; font-weight:bold; white-space:nowrap; width:90px; text-align:center; }
+    .lbl2 { background:#f0f0f0; font-weight:bold; white-space:nowrap; width:75px; text-align:center; }
+    .val { min-height:18px; }
+    .tall td { height:28px; }
+    .taller td { height:52px; vertical-align:top; padding-top:4px; }
+    .tallest td { height:70px; vertical-align:top; padding-top:4px; }
+    .section-hdr { background:#d0d0d0; font-weight:bold; text-align:center; font-size:11pt; }
+    .note { font-size:9pt; color:#555; margin-top:6mm; }
+    .sig-area { display:flex; gap:20mm; margin-top:8mm; font-size:10pt; }
+    .sig-box { flex:1; border-top:1px solid #000; padding-top:2mm; text-align:center; }
+  `;
+
+  const page1 = `
+  <div class="page">
+    <h2>陸軍第五地區支援指揮部衛生營</h2>
+    <div class="sub-header">個 人 基 本 資 料</div>
+    <table class="form">
+      <tr class="tall">
+        <td class="lbl">梯　　次</td>
+        <td class="val" colspan="2"></td>
+        <td class="lbl">入伍日期</td>
+        <td class="val" colspan="2"></td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">姓　　名</td>
+        <td class="val">${v(a.name)}</td>
+        <td class="lbl">性　　別</td>
+        <td class="val">${v(a.gender)}</td>
+        <td class="lbl">婚姻狀況</td>
+        <td class="val">${v(a.marital)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">出生年月日</td>
+        <td class="val">${v(a.birthDate)}</td>
+        <td class="lbl">身分證字號</td>
+        <td class="val" colspan="3">${v(a.idNumber)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">戶籍地址</td>
+        <td class="val" colspan="5">${v(addr)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">通訊地址</td>
+        <td class="val" colspan="5">${v(curAddr)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">聯絡電話</td>
+        <td class="val">${v(a.phone)}</td>
+        <td class="lbl">LINE ID</td>
+        <td class="val">${v(a.lineId)}</td>
+        <td class="lbl">Email</td>
+        <td class="val">${v(a.email)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">最高學歷</td>
+        <td class="val">${v(a.education)}</td>
+        <td class="lbl">學　　校</td>
+        <td class="val">${v(a.school)}</td>
+        <td class="lbl">科　　系</td>
+        <td class="val">${v(a.department)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">在學狀態</td>
+        <td class="val">${v(a.studyStatus)}</td>
+        <td class="lbl">目前職業</td>
+        <td class="val">${v(a.job)}</td>
+        <td class="lbl">工作單位</td>
+        <td class="val">${v(a.company)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">兵役狀況</td>
+        <td class="val">${v(a.military)}</td>
+        <td class="lbl">服役單位</td>
+        <td class="val" colspan="3">${v(a.militaryUnit)}</td>
+      </tr>
+      <tr class="taller">
+        <td class="lbl">工作經歷</td>
+        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.workHistory)}</td>
+      </tr>
+      <tr class="taller">
+        <td class="lbl">服役經歷</td>
+        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.militaryExp)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">駕　　照</td>
+        <td class="val" colspan="2">${vl(a.licenses)}</td>
+        <td class="lbl">英語程度</td>
+        <td class="val" colspan="2">${v(a.english)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">興趣嗜好</td>
+        <td class="val" colspan="5">${vl(a.hobbies)}</td>
+      </tr>
+      <tr class="taller">
+        <td class="lbl">專業技能</td>
+        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.skills)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">持有證照</td>
+        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.certs)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">健康狀況</td>
+        <td class="val">${v(a.health)}</td>
+        <td class="lbl">健康備註</td>
+        <td class="val" colspan="3">${v(a.healthNote)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">緊急聯絡人</td>
+        <td class="val">${v(a.emergencyName)}</td>
+        <td class="lbl">關　　係</td>
+        <td class="val">${v(a.emergencyRel)}</td>
+        <td class="lbl">緊急電話</td>
+        <td class="val">${v(a.emergencyPhone)}</td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl">可報到日期</td>
+        <td class="val">${v(a.availDate)}</td>
+        <td class="lbl">接受派遣</td>
+        <td class="val">${v(a.relocate)}</td>
+        <td class="lbl">家庭縣市</td>
+        <td class="val">${v(a.homeCity)}</td>
+      </tr>
+      <tr class="tallest">
+        <td class="lbl">加入動機</td>
+        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.motivation)}</td>
+      </tr>
+      <tr class="tallest">
+        <td class="lbl">個人優勢</td>
+        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.strength)}</td>
+      </tr>
+      <tr class="taller">
+        <td class="lbl">其他備註</td>
+        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.notes)}</td>
+      </tr>
+    </table>
+    <div class="note">填表日期：${new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'})}</div>
+  </div>`;
+
+  const page2 = `
+  <div class="page">
+    <h2>陸軍第五地區支援指揮部衛生營</h2>
+    <div class="sub-header">個 人 資 料 — 家 庭 成 員 及 其 他</div>
+    <table class="form" style="margin-bottom:6mm">
+      <tr>
+        <th class="section-hdr" colspan="5">家 庭 成 員</th>
+      </tr>
+      <tr>
+        <th style="width:70px;text-align:center;background:#e8e8e8">關係</th>
+        <th style="background:#e8e8e8">姓名</th>
+        <th style="width:50px;text-align:center;background:#e8e8e8">年齡</th>
+        <th style="background:#e8e8e8">職業</th>
+        <th style="background:#e8e8e8">聯絡電話</th>
+      </tr>
+      ${fmRows}
+    </table>
+
+    <table class="form" style="margin-bottom:6mm">
+      <tr>
+        <th class="section-hdr" colspan="4">體 能 測 驗 成 績（由單位填寫）</th>
+      </tr>
+      <tr>
+        <th style="background:#e8e8e8;text-align:center">測驗項目</th>
+        <th style="background:#e8e8e8;text-align:center">成績</th>
+        <th style="background:#e8e8e8;text-align:center">測驗項目</th>
+        <th style="background:#e8e8e8;text-align:center">成績</th>
+      </tr>
+      <tr class="tall"><td style="text-align:center">伏地挺身（次）</td><td></td><td style="text-align:center">仰臥起坐（次）</td><td></td></tr>
+      <tr class="tall"><td style="text-align:center">單槓引體向上（次）</td><td></td><td style="text-align:center">3000公尺跑步（分秒）</td><td></td></tr>
+      <tr class="tall"><td style="text-align:center">體能測驗日期</td><td></td><td style="text-align:center">測驗評等</td><td></td></tr>
+    </table>
+
+    <table class="form" style="margin-bottom:6mm">
+      <tr>
+        <th class="section-hdr" colspan="4">單 位 評 核（由單位填寫）</th>
+      </tr>
+      <tr class="tall">
+        <td class="lbl2" style="width:80px">分發單位</td>
+        <td class="val"></td>
+        <td class="lbl2" style="width:80px">職　　稱</td>
+        <td class="val"></td>
+      </tr>
+      <tr class="tall">
+        <td class="lbl2">報到日期</td>
+        <td class="val"></td>
+        <td class="lbl2">輔導幹部</td>
+        <td class="val"></td>
+      </tr>
+      <tr style="height:60px">
+        <td class="lbl2">綜合評語</td>
+        <td class="val" colspan="3"></td>
+      </tr>
+    </table>
+
+    <div class="sig-area">
+      <div class="sig-box">申請人簽名<br><br><br></div>
+      <div class="sig-box">輔導幹部<br><br><br></div>
+      <div class="sig-box">單位主管<br><br><br></div>
+      <div class="sig-box">營　　長<br><br><br></div>
+    </div>
+  </div>`;
+
+  const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="zh-TW"><head>
-    <meta charset="UTF-8"><title>${title}</title>
-    <style>
-      * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family:'Segoe UI',sans-serif; font-size:13px; color:#1e293b; padding:24px 32px; }
-      h1 { font-size:18px; font-weight:700; margin-bottom:4px; color:#0b1f3a; }
-      .subtitle { font-size:12px; color:#64748b; margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid #0b1f3a; }
-      .pd-section { margin-bottom:18px; }
-      .pd-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#64748b; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #dde3ea; }
-      .pd-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; }
-      .pd-row { display:flex; flex-direction:column; gap:1px; }
-      .pd-label { font-size:10px; color:#64748b; font-weight:600; text-transform:uppercase; }
-      .pd-val { font-size:13px; color:#1e293b; }
-      table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
-      th,td { padding:5px 8px; text-align:left; border:1px solid #dde3ea; }
-      th { background:#f0f4f8; }
-      @media print { body { padding:12px 16px; } }
-    </style>
-  </head><body>
-    <h1>${title}</h1>
-    <div class="subtitle">列印日期：${new Date().toLocaleDateString('zh-TW')}</div>
-    ${body}
-  </body></html>`);
+    <meta charset="UTF-8">
+    <title>個人基本資料－${v(a.name)}</title>
+    <style>${css}</style>
+  </head><body>${page1}${page2}</body></html>`);
   win.document.close();
   win.focus();
-  setTimeout(() => win.print(), 400);
-});
+  setTimeout(() => win.print(), 500);
+}
 
 // ── Import to personnel ────────────────────────────────
 document.getElementById('appImportBtn').addEventListener('click', async () => {
