@@ -3072,6 +3072,47 @@ main {
 }
 .ceq-add-btn:active { opacity: .8; }
 
+/* 零附件 新增列 */
+.cl-parts-add {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.cl-parts-add input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  background: #f8fafc;
+}
+.cl-parts-add input:focus { outline: none; border-color: var(--accent); border-style: solid; }
+.cl-parts-add button {
+  padding: 6px 12px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.part-del-btn {
+  padding: 2px 7px;
+  background: none;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 11px;
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.part-del-btn:hover { background: #fee2e2; }
+
 /* 進廠排程 → 保養 按鈕 */
 .sched-to-log-btn {
   font-size: 12px;

@@ -7678,9 +7678,7 @@ function renderCommsLogList() {
             <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${hasDeficiency?'#fef3c7':'#f0fdf4'};color:${hasDeficiency?'#d97706':'#16a34a'}">${l.overallResult || '良好'}</span>
           </div>
           <div style="font-size:13px;margin-top:4px">
-            📅 ${l.logDate || '—'}
-            　<span style="color:var(--primary);font-weight:600">${l.maintenanceLevel || ''}</span>
-            　${l.maintenanceType || ''}
+            📅 ${l.logDate || '—'}　${l.maintenanceType || ''}
           </div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">
             零附件：良好 ${goodParts} 項　${badParts ? `⚠️ 缺失 ${badParts} 項` : ''}
@@ -8101,58 +8099,79 @@ document.getElementById('commsSchedSaveBtn')?.addEventListener('click', async ()
 });
 
 // ── 保養紀錄 Modal ────────────────────────────────────
-function buildCommsPartsForm(savedParts = []) {
-  const el = document.getElementById('cl-parts-list');
-  if (!el) return;
-  el.innerHTML = COMMS_PARTS.map(name => {
-    const saved = savedParts.find(p => p.name === name);
-    const good  = saved ? saved.condition === '良好' : true;
-    const bad   = saved ? saved.condition === '缺失' : false;
-    const pnotes = saved?.notes || '';
-    return `
-    <div class="comms-part-row" data-part="${name}" style="padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span style="font-size:13px;font-weight:500;flex:1">${name}</span>
-        <div style="display:flex;gap:6px">
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px">
-            <input type="radio" name="part-${name.replace(/[^\w]/g,'_')}" value="良好" ${good?'checked':''}
-              onchange="commsPartChange('${name}')"> 良好
-          </label>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px">
-            <input type="radio" name="part-${name.replace(/[^\w]/g,'_')}" value="缺失" ${bad?'checked':''}
-              onchange="commsPartChange('${name}')"> 缺失
-          </label>
-        </div>
-      </div>
-      <div class="part-deficiency-note" style="display:${bad?'':'none'};margin-top:4px">
-        <input type="text" placeholder="缺失說明（選填）" value="${pnotes}"
-          style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"
-          data-part-note="${name}">
-      </div>
-    </div>`;
-  }).join('');
+let _partIdx = 0;
+
+function makeCommsPartRow(name, condition, notes) {
+  const idx = _partIdx++;
+  const isBad = condition === '缺失';
+  const esc = name.replace(/"/g, '&quot;');
+  return `
+  <div class="comms-part-row" data-part="${esc}" style="border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0">
+      <span style="flex:1;font-size:13px;font-weight:500">${name}</span>
+      <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:13px">
+        <input type="radio" name="cp${idx}" value="良好" ${isBad?'':'checked'} onchange="commsPartChange(this)"> 良好
+      </label>
+      <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:13px">
+        <input type="radio" name="cp${idx}" value="缺失" ${isBad?'checked':''} onchange="commsPartChange(this)"> 缺失
+      </label>
+      <button type="button" class="part-del-btn" onclick="removeCommsPart(this)">✕</button>
+    </div>
+    <div class="part-deficiency-note" style="display:${isBad?'':'none'};padding-bottom:8px">
+      <input type="text" placeholder="缺失說明（選填）" value="${notes.replace(/"/g,'&quot;')}"
+        style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px"
+        data-part-note="${esc}">
+    </div>
+  </div>`;
 }
 
-window.commsPartChange = function(name) {
-  const row    = document.querySelector(`.comms-part-row[data-part="${name}"]`);
-  if (!row) return;
-  const isBad  = row.querySelector('input[value="缺失"]')?.checked;
-  const noteEl = row.querySelector('.part-deficiency-note');
-  if (noteEl) noteEl.style.display = isBad ? '' : 'none';
-  // Show/hide deficiency section
-  const anyBad = COMMS_PARTS.some(p => {
-    const r = document.querySelector(`.comms-part-row[data-part="${p}"]`);
-    return r?.querySelector('input[value="缺失"]')?.checked;
-  });
+function buildCommsPartsForm(savedParts = []) {
+  _partIdx = 0;
+  const el = document.getElementById('cl-parts-list');
+  if (!el) return;
+  const parts = savedParts.length
+    ? savedParts
+    : COMMS_PARTS.map(name => ({ name, condition: '良好', notes: '' }));
+  el.innerHTML = parts.map(p => makeCommsPartRow(p.name, p.condition || '良好', p.notes || '')).join('');
+}
+
+function updateCommsDeficiencySection() {
+  const anyBad = [...document.querySelectorAll('#cl-parts-list .comms-part-row')]
+    .some(row => row.querySelector('input[value="缺失"]')?.checked);
   const defSec = document.getElementById('cl-deficiency-section');
   if (defSec) defSec.style.display = anyBad ? '' : 'none';
+}
+
+window.commsPartChange = function(radio) {
+  const row = radio.closest('.comms-part-row');
+  if (!row) return;
+  const noteEl = row.querySelector('.part-deficiency-note');
+  if (noteEl) noteEl.style.display = radio.value === '缺失' ? '' : 'none';
+  updateCommsDeficiencySection();
+};
+
+window.addCommsPart = function() {
+  const input = document.getElementById('cl-part-input');
+  const name = input?.value.trim();
+  if (!name) return;
+  const el = document.getElementById('cl-parts-list');
+  if (!el) return;
+  const exists = [...el.querySelectorAll('.comms-part-row')].some(r => r.dataset.part === name);
+  if (exists) { showToast('此零附件已存在'); return; }
+  el.insertAdjacentHTML('beforeend', makeCommsPartRow(name, '良好', ''));
+  if (input) input.value = '';
+};
+
+window.removeCommsPart = function(btn) {
+  btn.closest('.comms-part-row').remove();
+  updateCommsDeficiencySection();
 };
 
 function readCommsPartsList() {
-  return COMMS_PARTS.map(name => {
-    const row   = document.querySelector(`.comms-part-row[data-part="${name}"]`);
-    const isBad = row?.querySelector('input[value="缺失"]')?.checked;
-    const notes = row?.querySelector(`[data-part-note="${name}"]`)?.value?.trim() || '';
+  return [...document.querySelectorAll('#cl-parts-list .comms-part-row')].map(row => {
+    const name  = row.dataset.part;
+    const isBad = row.querySelector('input[value="缺失"]')?.checked;
+    const notes = row.querySelector('[data-part-note]')?.value?.trim() || '';
     return { name, condition: isBad ? '缺失' : '良好', notes };
   });
 }
@@ -8164,7 +8183,6 @@ window.openCommsLogModal = function(id = null, preEquipId = null) {
   populateCommsEquipSelects();
   document.getElementById('cl-equip-sel').value    = l?.equipmentId   || preEquipId || '';
   document.getElementById('cl-date').value          = l?.logDate        || new Date().toISOString().slice(0, 10);
-  document.getElementById('cl-level').value         = l?.maintenanceLevel || '一級保養（使用級）';
   document.getElementById('cl-type').value          = l?.maintenanceType  || '定期';
   document.getElementById('cl-technician').value    = l?.technician       || '';
   document.getElementById('cl-deficiency-process').value = l?.deficiencyProcess || '自行修復';
@@ -8202,7 +8220,6 @@ document.getElementById('commsLogSaveBtn')?.addEventListener('click', async () =
     equipmentId:      equipId,
     serialNumber:     equip?.serialNumber || '',
     logDate:          date,
-    maintenanceLevel: document.getElementById('cl-level').value,
     maintenanceType:  document.getElementById('cl-type').value,
     technician:       document.getElementById('cl-technician').value.trim(),
     parts,
