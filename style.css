@@ -3072,6 +3072,17 @@ main {
 }
 .ceq-add-btn:active { opacity: .8; }
 
+/* 品名管理 — 零附件編輯列 */
+.cnp-part-row {
+  display: flex;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  font-size: 13px;
+}
+.cnp-part-row span { flex: 1; }
+
 /* 零附件 新增列 */
 .cl-parts-add {
   display: flex;

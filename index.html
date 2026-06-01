@@ -1142,16 +1142,7 @@
 
         <!-- 品名管理面板 -->
         <div id="commsNamePanel" style="display:none;background:var(--white);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:16px">
-          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px">📋 裝備品名管理</div>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input type="text" id="commsNameInput" placeholder="輸入新品名，例：步話機" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-            <button type="button" class="btn btn-primary btn-sm" id="addCommsNameBtn">＋ 新增</button>
-          </div>
-          <div id="commsNameList" class="me-type-list"></div>
-          <div id="commsNameEmpty" class="empty-state" style="display:none">
-            <div class="icon">📋</div>
-            <p>尚無品名，請輸入後點「＋ 新增」</p>
-          </div>
+          <div id="commsNamePanelContent"></div>
         </div>
 
         <!-- Tabs -->
@@ -2678,6 +2669,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260528g"></script>
+  <script type="module" src="script.js?v=20260528h"></script>
 </body>
 </html>

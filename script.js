@@ -7917,22 +7917,106 @@ function populateCommsNameSel() {
   if (cur) sel.value = cur;
 }
 
+let editingCommsNameId = null;
+
 function renderCommsNames() {
-  const listEl = document.getElementById('commsNameList');
-  const empty  = document.getElementById('commsNameEmpty');
-  if (!listEl) return;
-  if (!commsEquipNames.length) {
-    listEl.innerHTML = '';
-    if (empty) empty.style.display = '';
-    return;
+  const el = document.getElementById('commsNamePanelContent');
+  if (!el) return;
+
+  if (editingCommsNameId) {
+    const n = commsEquipNames.find(x => x.id === editingCommsNameId);
+    if (!n) { editingCommsNameId = null; renderCommsNames(); return; }
+    const parts = n.parts || [];
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button type="button" onclick="exitCommsNameEdit()"
+          style="padding:5px 12px;border:1.5px solid var(--border);border-radius:20px;background:var(--white);font-size:13px;cursor:pointer;touch-action:manipulation">← 返回</button>
+        <span style="font-size:14px;font-weight:700;color:var(--navy);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.name}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚙️ 此品名的零附件清單（保養時會自動帶入）</div>
+      <div id="cnp-parts-list">
+        ${parts.length
+          ? parts.map(p => `
+            <div class="cnp-part-row">
+              <span>${p}</span>
+              <button type="button" class="part-del-btn" onclick="removeCommsNamePart('${editingCommsNameId}','${p.replace(/'/g,"\\'")}')">✕</button>
+            </div>`).join('')
+          : '<div style="color:var(--muted);font-size:13px;padding:8px 0">尚無零附件，請新增</div>'}
+      </div>
+      <div class="cl-parts-add" style="margin-top:10px">
+        <input type="text" id="cnp-part-input" placeholder="新增零附件名稱…" onkeydown="if(event.key==='Enter')addCommsNamePart()">
+        <button type="button" onclick="addCommsNamePart()">＋ 新增</button>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px">📋 裝備品名管理</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="commsNameInput" placeholder="輸入新品名，例：步話機"
+          style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"
+          onkeydown="if(event.key==='Enter')commsNameAdd()">
+        <button type="button" class="btn btn-primary btn-sm" onclick="commsNameAdd()">＋ 新增</button>
+      </div>
+      ${commsEquipNames.length ? `
+        <div class="me-type-list">
+          ${commsEquipNames.map(n => `
+            <div class="me-type-item">
+              <span class="me-type-name">${n.name}</span>
+              <div style="display:flex;gap:4px">
+                <button class="btn-icon" onclick="enterCommsNameEdit('${n.id}')" title="設定零附件">✏️</button>
+                <button class="btn-icon danger" onclick="deleteCommsName('${n.id}','${(n.name||'').replace(/'/g,"\\'")}')">🗑</button>
+              </div>
+            </div>`).join('')}
+        </div>` : `
+        <div class="empty-state">
+          <div class="icon">📋</div>
+          <p>尚無品名，請輸入後點「＋ 新增」</p>
+        </div>`}`;
   }
-  if (empty) empty.style.display = 'none';
-  listEl.innerHTML = commsEquipNames.map(n => `
-    <div class="me-type-item">
-      <span class="me-type-name">${n.name}</span>
-      <button class="btn-icon danger" onclick="deleteCommsName('${n.id}','${(n.name||'').replace(/'/g,"\\'")}')">🗑</button>
-    </div>`).join('');
 }
+
+window.commsNameAdd = async function() {
+  const input = document.getElementById('commsNameInput');
+  const name = input?.value.trim();
+  if (!name) { showToast('請輸入品名'); return; }
+  if (commsEquipNames.some(n => n.name === name)) { showToast('品名已存在'); return; }
+  try {
+    await addDoc(COL_COMMS_NAMES, { name, parts: [], createdAt: serverTimestamp() });
+    if (input) input.value = '';
+    showToast('✓ 已新增');
+  } catch(e) { showToast('新增失敗：' + e.message); }
+};
+
+window.enterCommsNameEdit = function(id) {
+  editingCommsNameId = id;
+  renderCommsNames();
+};
+
+window.exitCommsNameEdit = function() {
+  editingCommsNameId = null;
+  renderCommsNames();
+};
+
+window.addCommsNamePart = async function() {
+  const input = document.getElementById('cnp-part-input');
+  const partName = input?.value.trim();
+  if (!partName) return;
+  const n = commsEquipNames.find(x => x.id === editingCommsNameId);
+  if (!n) return;
+  const parts = n.parts || [];
+  if (parts.includes(partName)) { showToast('此零附件已存在'); return; }
+  try {
+    await updateDoc(doc(db, 'commsEquipNames', editingCommsNameId), { parts: [...parts, partName] });
+    if (input) input.value = '';
+  } catch(e) { showToast('新增失敗：' + e.message); }
+};
+
+window.removeCommsNamePart = async function(nameId, partName) {
+  const n = commsEquipNames.find(x => x.id === nameId);
+  if (!n) return;
+  const parts = (n.parts || []).filter(p => p !== partName);
+  try { await updateDoc(doc(db, 'commsEquipNames', nameId), { parts }); }
+  catch(e) { showToast('刪除失敗：' + e.message); }
+};
 
 window.deleteCommsName = async function(id, name) {
   showConfirm(`確定刪除品名「${name}」？`, async () => {
@@ -7985,21 +8069,6 @@ document.getElementById('commsNameTabBtn')?.addEventListener('click', () => {
   }
 });
 
-document.getElementById('addCommsNameBtn')?.addEventListener('click', async () => {
-  const inp  = document.getElementById('commsNameInput');
-  const name = inp?.value.trim();
-  if (!name) { showToast('請輸入品名'); return; }
-  if (commsEquipNames.some(n => n.name === name)) { showToast('品名已存在'); return; }
-  try {
-    await addDoc(COL_COMMS_NAMES, { name, createdAt: serverTimestamp() });
-    inp.value = '';
-    showToast('✓ 已新增');
-  } catch(e) { showToast('新增失敗：' + e.message); }
-});
-
-document.getElementById('commsNameInput')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('addCommsNameBtn')?.click();
-});
 
 document.getElementById('commsEquipDeleteBtn')?.addEventListener('click', () => {
   showConfirm('確定刪除此裝備？相關排程與紀錄不會自動刪除。', async () => {
@@ -8188,7 +8257,17 @@ window.openCommsLogModal = function(id = null, preEquipId = null) {
   document.getElementById('cl-deficiency-process').value = l?.deficiencyProcess || '自行修復';
   document.getElementById('cl-deficiency-notes').value   = l?.deficiencyNotes   || '';
   document.getElementById('cl-notes').value               = l?.notes             || '';
-  buildCommsPartsForm(l?.parts || []);
+  // 載入零附件：已有紀錄用原始清單，新建時從品名 doc 取設定，再 fallback 到 COMMS_PARTS
+  if (l?.parts?.length) {
+    buildCommsPartsForm(l.parts);
+  } else {
+    const equipId = l?.equipmentId || preEquipId;
+    const equip   = commsEquipment.find(e => e.id === equipId);
+    const nameDoc = commsEquipNames.find(n => n.name === equip?.name);
+    const templateParts = (nameDoc?.parts?.length ? nameDoc.parts : COMMS_PARTS)
+      .map(p => ({ name: p, condition: '良好', notes: '' }));
+    buildCommsPartsForm(templateParts);
+  }
   const anyBad = (l?.parts || []).some(p => p.condition === '缺失');
   document.getElementById('cl-deficiency-section').style.display = anyBad ? '' : 'none';
   document.getElementById('commsLogDeleteBtn').style.display = l ? '' : 'none';
