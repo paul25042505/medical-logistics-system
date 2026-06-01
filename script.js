@@ -4872,7 +4872,7 @@ table{width:100%;border-collapse:collapse}
 <tr style="height:25px">
   <td class="lb">姓名</td><td>${v(a.name)}</td>
   <td class="lb sm">身分證<br>字號</td><td>${v(a.idNumber)}</td>
-  <td class="lb">出生地</td><td></td>
+  <td class="lb">性別</td><td>${v(a.gender)}</td>
   <td class="lb">生日</td><td>${v(a.birthDate)}</td>
 </tr>
 
@@ -5046,7 +5046,8 @@ table{width:100%;border-collapse:collapse}
   <td colspan="5" class="xs">入伍前職業：(公司行號及服務時間)□學生□無<br>
     1.職業　${jobLine0}<br>
     2.職業　${jobLine1}<br>
-    3.職業　${jobLine2}
+    3.職業　${jobLine2}<br>
+    兵役狀況：${v(a.military)}　服役單位：${v(a.militaryUnit)}${v(a.militaryExp)?'<br>服役經歷：'+v(a.militaryExp):''}
   </td>
   <td colspan="3" class="xs" style="vertical-align:top">入伍前、後是否有看過精神科醫生<br>有□　無□<br>症狀：<br>醫院：</td>
 </tr>
@@ -5092,38 +5093,6 @@ table{width:100%;border-collapse:collapse}
 <tr style="height:14px">
   <td colspan="4" class="xs">（文藝類、科工類、設計類、技工類均可）</td>
   <td colspan="3" class="xs">（語言類、職業甲乙丙級證照等均可）</td>
-</tr>
-
-<!-- 申請人補充資料 (fields from app not in standard form) -->
-<tr style="height:22px">
-  <td class="lb xs">性別</td>
-  <td class="xs">${v(a.gender)}</td>
-  <td class="lb xs">婚姻狀況</td>
-  <td class="xs">${v(a.marital)}</td>
-  <td class="lb xs">可報到日期</td>
-  <td class="xs">${v(a.availDate)}</td>
-  <td class="lb xs">接受派遣</td>
-  <td class="xs">${v(a.relocate)}</td>
-</tr>
-<tr style="height:22px">
-  <td class="lb xs">兵役狀況</td>
-  <td class="xs">${v(a.military)}</td>
-  <td class="lb xs">服役單位</td>
-  <td class="xs" colspan="2">${v(a.militaryUnit)}</td>
-  <td class="lb xs">健康狀況</td>
-  <td class="xs" colspan="2">${v(a.health)}${v(a.healthNote)?'　'+v(a.healthNote):''}</td>
-</tr>
-${v(a.militaryExp)?`<tr style="height:22px">
-  <td class="lb xs">服役經歷</td>
-  <td class="xs" colspan="7" style="white-space:pre-wrap">${v(a.militaryExp)}</td>
-</tr>`:''}
-<tr style="height:22px">
-  <td class="lb xs">緊急聯絡人</td>
-  <td class="xs">${v(a.emergencyName)}</td>
-  <td class="lb xs">關係</td>
-  <td class="xs">${v(a.emergencyRel)}</td>
-  <td class="lb xs">緊急電話</td>
-  <td class="xs" colspan="3">${v(a.emergencyPhone)}</td>
 </tr>
 
 <!-- 自傳 / 反映事項 -->
