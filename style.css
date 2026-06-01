@@ -408,6 +408,7 @@ main {
   justify-content: center;
   padding: 20px;
 }
+#app-confirm-overlay { z-index: 500; }
 .modal-overlay.open { display: flex; }
 
 .modal {
