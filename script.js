@@ -126,7 +126,7 @@ const CAR_BRANDS  = [
   'Mitsubishi 三菱','Hyundai 現代','Kia 起亞','MG 名爵','Volkswagen 福斯','Škoda 斯柯達',
   'BMW 寶馬','Mercedes-Benz 賓士','Lexus 凌志','Subaru 速霸陸',
   'Suzuki 鈴木','Isuzu 五十鈴','Tesla 特斯拉','Volvo 富豪',
-  'Audi 奧迪','LUXGEN 納智捷',
+  'Audi 奧迪','LUXGEN 納智捷','INFINITI 英菲尼迪',
 ];
 const MOTO_BRANDS = [
   'Yamaha 山葉','Honda 本田','光陽 Kymco','三陽 SYM',
