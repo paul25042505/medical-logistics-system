@@ -7589,7 +7589,7 @@ function renderCommsSchedList() {
           <div style="font-size:13px;margin-top:4px">
             📅 ${s.scheduledDate || '—'}
             　<span style="color:var(--primary);font-weight:600">${s.maintenanceLevel || ''}</span>
-            　${s.maintenanceType || ''}
+            　${s.maintenanceType || ''}${s.maintenanceCategory ? `　<span style="font-size:12px;font-weight:700;padding:1px 7px;border-radius:8px;background:#e0e7ff;color:#3730a3">${s.maintenanceCategory}</span>` : ''}
           </div>
           ${s.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">備註：${s.notes}</div>` : ''}
         </div>
@@ -7998,9 +7998,10 @@ window.openCommsSchedModal = function(id = null, preEquipId = null) {
   populateCommsEquipSelects();
   document.getElementById('cs-equip-sel').value   = s?.equipmentId   || preEquipId || '';
   document.getElementById('cs-date').value         = s?.scheduledDate  || '';
-  document.getElementById('cs-level').value        = s?.maintenanceLevel || '一級保養（使用級）';
-  document.getElementById('cs-type').value         = s?.maintenanceType  || '定期';
-  document.getElementById('cs-status').value       = s?.status           || '待保養';
+  document.getElementById('cs-level').value        = s?.maintenanceLevel    || '一級保養（使用級）';
+  document.getElementById('cs-type').value         = s?.maintenanceType     || '定期';
+  document.getElementById('cs-category').value     = s?.maintenanceCategory || 'Q';
+  document.getElementById('cs-status').value       = s?.status              || '待保養';
   document.getElementById('cs-notes').value        = s?.notes            || '';
   document.getElementById('commsSchedDeleteBtn').style.display = s ? '' : 'none';
   document.getElementById('commsSchedModalOverlay').classList.add('open');
@@ -8029,9 +8030,10 @@ document.getElementById('commsSchedSaveBtn')?.addEventListener('click', async ()
     equipmentId:      equipId,
     serialNumber:     equip?.serialNumber || '',
     scheduledDate:    date,
-    maintenanceLevel: document.getElementById('cs-level').value,
-    maintenanceType:  document.getElementById('cs-type').value,
-    status:           document.getElementById('cs-status').value,
+    maintenanceLevel:    document.getElementById('cs-level').value,
+    maintenanceType:     document.getElementById('cs-type').value,
+    maintenanceCategory: document.getElementById('cs-category').value,
+    status:              document.getElementById('cs-status').value,
     notes:            document.getElementById('cs-notes').value.trim(),
     updatedAt:        serverTimestamp(),
   };
