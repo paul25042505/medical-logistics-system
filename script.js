@@ -4809,231 +4809,309 @@ function printApplicationMilitaryForm(a) {
 
   const addr    = [a.addrCity, a.addrDistrict, a.addrDetail].filter(Boolean).join('');
   const curAddr = [a.curAddrCity, a.curAddrDistrict, a.curAddrDetail].filter(Boolean).join('') || addr;
+  const fd      = Array.isArray(a.familyMembers) ? a.familyMembers : [];
 
-  const fmRows = Array.isArray(a.familyMembers) && a.familyMembers.length
-    ? a.familyMembers.map(m => `
-        <tr>
-          <td style="text-align:center">${v(m.relation)}</td>
-          <td>${v(m.name)}</td>
-          <td style="text-align:center">${v(m.age)}</td>
-          <td>${v(m.job)}</td>
-          <td>${v(m.phone)}</td>
-        </tr>`).join('')
-    : '<tr><td colspan="5" style="text-align:center;color:#999">（無）</td></tr>';
+  const cE = k => {
+    const m = {'博士':['博士'],'碩士':['碩士','研究所'],'大學':['大學'],
+               '四技二專':['四技','二專'],'高中':['高中'],'高職':['高職'],
+               '國中':['國中'],'國小':['國小']};
+    return (m[k]||[k]).some(t => v(a.education).includes(t)) ? '■' : '□';
+  };
+  const cS = k => v(a.studyStatus).includes(k) ? '■' : '□';
+
+  const fmDataRow = (m) => `<tr style="height:19px">
+    <td style="text-align:center;font-size:9pt">${v(m.relation)}</td>
+    <td style="font-size:9pt">${v(m.name)}</td>
+    <td style="text-align:center;font-size:9pt">${v(m.age)}</td>
+    <td style="font-size:9pt">${v(m.job)}</td>
+    <td style="font-size:9pt">${v(m.phone)}</td>
+    <td style="font-size:8pt">□是□否，原因＿＿＿＿＿＿</td></tr>`;
+  const fmEmptyRow = () => `<tr style="height:19px">
+    <td></td><td></td><td></td><td></td><td></td>
+    <td style="font-size:8pt">□是□否，原因＿＿＿＿＿＿</td></tr>`;
+
+  // ── build family rows ──────────────────────────────────
+  // Page 1: first 3 rows; Page 2: rows 3-7
+  const famHdr = `<tr>
+    <td class="lb" style="text-align:center;font-size:8pt">稱謂</td>
+    <td class="lb" style="text-align:center;font-size:8pt">姓名</td>
+    <td class="lb" style="text-align:center;font-size:8pt">年齡</td>
+    <td class="lb" style="text-align:center;font-size:8pt">職業(公司名稱)</td>
+    <td class="lb" style="text-align:center;font-size:8pt">電話</td>
+    <td class="lb" style="text-align:center;font-size:8pt">目前是否和你同住？</td></tr>`;
+  const p1FamRows = [0,1,2].map(i => fd[i] ? fmDataRow(fd[i]) : fmEmptyRow()).join('');
+  const p2FamRows = [3,4,5,6,7].map(i => fd[i] ? fmDataRow(fd[i]) : fmEmptyRow()).join('');
 
   const css = `
-    @page { size: A4; margin: 15mm 18mm; }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'標楷體','DFKai-SB','BiauKai',serif; font-size:11pt; color:#000; }
-    .page { page-break-after: always; }
-    .page:last-child { page-break-after: avoid; }
-    h2 { font-size:16pt; font-weight:bold; text-align:center; margin-bottom:2mm; letter-spacing:2px; }
-    .sub-header { font-size:10pt; text-align:center; margin-bottom:4mm; }
-    table.form { width:100%; border-collapse:collapse; }
-    table.form td, table.form th {
-      border:1px solid #000; padding:3px 5px; vertical-align:middle; font-size:10.5pt;
-    }
-    .lbl { background:#f0f0f0; font-weight:bold; white-space:nowrap; width:90px; text-align:center; }
-    .lbl2 { background:#f0f0f0; font-weight:bold; white-space:nowrap; width:75px; text-align:center; }
-    .val { min-height:18px; }
-    .tall td { height:28px; }
-    .taller td { height:52px; vertical-align:top; padding-top:4px; }
-    .tallest td { height:70px; vertical-align:top; padding-top:4px; }
-    .section-hdr { background:#d0d0d0; font-weight:bold; text-align:center; font-size:11pt; }
-    .note { font-size:9pt; color:#555; margin-top:6mm; }
-    .sig-area { display:flex; gap:20mm; margin-top:8mm; font-size:10pt; }
-    .sig-box { flex:1; border-top:1px solid #000; padding-top:2mm; text-align:center; }
-  `;
+@page{size:A4 portrait;margin:8mm 12mm}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'標楷體','DFKai-SB','BiauKai',serif;font-size:9pt;color:#000}
+.pg{page-break-after:always}.pg:last-child{page-break-after:avoid}
+table{width:100%;border-collapse:collapse}
+.ft{border:2px solid #000}
+.ft td,.ft th{border:1px solid #000;padding:2px 3px;vertical-align:middle;font-size:9pt}
+.lb{background:#ebebeb;font-weight:bold;text-align:center}
+.sm{font-size:8pt}.xs{font-size:7.5pt}.vt{writing-mode:vertical-rl;text-align:center}
+`;
 
-  const page1 = `
-  <div class="page">
-    <h2>陸軍第五地區支援指揮部衛生營</h2>
-    <div class="sub-header">個 人 基 本 資 料</div>
-    <table class="form">
-      <tr class="tall">
-        <td class="lbl">梯　　次</td>
-        <td class="val" colspan="2"></td>
-        <td class="lbl">入伍日期</td>
-        <td class="val" colspan="2"></td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">姓　　名</td>
-        <td class="val">${v(a.name)}</td>
-        <td class="lbl">性　　別</td>
-        <td class="val">${v(a.gender)}</td>
-        <td class="lbl">婚姻狀況</td>
-        <td class="val">${v(a.marital)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">出生年月日</td>
-        <td class="val">${v(a.birthDate)}</td>
-        <td class="lbl">身分證字號</td>
-        <td class="val" colspan="3">${v(a.idNumber)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">戶籍地址</td>
-        <td class="val" colspan="5">${v(addr)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">通訊地址</td>
-        <td class="val" colspan="5">${v(curAddr)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">聯絡電話</td>
-        <td class="val">${v(a.phone)}</td>
-        <td class="lbl">LINE ID</td>
-        <td class="val">${v(a.lineId)}</td>
-        <td class="lbl">Email</td>
-        <td class="val">${v(a.email)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">最高學歷</td>
-        <td class="val">${v(a.education)}</td>
-        <td class="lbl">學　　校</td>
-        <td class="val">${v(a.school)}</td>
-        <td class="lbl">科　　系</td>
-        <td class="val">${v(a.department)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">在學狀態</td>
-        <td class="val">${v(a.studyStatus)}</td>
-        <td class="lbl">目前職業</td>
-        <td class="val">${v(a.job)}</td>
-        <td class="lbl">工作單位</td>
-        <td class="val">${v(a.company)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">兵役狀況</td>
-        <td class="val">${v(a.military)}</td>
-        <td class="lbl">服役單位</td>
-        <td class="val" colspan="3">${v(a.militaryUnit)}</td>
-      </tr>
-      <tr class="taller">
-        <td class="lbl">工作經歷</td>
-        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.workHistory)}</td>
-      </tr>
-      <tr class="taller">
-        <td class="lbl">服役經歷</td>
-        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.militaryExp)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">駕　　照</td>
-        <td class="val" colspan="2">${vl(a.licenses)}</td>
-        <td class="lbl">英語程度</td>
-        <td class="val" colspan="2">${v(a.english)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">興趣嗜好</td>
-        <td class="val" colspan="5">${vl(a.hobbies)}</td>
-      </tr>
-      <tr class="taller">
-        <td class="lbl">專業技能</td>
-        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.skills)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">持有證照</td>
-        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.certs)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">健康狀況</td>
-        <td class="val">${v(a.health)}</td>
-        <td class="lbl">健康備註</td>
-        <td class="val" colspan="3">${v(a.healthNote)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">緊急聯絡人</td>
-        <td class="val">${v(a.emergencyName)}</td>
-        <td class="lbl">關　　係</td>
-        <td class="val">${v(a.emergencyRel)}</td>
-        <td class="lbl">緊急電話</td>
-        <td class="val">${v(a.emergencyPhone)}</td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl">可報到日期</td>
-        <td class="val">${v(a.availDate)}</td>
-        <td class="lbl">接受派遣</td>
-        <td class="val">${v(a.relocate)}</td>
-        <td class="lbl">家庭縣市</td>
-        <td class="val">${v(a.homeCity)}</td>
-      </tr>
-      <tr class="tallest">
-        <td class="lbl">加入動機</td>
-        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.motivation)}</td>
-      </tr>
-      <tr class="tallest">
-        <td class="lbl">個人優勢</td>
-        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.strength)}</td>
-      </tr>
-      <tr class="taller">
-        <td class="lbl">其他備註</td>
-        <td class="val" colspan="5" style="white-space:pre-wrap">${v(a.notes)}</td>
-      </tr>
+  // ── Page 1 ──────────────────────────────────────────────
+  const page1 = `<div class="pg"><table class="ft">
+<colgroup>
+  <col style="width:50px"><col style="width:78px">
+  <col style="width:54px"><col style="width:80px">
+  <col style="width:48px"><col style="width:74px">
+  <col style="width:48px"><col>
+</colgroup>
+<tr><td colspan="8" class="lb" style="font-size:15pt;letter-spacing:5px;padding:5px 0">陸軍第五地區支援指揮部衛生營個人基本資料</td></tr>
+
+<tr style="height:25px">
+  <td class="lb">姓名</td><td>${v(a.name)}</td>
+  <td class="lb sm">身分證<br>字號</td><td>${v(a.idNumber)}</td>
+  <td class="lb">出生地</td><td></td>
+  <td class="lb">生日</td><td>${v(a.birthDate)}</td>
+</tr>
+
+<tr style="height:25px">
+  <td class="lb">梯次</td><td></td>
+  <td class="lb sm">入伍<br>日期</td><td class="sm">　年　　月　　日</td>
+  <td class="lb sm">到部<br>日期</td><td class="sm">　年　　月　　日</td>
+  <td class="lb sm">退伍<br>日期</td><td class="sm">　年　　月　　日</td>
+</tr>
+
+<tr style="height:30px">
+  <td class="lb">身高</td><td></td>
+  <td class="lb">體重</td><td></td>
+  <td colspan="2" class="xs" style="text-align:center">三千公尺　　分　　秒<br>□未鑑測</td>
+  <td class="xs" style="text-align:center">伏地挺身　下<br>□未鑑測</td>
+  <td class="xs" style="text-align:center">仰臥起坐　下<br>□未鑑測</td>
+</tr>
+
+<tr style="height:18px">
+  <td class="lb xs" rowspan="2">民間<br>學歷</td>
+  <td colspan="7" class="sm">${cE('博士')}博士　${cE('碩士')}碩士　${cE('大學')}大學　${cE('四技二專')}四技二專　${cE('高中')}高中　${cE('高職')}高職　${cE('國中')}國中　${cE('國小')}國小</td>
+</tr>
+<tr style="height:20px">
+  <td colspan="7" class="sm">校名：${v(a.school)}　　　科系別：${v(a.department)}　　　　　　　　${cS('畢業')}畢業　${cS('休學')}休學　${cS('肄業')}肄業</td>
+</tr>
+
+<tr style="height:19px">
+  <td class="lb">戶籍地址</td><td colspan="7">${v(addr)}</td>
+</tr>
+<tr style="height:19px">
+  <td class="lb">通訊地址</td><td colspan="7">${v(curAddr)}</td>
+</tr>
+
+<tr style="height:34px">
+  <td class="lb sm">家中電話</td>
+  <td colspan="3" class="xs">□無室內電話（□父□母）<br>自己手機：${v(a.phone)}</td>
+  <td colspan="2" class="xs"></td>
+  <td colspan="2" class="xs" style="text-align:center">血型　□A　□B<br>　　　□O　□AB</td>
+</tr>
+
+<tr style="height:40px">
+  <td class="lb xs">各種帳號<br>(如MSN、<br>FACEBOOK、<br>奇摩、SKYPE)</td>
+  <td colspan="2" class="sm">${v(a.lineId)}${a.email ? '<br>'+v(a.email) : ''}</td>
+  <td class="lb sm">部落格<br>無名帳號</td>
+  <td></td>
+  <td class="lb xs">休閒時興趣、<br>喜愛去處</td>
+  <td colspan="2" class="sm">${vl(a.hobbies)}</td>
+</tr>
+
+<tr style="height:38px">
+  <td class="lb xs">個人名下所屬<br>汽、機車廠<br>牌型號、車牌</td>
+  <td colspan="2"></td>
+  <td class="lb sm">宗教信仰</td>
+  <td></td>
+  <td class="lb">駕照</td>
+  <td colspan="2" class="sm">${vl(a.licenses) ? vl(a.licenses)+'　' : ''}□無　□有，　　手排</td>
+</tr>
+
+<tr style="height:58px">
+  <td class="lb xs vt" style="width:50px">前科<br>保護管束</td>
+  <td colspan="2" class="xs">□無<br>□有，原因<br>＿＿＿＿＿＿＿</td>
+  <td colspan="5" class="xs">□未結案<br>□已結案。罰金　　　　元、有期徒刑　　年　　月、拘役　　月　　日、其他罰責　　　　　　。<br>罰責執行　於　　年　　月　　日執行。<br>保護管束，自　　年　　月　　日至　　年　　月　　日執行。</td>
+</tr>
+
+<tr style="height:55px">
+  <td class="lb sm">本身痼疾</td>
+  <td class="xs">□是□否<br><br>藥物過敏<br>＿＿＿＿＿</td>
+  <td colspan="2" class="xs">□未婚（寫右欄）<br>□已婚，目前感情狀況<br>□和睦　□普通　□不和<br>□無子女<br>□有子女，男　　女</td>
+  <td colspan="3" class="xs">□無男女朋友<br>□有男女朋友（請圈選）<br>目前感情狀況<br>□和睦　□普通　□不和<br>是否有金錢糾紛？□是□否</td>
+</tr>
+
+<tr style="height:30px">
+  <td class="lb xs">家中是否<br>有重病久<br>病者</td>
+  <td colspan="6" class="xs">□是□否。誰　　　　　　病因　　　　　　　　　　　　　　是否需要連隊協助？□是□否</td>
+</tr>
+
+<tr style="height:66px">
+  <td class="lb xs">家庭氣氛<br>是否和諧<br>□是□否</td>
+  <td colspan="2" class="xs">父母是否離異？□是□否<br>離異原因　　　　　　　　　　<br>目前與□父□母同住，<br>和另一方有無聯絡？□是□否</td>
+  <td colspan="2" class="xs">家中經濟狀況<br>□已申請低收入戶<br>□貧困非低收入戶<br>□普通<br>□小康<br>□富裕</td>
+  <td colspan="2" class="xs">父母是否有人已逝？□是□否<br>□生病□意外□自縊□其他<br>兄弟姊妹是否有人已逝？<br>□是□否□生病□意外□自縊<br>□其他</td>
+</tr>
+
+<tr style="height:52px">
+  <td class="lb xs">個人<br>是否<br>負債？</td>
+  <td class="xs">□是□否，<br>□學貸□房貸<br>□車貸□其他<br>用途，約　　元</td>
+  <td class="lb xs">家中是否<br>負債？</td>
+  <td class="xs">□是□否，<br>□學貸□房貸<br>□車貸□其他<br>用途，約　　元</td>
+  <td class="lb xs">個人是否<br>有刺青？</td>
+  <td class="xs">□是<br>□否</td>
+  <td colspan="2" class="xs">曾經加入過幫派？□是□否，<br>時間　　年　　月時，<br>名稱　　　　　　　，目前<br>是□仍有接觸。</td>
+</tr>
+
+<tr>
+  <td class="lb vt" rowspan="${1+3+1}" style="font-size:9pt">家<br>庭<br>狀<br>況</td>
+  <td colspan="7">
+    <table style="width:100%;border-collapse:collapse">
+      <colgroup>
+        <col style="width:48px"><col style="width:70px"><col style="width:38px">
+        <col><col style="width:90px"><col style="width:130px">
+      </colgroup>
+      ${famHdr}${p1FamRows}
     </table>
-    <div class="note">填表日期：${new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'})}</div>
-  </div>`;
+  </td>
+</tr>
 
-  const page2 = `
-  <div class="page">
-    <h2>陸軍第五地區支援指揮部衛生營</h2>
-    <div class="sub-header">個 人 資 料 — 家 庭 成 員 及 其 他</div>
-    <table class="form" style="margin-bottom:6mm">
-      <tr>
-        <th class="section-hdr" colspan="5">家 庭 成 員</th>
-      </tr>
-      <tr>
-        <th style="width:70px;text-align:center;background:#e8e8e8">關係</th>
-        <th style="background:#e8e8e8">姓名</th>
-        <th style="width:50px;text-align:center;background:#e8e8e8">年齡</th>
-        <th style="background:#e8e8e8">職業</th>
-        <th style="background:#e8e8e8">聯絡電話</th>
-      </tr>
-      ${fmRows}
+</table></div>`;
+
+  // ── Page 2 ──────────────────────────────────────────────
+  const wh = v(a.workHistory);
+  const skillsText = v(a.skills);
+  const certsText  = v(a.certs);
+
+  const page2 = `<div class="pg"><table class="ft">
+<colgroup>
+  <col style="width:50px"><col style="width:78px">
+  <col style="width:54px"><col style="width:80px">
+  <col style="width:48px"><col style="width:74px">
+  <col style="width:48px"><col>
+</colgroup>
+
+<!-- 家庭狀況 continued -->
+<tr>
+  <td class="lb vt" rowspan="${5+1+1}" style="font-size:9pt">家<br>庭<br>狀<br>況</td>
+  <td colspan="7">
+    <table style="width:100%;border-collapse:collapse">
+      <colgroup>
+        <col style="width:48px"><col style="width:70px"><col style="width:38px">
+        <col><col style="width:90px"><col style="width:130px">
+      </colgroup>
+      ${p2FamRows}
     </table>
+  </td>
+</tr>
 
-    <table class="form" style="margin-bottom:6mm">
+<!-- 女友/好友/常往來之朋友 -->
+<tr>
+  <td colspan="7">
+    <table style="width:100%;border-collapse:collapse">
+      <colgroup>
+        <col style="width:48px"><col style="width:70px"><col style="width:38px">
+        <col style="width:90px"><col style="width:90px"><col>
+      </colgroup>
       <tr>
-        <th class="section-hdr" colspan="4">體 能 測 驗 成 績（由單位填寫）</th>
+        <td class="lb xs" style="text-align:center">稱謂</td>
+        <td class="lb xs" style="text-align:center">姓名</td>
+        <td class="lb xs" style="text-align:center">年齡</td>
+        <td class="lb xs" style="text-align:center">職業(公司名稱)</td>
+        <td class="lb xs" style="text-align:center">電話</td>
+        <td class="lb xs" style="text-align:center">朋友如何認識、常和朋友一起去的處所及活動</td>
       </tr>
-      <tr>
-        <th style="background:#e8e8e8;text-align:center">測驗項目</th>
-        <th style="background:#e8e8e8;text-align:center">成績</th>
-        <th style="background:#e8e8e8;text-align:center">測驗項目</th>
-        <th style="background:#e8e8e8;text-align:center">成績</th>
-      </tr>
-      <tr class="tall"><td style="text-align:center">伏地挺身（次）</td><td></td><td style="text-align:center">仰臥起坐（次）</td><td></td></tr>
-      <tr class="tall"><td style="text-align:center">單槓引體向上（次）</td><td></td><td style="text-align:center">3000公尺跑步（分秒）</td><td></td></tr>
-      <tr class="tall"><td style="text-align:center">體能測驗日期</td><td></td><td style="text-align:center">測驗評等</td><td></td></tr>
+      <tr style="height:19px"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr style="height:19px"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr style="height:19px"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
     </table>
+  </td>
+</tr>
 
-    <table class="form" style="margin-bottom:6mm">
-      <tr>
-        <th class="section-hdr" colspan="4">單 位 評 核（由單位填寫）</th>
-      </tr>
-      <tr class="tall">
-        <td class="lbl2" style="width:80px">分發單位</td>
-        <td class="val"></td>
-        <td class="lbl2" style="width:80px">職　　稱</td>
-        <td class="val"></td>
-      </tr>
-      <tr class="tall">
-        <td class="lbl2">報到日期</td>
-        <td class="val"></td>
-        <td class="lbl2">輔導幹部</td>
-        <td class="val"></td>
-      </tr>
-      <tr style="height:60px">
-        <td class="lbl2">綜合評語</td>
-        <td class="val" colspan="3"></td>
-      </tr>
-    </table>
+</table>
 
-    <div class="sig-area">
-      <div class="sig-box">申請人簽名<br><br><br></div>
-      <div class="sig-box">輔導幹部<br><br><br></div>
-      <div class="sig-box">單位主管<br><br><br></div>
-      <div class="sig-box">營　　長<br><br><br></div>
-    </div>
-  </div>`;
+<!-- 入伍前職業 -->
+<table class="ft" style="margin-top:-1px">
+<tr style="height:26px">
+  <td colspan="5" class="xs">入伍前職業：(公司行號及服務時間)□學生□無<br>
+    1.職業${wh ? '　'+wh.split('\n')[0] : '＿＿＿公司＿＿＿＿＿＿，　年　月～　年　月。'}<br>
+    2.職業${wh && wh.split('\n')[1] ? '　'+wh.split('\n')[1] : '＿＿＿公司＿＿＿＿＿＿，　年　月～　年　月。'}<br>
+    3.職業${wh && wh.split('\n')[2] ? '　'+wh.split('\n')[2] : '＿＿＿公司＿＿＿＿＿＿，　年　月～　年　月。'}
+  </td>
+  <td colspan="3" class="xs" style="vertical-align:top">入伍前、後是否有看過精神科醫生<br>有□　無□<br>症狀：<br>醫院：</td>
+</tr>
+<tr style="height:26px">
+  <td colspan="5" class="xs">
+    1.美工　年　2.水電　年　3.木工　年　4.烹飪　年<br>
+    5.麵包　年　6.硬維　年　7.其他　年，：
+  </td>
+  <td colspan="3" class="xs" style="vertical-align:top">入伍後是否有單獨跟心輔官約談<br>有□無□請簡述：</td>
+</tr>
+<tr style="height:24px">
+  <td colspan="8" class="xs">是否具備游泳專長或救生員證照□是□否、社團或比賽經驗（如游泳社、大專盃）請簡述：</td>
+</tr>
+
+<!-- 民間專長 -->
+<tr>
+  <td class="lb vt xs" rowspan="6">民<br>間<br>專<br>長</td>
+  <td colspan="4" class="xs">
+    Word：□精通□普通□不會<br>
+    Excel：□精通□普通□不會<br>
+    Powerpoint：□精通□普通□不會<br>
+    繪圖軟體＿＿＿＿：□精通□普通□不會
+  </td>
+  <td colspan="3" class="xs">
+    是否玩線上遊戲：□是□否<br>
+    帳號：<br>
+    遊戲：
+  </td>
+</tr>
+<tr style="height:20px">
+  <td colspan="4" class="xs">是否有參加過國際或國內比賽？□是□否　請簡述：</td>
+  <td colspan="3" class="xs">是否具備國際或國內檢定證照？□是□否　請簡述：</td>
+</tr>
+<tr style="height:18px">
+  <td colspan="4" class="xs">1.${certsText ? certsText.split('\n')[0]||'＿＿＿＿＿＿＿＿＿＿＿＿＿＿' : '＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+  <td colspan="3" class="xs">1.${skillsText ? skillsText.split('\n')[0]||'＿＿＿＿＿＿＿＿＿＿＿＿' : '＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+</tr>
+<tr style="height:18px">
+  <td colspan="4" class="xs">2.${certsText && certsText.split('\n')[1] ? certsText.split('\n')[1] : '＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+  <td colspan="3" class="xs">2.${skillsText && skillsText.split('\n')[1] ? skillsText.split('\n')[1] : '＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+</tr>
+<tr style="height:14px">
+  <td colspan="4" class="xs">（文藝類、科工類、設計類、技工類均可）</td>
+  <td colspan="3" class="xs">（語言類、職業甲乙丙級證照等均可）</td>
+</tr>
+
+<!-- 自傳 / 反映事項 -->
+<tr style="height:70px">
+  <td colspan="5" style="vertical-align:top">
+    <div class="lb xs" style="margin-bottom:3px">自傳及到部心得</div>
+    <div class="xs" style="white-space:pre-wrap">${v(a.motivation)}${a.strength ? '\n' + v(a.strength) : ''}</div>
+  </td>
+  <td colspan="3" style="vertical-align:top">
+    <div class="lb xs" style="margin-bottom:3px">反映事項</div>
+    <div class="xs" style="white-space:pre-wrap">${v(a.notes)}</div>
+  </td>
+</tr>
+
+<!-- 幹部晤談紀錄 -->
+<tr style="height:50px">
+  <td class="lb vt xs" rowspan="1">幹<br>部<br>晤<br>談<br>紀<br>錄</td>
+  <td colspan="6" class="xs" style="vertical-align:top">
+    幹部備填，就個人精華狀況、生活上調適、家屬聯繫情形、基本資料之核校、就難問題之協處等實死記錄—<br><br><br><br>
+  </td>
+  <td class="xs" style="vertical-align:bottom;text-align:right">簽名＿＿＿＿</td>
+</tr>
+
+<!-- 備註 -->
+<tr style="height:80px">
+  <td class="lb vt xs">備<br>註</td>
+  <td colspan="7" class="xs" style="vertical-align:top;line-height:1.5">
+    今天是我到衛生營第一連的第一天，由＿＿＿＿＿＿＿＿＿對我進行約談、說明休假、軍紀、賞安、性別營規、申訴、生活規範等相關規定。我已經完成家屬聯繫，讓家人知道我已到部報到。目前為止□沒有特殊問題□尚有問題反映（寫在上方）。我對所宣導之規定均已瞭解。以上我的個人資料除奉權責核定的幹部外，其餘人無法獲得。由參一保管，並於退伍後銷毀。<br><br>
+    <div style="text-align:right">本人簽名＿＿＿＿＿＿＿＿。中華民國　　　年　　月　　日</div>
+  </td>
+</tr>
+
+</table></div>`;
 
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="zh-TW"><head>
