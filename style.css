@@ -3032,8 +3032,8 @@ main {
   gap: 6px;
   flex-wrap: wrap;
 }
-.ceq-name { font-weight: 700; font-size: 14px; }
-.ceq-serial { font-family: monospace; font-size: 12px; color: var(--muted); }
+.ceq-serial { font-family: monospace; font-size: 15px; font-weight: 700; color: var(--navy); }
+.ceq-name { font-size: 11px; color: var(--muted); }
 .ceq-badge { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; }
 .ceq-edit { margin-left: auto; opacity: .45; font-size: 15px; background: none; border: none; cursor: pointer; flex-shrink: 0; touch-action: manipulation; }
 .ceq-edit:hover { opacity: 1; }
@@ -3053,9 +3053,10 @@ main {
   background: #f8fafc;
   cursor: pointer;
 }
-.ceq-quick select.ceq-day-sel { max-width: 64px; }
-.ceq-quick select.ceq-type-sel { max-width: 70px; }
-.ceq-quick select.ceq-cat-sel  { max-width: 52px; }
+.ceq-quick select.ceq-month-sel { max-width: 96px; }
+.ceq-quick select.ceq-day-sel  { max-width: 60px; }
+.ceq-quick select.ceq-type-sel { max-width: 68px; }
+.ceq-quick select.ceq-cat-sel  { max-width: 50px; }
 .ceq-add-btn {
   padding: 5px 11px;
   background: var(--accent);

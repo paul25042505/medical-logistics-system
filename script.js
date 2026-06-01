@@ -7519,6 +7519,9 @@ function renderCommsEquipList() {
     return matchSearch && matchStatus;
   });
 
+  // 同品名排在一起，品名相同時依序號排序
+  list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-TW') || (a.serialNumber || '').localeCompare(b.serialNumber || ''));
+
   const el = document.getElementById('comms-equip-list');
   const empty = document.getElementById('comms-equip-empty');
   if (!el) return;
@@ -7527,21 +7530,30 @@ function renderCommsEquipList() {
   if (empty) empty.style.display = 'none';
 
   const statusColor = { '堪用': '#16a34a', '維修中': '#d97706', '報廢': '#dc2626' };
-  const todayDay = new Date().getDate();
+  const now = new Date();
+  const todayDay = now.getDate();
+  const thisYM  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const nextDate = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  const nextYM   = `${nextDate.getFullYear()}-${String(nextDate.getMonth()+1).padStart(2,'0')}`;
+  const thisLabel = `${now.getMonth()+1}月`;
+  const nextLabel = `${nextDate.getMonth()+1}月`;
+
   const dayOpts = Array.from({length:31}, (_,i) => i+1)
     .map(d => `<option value="${d}"${d===todayDay?' selected':''}>${d}日</option>`).join('');
+  const monthOpts = `<option value="${thisYM}">${thisLabel}（本月）</option><option value="${nextYM}">${nextLabel}（下月）</option>`;
 
   el.innerHTML = list.map(e => `
     <div class="ceq-row">
       <div class="ceq-top">
-        <span class="ceq-name">${e.name || '—'}</span>
         <span class="ceq-serial">#${e.serialNumber || '—'}</span>
+        <span class="ceq-name">${e.name || '—'}</span>
         <span class="ceq-badge" style="background:${statusColor[e.status]||'#6b7280'}22;color:${statusColor[e.status]||'#6b7280'}">${e.status || '堪用'}</span>
         <button class="ceq-edit" onclick="openCommsEquipModal('${e.id}')" title="編輯裝備資料">✏️</button>
       </div>
       <div class="ceq-bottom">
         <span class="ceq-unit">${e.unit || ''}</span>
         <div class="ceq-quick">
+          <select class="ceq-month-sel" id="qs-month-${e.id}">${monthOpts}</select>
           <select class="ceq-day-sel" id="qs-day-${e.id}">${dayOpts}</select>
           <select class="ceq-type-sel" id="qs-type-${e.id}">
             <option value="定期">定期</option>
@@ -7558,29 +7570,29 @@ function renderCommsEquipList() {
 }
 
 window.commsQuickSched = async function(equipId) {
-  const day  = parseInt(document.getElementById(`qs-day-${equipId}`)?.value  || new Date().getDate(), 10);
+  const ym   = document.getElementById(`qs-month-${equipId}`)?.value || new Date().toISOString().slice(0,7);
+  const day  = parseInt(document.getElementById(`qs-day-${equipId}`)?.value || new Date().getDate(), 10);
   const type = document.getElementById(`qs-type-${equipId}`)?.value || '定期';
   const cat  = document.getElementById(`qs-cat-${equipId}`)?.value  || 'Q';
   const equip = commsEquipment.find(e => e.id === equipId);
   if (!equip) return;
 
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const dateStr = `${ym}-${String(day).padStart(2,'0')}`;
 
   const btn = document.querySelector(`#qs-day-${equipId}`)?.closest('.ceq-bottom')?.querySelector('.ceq-add-btn');
   if (btn) btn.disabled = true;
   try {
     await addDoc(COL_COMMS_SCHED, {
-      equipmentId:      equipId,
-      serialNumber:     equip.serialNumber || '',
-      scheduledDate:    dateStr,
-      maintenanceLevel: '一級保養（使用級）',
-      maintenanceType:  type,
+      equipmentId:         equipId,
+      serialNumber:        equip.serialNumber || '',
+      scheduledDate:       dateStr,
+      maintenanceLevel:    '一級保養（使用級）',
+      maintenanceType:     type,
       maintenanceCategory: cat,
-      status:           '待保養',
-      notes:            '',
-      updatedAt:        serverTimestamp(),
-      createdAt:        serverTimestamp(),
+      status:              '待保養',
+      notes:               '',
+      updatedAt:           serverTimestamp(),
+      createdAt:           serverTimestamp(),
     });
     showToast(`✓ ${equip.serialNumber} 已排程 ${dateStr}`);
   } catch(e) { showToast('新增失敗：' + e.message); }
