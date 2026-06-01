@@ -4709,12 +4709,40 @@ window.openAppDetail = function(id) {
   const cur  = [a.curAddrCity, a.curAddrDistrict, a.curAddrDetail].filter(Boolean).join('');
   const licenses = Array.isArray(a.licenses) ? a.licenses.join('、') : (a.licenses || '—');
   const hobbies  = Array.isArray(a.hobbies)  ? a.hobbies.join('、')  : (a.hobbies  || '—');
-  const fmRows = Array.isArray(a.familyMembers) && a.familyMembers.length
-    ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
-        <thead><tr style="background:var(--bg)"><th style="padding:6px 10px;text-align:left">關係</th><th style="padding:6px 10px;text-align:left">年齡</th><th style="padding:6px 10px;text-align:left">職業</th></tr></thead>
-        <tbody>${a.familyMembers.map(m => `<tr><td style="padding:6px 10px">${m.relation||'—'}</td><td style="padding:6px 10px">${m.age||'—'}</td><td style="padding:6px 10px">${m.job||'—'}</td></tr>`).join('')}</tbody>
-      </table>`
-    : '無';
+
+  const fmTable = (members, cols) => {
+    if (!Array.isArray(members) || !members.length) return '無';
+    const ths = cols.map(c => `<th style="padding:5px 8px;text-align:left">${c.label}</th>`).join('');
+    const trs = members.map(m => `<tr>${cols.map(c => `<td style="padding:5px 8px">${m[c.key]||'—'}</td>`).join('')}</tr>`).join('');
+    return `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px">
+      <thead style="background:var(--bg)"><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+  };
+
+  const fmRows = fmTable(a.familyMembers, [
+    {label:'稱謂',key:'relation'},{label:'姓名',key:'name'},{label:'年齡',key:'age'},
+    {label:'職業',key:'job'},{label:'電話',key:'phone'}
+  ]);
+  const frRows = fmTable(a.friends, [
+    {label:'稱謂',key:'relation'},{label:'姓名',key:'name'},{label:'年齡',key:'age'},
+    {label:'職業',key:'job'},{label:'電話',key:'phone'},{label:'如何認識',key:'meetInfo'}
+  ]);
+
+  const tradeText = [
+    a.tradeArt     ? `美工${a.tradeArt}年`     : '',
+    a.tradeElec    ? `水電${a.tradeElec}年`     : '',
+    a.tradeCarp    ? `木工${a.tradeCarp}年`     : '',
+    a.tradeCook    ? `烹飪${a.tradeCook}年`     : '',
+    a.tradeBread   ? `麵包${a.tradeBread}年`    : '',
+    a.tradeHvac    ? `硬維${a.tradeHvac}年`     : '',
+    a.tradeOtherYears ? `${a.tradeOtherName||'其他'}${a.tradeOtherYears}年` : '',
+  ].filter(Boolean).join('、');
+
+  const officeText = [
+    a.wordSkill  ? `Word:${a.wordSkill}`  : '',
+    a.excelSkill ? `Excel:${a.excelSkill}` : '',
+    a.pptSkill   ? `PPT:${a.pptSkill}`    : '',
+    a.drawingSkill ? `${a.drawingSoftware||'繪圖'}:${a.drawingSkill}` : '',
+  ].filter(Boolean).join('　');
 
   document.getElementById('app-detail-title').textContent = `入職申請 — ${a.name || '—'}`;
   document.getElementById('app-detail-body').innerHTML = `
@@ -4722,9 +4750,11 @@ window.openAppDetail = function(id) {
       ${sec('📋 基本資料')}
       ${grid(`
         ${row('姓名', a.name)} ${row('性別', a.gender)}
-        ${row('出生年月日', a.birthDate)} ${row('身分證', a.idNumber)}
-        ${row('電話', a.phone)} ${row('LINE', a.lineId)}
-        ${row('Email', a.email)} ${row('婚姻狀況', a.marital)}
+        ${row('出生年月日', a.birthDate)} ${row('出生地', a.birthPlace)}
+        ${row('身分證', a.idNumber)} ${row('血型', a.bloodType)}
+        ${row('手機', a.phone)} ${row('家中電話', a.homePhone)}
+        ${row('LINE', a.lineId)} ${row('Email', a.email)}
+        ${row('婚姻狀況', a.marital)}
         ${row('戶籍地址', addr || '—')} ${row('現居地址', cur || addr || '—')}
       `)}
     </div>
@@ -4737,7 +4767,7 @@ window.openAppDetail = function(id) {
         ${row('工作性質', a.jobType)} ${row('月薪範圍', a.salary)}
         ${row('兵役狀況', a.military)} ${row('服役單位', a.militaryUnit)}
       `)}
-      ${a.workHistory ? `<div style="margin-top:10px"><div class="pd-label">工作經歷</div><div class="pd-val" style="white-space:pre-wrap">${a.workHistory}</div></div>` : ''}
+      ${a.workHistory ? `<div style="margin-top:8px"><div class="pd-label">工作經歷</div><div class="pd-val" style="white-space:pre-wrap">${a.workHistory}</div></div>` : ''}
       ${a.militaryExp ? `<div style="margin-top:6px"><div class="pd-label">服役經歷</div><div class="pd-val" style="white-space:pre-wrap">${a.militaryExp}</div></div>` : ''}
     </div>
     <div class="pd-section">
@@ -4745,15 +4775,43 @@ window.openAppDetail = function(id) {
       ${grid(`
         ${row('駕照', licenses)} ${row('興趣', hobbies)}
         ${row('英語程度', a.english)} ${row('其他語言', a.otherLang)}
+        ${row('各種帳號', a.socialAccounts)} ${row('宗教信仰', a.religion)}
+        ${row('名下汽機車', a.vehicles)} ${row('游泳/救生員', a.swimming)}
       `)}
+      ${tradeText ? `<div style="margin-top:6px"><div class="pd-label">技工技能</div><div class="pd-val">${tradeText}</div></div>` : ''}
+      ${officeText ? `<div style="margin-top:6px"><div class="pd-label">電腦技能</div><div class="pd-val">${officeText}</div></div>` : ''}
+      ${a.gaming && a.gaming !== '不玩' ? `<div style="margin-top:6px"><div class="pd-label">線上遊戲</div><div class="pd-val">${a.gamingName||''} / 帳號：${a.gamingAccount||''}</div></div>` : ''}
+      ${a.clubExp ? `<div style="margin-top:6px"><div class="pd-label">社團/比賽</div><div class="pd-val" style="white-space:pre-wrap">${a.clubExp}</div></div>` : ''}
+      ${a.competitionDetail ? `<div style="margin-top:6px"><div class="pd-label">參賽經歷</div><div class="pd-val" style="white-space:pre-wrap">${a.competitionDetail}</div></div>` : ''}
       ${a.skills ? `<div style="margin-top:6px"><div class="pd-label">專業技能</div><div class="pd-val" style="white-space:pre-wrap">${a.skills}</div></div>` : ''}
       ${a.certs  ? `<div style="margin-top:6px"><div class="pd-label">持有證照</div><div class="pd-val" style="white-space:pre-wrap">${a.certs}</div></div>` : ''}
+      ${a.certificationDetail ? `<div style="margin-top:6px"><div class="pd-label">檢定證照</div><div class="pd-val" style="white-space:pre-wrap">${a.certificationDetail}</div></div>` : ''}
     </div>
     <div class="pd-section">
       ${sec('👨‍👩‍👧 家庭狀況')}
-      ${grid(`${row('子女數', a.children)} ${row('家庭所在縣市', a.homeCity)}`)}
+      ${grid(`
+        ${row('子女數', a.children)} ${row('家庭所在縣市', a.homeCity)}
+        ${row('家庭氣氛', a.familyHarmony)} ${row('父母離異', a.parentsDivorced)}
+        ${row('離異原因', a.divorceReason)} ${row('家中經濟', a.familyEconomic)}
+        ${row('家中重病者', a.familyIllness === '是' ? (a.familyIllnessWho||'') + ' / ' + (a.familyIllnessDisease||'') : a.familyIllness)}
+        ${row('父母已逝', a.parentDeceased)} ${row('兄弟姊妹已逝', a.siblingDeceased)}
+      `)}
       ${a.familyNote ? `<div style="margin-top:6px"><div class="pd-label">家庭簡介</div><div class="pd-val">${a.familyNote}</div></div>` : ''}
       <div style="margin-top:10px"><div class="pd-label" style="margin-bottom:4px">家庭成員</div>${fmRows}</div>
+      ${Array.isArray(a.friends) && a.friends.length ? `<div style="margin-top:10px"><div class="pd-label" style="margin-bottom:4px">女友/好友/常往來之朋友</div>${frRows}</div>` : ''}
+    </div>
+    <div class="pd-section">
+      ${sec('🔒 個人背景')}
+      ${grid(`
+        ${row('前科保護管束', a.criminalRecord)} ${row('感情狀況', a.relationshipStatus)}
+        ${row('有無男女朋友', a.hasPartner)} ${row('感情和諧程度', a.partnerHarmony)}
+        ${row('金錢糾紛', a.moneyDispute)} ${row('個人有刺青', a.hasTattoo)}
+        ${row('個人負債', a.personalDebt === '是' ? `是（${(Array.isArray(a.personalDebtTypes)?a.personalDebtTypes.join('、'):a.personalDebtTypes)||''}，約${a.personalDebtAmount||''}元）` : a.personalDebt)}
+        ${row('家中負債', a.familyDebt === '是' ? `是（${(Array.isArray(a.familyDebtTypes)?a.familyDebtTypes.join('、'):a.familyDebtTypes)||''}，約${a.familyDebtAmount||''}元）` : a.familyDebt)}
+        ${row('曾加入幫派', a.gangHistory)}
+      `)}
+      ${a.criminalRecordDetail ? `<div style="margin-top:6px"><div class="pd-label">前科詳情</div><div class="pd-val" style="white-space:pre-wrap">${a.criminalRecordDetail}</div></div>` : ''}
+      ${a.gangHistory === '是' ? `<div style="margin-top:6px"><div class="pd-label">幫派資訊</div><div class="pd-val">${a.gangName||''} / ${a.gangPeriod||''} / ${a.gangContact||''}</div></div>` : ''}
     </div>
     <div class="pd-section">
       ${sec('📋 其他資訊')}
@@ -4810,6 +4868,7 @@ function printApplicationMilitaryForm(a) {
   const addr    = [a.addrCity, a.addrDistrict, a.addrDetail].filter(Boolean).join('');
   const curAddr = [a.curAddrCity, a.curAddrDistrict, a.curAddrDetail].filter(Boolean).join('') || addr;
   const fd      = Array.isArray(a.familyMembers) ? a.familyMembers : [];
+  const fr      = Array.isArray(a.friends) ? a.friends : [];
 
   const cE = k => {
     const m = {'博士':['博士'],'碩士':['碩士','研究所'],'大學':['大學'],
@@ -4819,10 +4878,49 @@ function printApplicationMilitaryForm(a) {
   };
   const cS = k => v(a.studyStatus).includes(k) ? '■' : '□';
 
+  // Blood type checkbox (exact match so A ≠ AB)
+  const bt = v(a.bloodType).toUpperCase().trim();
+  const cB = k => bt === k ? '■' : '□';
+
   // Checkbox helpers for health / marital / children
   const isMarried  = ['已婚','結婚'].some(k => v(a.marital).includes(k));
   const hasHealth  = v(a.health) && !['良好','健康','正常','無','沒有'].some(k => v(a.health).includes(k));
   const hasKids    = v(a.children) && a.children !== '0' && a.children !== '無';
+
+  // Relationship / partner
+  const hasPartner = v(a.hasPartner) === '有';
+  const ph = v(a.partnerHarmony);
+  const partnerHarmonyText = ph === '和睦' ? '■和睦　□普通　□不和'
+    : ph === '普通' ? '□和睦　■普通　□不和'
+    : ph === '不和' ? '□和睦　□普通　■不和'
+    : '□和睦　□普通　□不和';
+  const moneyDispute = v(a.moneyDispute) === '是' ? '■是□否' : v(a.moneyDispute) === '否' ? '□是■否' : '□是□否';
+
+  // Family status helpers
+  const hasFamilyIllness  = v(a.familyIllness)   === '是';
+  const isHarmonic        = v(a.familyHarmony)    === '和諧';
+  const isNotHarmonic     = v(a.familyHarmony)    === '不和諧';
+  const isDivorced        = v(a.parentsdivorced)  === '是';
+  const isParentDeceased  = v(a.parentDeceased)   === '是';
+  const isSiblingDeceased = v(a.siblingDeceased)  === '是';
+  const econCheck = k => v(a.familyEconomic) === k ? '■' : '□';
+
+  // Criminal / tattoo / gang / debt
+  const hasCriminal     = v(a.criminalRecord)  === '有';
+  const hasTattoo       = v(a.hasTattoo)        === '有';
+  const hasGang         = v(a.gangHistory)      === '有';
+  const hasPersonalDebt = v(a.personalDebt)     === '有';
+  const hasFamilyDebt   = v(a.familyDebt)       === '有';
+  const dtc = (types, k) => Array.isArray(types) && types.includes(k) ? '■' : '□';
+
+  // Office skill checkboxes
+  const skillCheck = val => val === '精通' ? '■精通□普通□不會'
+    : val === '普通' ? '□精通■普通□不會'
+    : val === '不會' ? '□精通□普通■不會'
+    : '□精通□普通□不會';
+
+  // Trade skill year display
+  const tradeYear = y => { const n = parseInt(y); return (n && n > 0) ? n : '　'; };
 
   const fmDataRow = (m) => `<tr style="height:19px">
     <td style="text-align:center;font-size:9pt">${v(m.relation)}</td>
@@ -4834,6 +4932,14 @@ function printApplicationMilitaryForm(a) {
   const fmEmptyRow = () => `<tr style="height:19px">
     <td></td><td></td><td></td><td></td><td></td>
     <td style="font-size:8pt">□是□否，原因＿＿＿＿＿＿</td></tr>`;
+  const frDataRow = (f) => `<tr style="height:19px">
+    <td style="text-align:center;font-size:9pt">${v(f.relation)}</td>
+    <td style="font-size:9pt">${v(f.name)}</td>
+    <td style="text-align:center;font-size:9pt">${v(f.age)}</td>
+    <td style="font-size:9pt">${v(f.job)}</td>
+    <td style="font-size:9pt">${v(f.phone)}</td>
+    <td style="font-size:9pt">${v(f.meetInfo)}</td></tr>`;
+  const frEmptyRow = () => `<tr style="height:19px"><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
 
   // ── build family rows ──────────────────────────────────
   // Page 1: first 3 rows; Page 2: rows 3-7
@@ -4846,6 +4952,7 @@ function printApplicationMilitaryForm(a) {
     <td class="lb" style="text-align:center;font-size:8pt">目前是否和你同住？</td></tr>`;
   const p1FamRows = [0,1,2].map(i => fd[i] ? fmDataRow(fd[i]) : fmEmptyRow()).join('');
   const p2FamRows = [3,4,5,6,7].map(i => fd[i] ? fmDataRow(fd[i]) : fmEmptyRow()).join('');
+  const frRows    = [0,1,2].map(i => fr[i] ? frDataRow(fr[i]) : frEmptyRow()).join('');
 
   const css = `
 @page{size:A4 portrait;margin:8mm 12mm}
@@ -4908,14 +5015,14 @@ table{width:100%;border-collapse:collapse}
 
 <tr style="height:34px">
   <td class="lb sm">家中電話</td>
-  <td colspan="3" class="xs">□無室內電話（□父□母）<br>自己手機：${v(a.phone)}</td>
+  <td colspan="3" class="xs">${v(a.homePhone) ? '室內電話：'+v(a.homePhone)+'<br>' : '□無室內電話（□父□母）<br>'}自己手機：${v(a.phone)}</td>
   <td colspan="2" class="xs"></td>
-  <td colspan="2" class="xs" style="text-align:center">血型　□A　□B<br>　　　□O　□AB</td>
+  <td colspan="2" class="xs" style="text-align:center">血型　${cB('A')}A　${cB('B')}B<br>　　　${cB('O')}O　${cB('AB')}AB</td>
 </tr>
 
 <tr style="height:40px">
   <td class="lb xs">各種帳號<br>(如MSN、<br>FACEBOOK、<br>奇摩、SKYPE)</td>
-  <td colspan="2" class="sm">${v(a.lineId)}${a.email ? '<br>'+v(a.email) : ''}</td>
+  <td colspan="2" class="sm">${v(a.lineId)?'LINE：'+v(a.lineId):''}${a.email?'<br>Email：'+v(a.email):''}${v(a.socialAccounts)?'<br>'+v(a.socialAccounts):''}</td>
   <td class="lb sm">部落格<br>無名帳號</td>
   <td></td>
   <td class="lb xs">休閒時興趣、<br>喜愛去處</td>
@@ -4924,16 +5031,16 @@ table{width:100%;border-collapse:collapse}
 
 <tr style="height:38px">
   <td class="lb xs">個人名下所屬<br>汽、機車廠<br>牌型號、車牌</td>
-  <td colspan="2"></td>
+  <td colspan="2" class="xs">${v(a.vehicles)}</td>
   <td class="lb sm">宗教信仰</td>
-  <td></td>
+  <td class="xs">${v(a.religion)}</td>
   <td class="lb">駕照</td>
   <td colspan="2" class="sm">${vl(a.licenses) ? vl(a.licenses)+'　' : ''}□無　□有，　　手排</td>
 </tr>
 
 <tr style="height:58px">
   <td class="lb xs vt" style="width:50px">前科<br>保護管束</td>
-  <td colspan="2" class="xs">□無<br>□有，原因<br>＿＿＿＿＿＿＿</td>
+  <td colspan="2" class="xs">${hasCriminal?'□無<br>■有':'■無<br>□有'}，原因<br>${hasCriminal?v(a.criminalRecordDetail):'＿＿＿＿＿＿＿'}</td>
   <td colspan="5" class="xs">□未結案<br>□已結案。罰金　　　　元、有期徒刑　　年　　月、拘役　　月　　日、其他罰責　　　　　　。<br>罰責執行　於　　年　　月　　日執行。<br>保護管束，自　　年　　月　　日至　　年　　月　　日執行。</td>
 </tr>
 
@@ -4941,29 +5048,29 @@ table{width:100%;border-collapse:collapse}
   <td class="lb sm">本身痼疾</td>
   <td class="xs">${hasHealth?'■是□否':'□是■否'}${v(a.healthNote)?'<br>'+v(a.healthNote):''}<br><br>藥物過敏<br>＿＿＿＿＿</td>
   <td colspan="2" class="xs">${isMarried?'□':'■'}未婚（寫右欄）<br>${isMarried?'■':'□'}已婚，目前感情狀況<br>□和睦　□普通　□不和<br>${hasKids?'□':'■'}無子女<br>${hasKids?'■':'□'}有子女，${hasKids?v(a.children)+'人':'男　　女'}</td>
-  <td colspan="3" class="xs">□無男女朋友<br>□有男女朋友（請圈選）<br>目前感情狀況<br>□和睦　□普通　□不和<br>是否有金錢糾紛？□是□否</td>
+  <td colspan="3" class="xs">${hasPartner?'□無男女朋友<br>■有男女朋友（請圈選）':'■無男女朋友<br>□有男女朋友（請圈選）'}<br>目前感情狀況<br>${partnerHarmonyText}<br>是否有金錢糾紛？${moneyDispute}</td>
 </tr>
 
 <tr style="height:30px">
   <td class="lb xs">家中是否<br>有重病久<br>病者</td>
-  <td colspan="6" class="xs">□是□否。誰　　　　　　病因　　　　　　　　　　　　　　是否需要連隊協助？□是□否</td>
+  <td colspan="6" class="xs">${hasFamilyIllness?'■是□否':'□是■否'}。誰　${v(a.familyIllnessWho)}　　病因　${v(a.familyIllnessDisease)}　　　　　　　是否需要連隊協助？□是□否</td>
 </tr>
 
 <tr style="height:66px">
-  <td class="lb xs">家庭氣氛<br>是否和諧<br>□是□否</td>
-  <td colspan="2" class="xs">父母是否離異？□是□否<br>離異原因　　　　　　　　　　<br>目前與□父□母同住，<br>和另一方有無聯絡？□是□否</td>
-  <td colspan="2" class="xs">家中經濟狀況<br>□已申請低收入戶<br>□貧困非低收入戶<br>□普通<br>□小康<br>□富裕</td>
-  <td colspan="2" class="xs">父母是否有人已逝？□是□否<br>□生病□意外□自縊□其他<br>兄弟姊妹是否有人已逝？<br>□是□否□生病□意外□自縊<br>□其他</td>
+  <td class="lb xs">家庭氣氛<br>是否和諧<br>${isHarmonic?'■是□否':isNotHarmonic?'□是■否':'□是□否'}</td>
+  <td colspan="2" class="xs">父母是否離異？${isDivorced?'■是□否':'□是■否'}<br>離異原因　${v(a.divorceReason)}<br>目前與□父□母同住，<br>和另一方有無聯絡？□是□否</td>
+  <td colspan="2" class="xs">家中經濟狀況<br>${econCheck('已申請低收入戶')}已申請低收入戶<br>${econCheck('貧困非低收入戶')}貧困非低收入戶<br>${econCheck('普通')}普通<br>${econCheck('小康')}小康<br>${econCheck('富裕')}富裕</td>
+  <td colspan="2" class="xs">父母是否有人已逝？${isParentDeceased?'■是□否':'□是■否'}<br>${v(a.parentDeceasedCause)||'□生病□意外□自縊□其他'}<br>兄弟姊妹是否有人已逝？<br>${isSiblingDeceased?'■是□否':'□是■否'}□生病□意外□自縊<br>□其他</td>
 </tr>
 
 <tr style="height:52px">
   <td class="lb xs">個人<br>是否<br>負債？</td>
-  <td class="xs">□是□否，<br>□學貸□房貸<br>□車貸□其他<br>用途，約　　元</td>
+  <td class="xs">${hasPersonalDebt?'■是□否':'□是■否'}，<br>${dtc(a.personalDebtTypes,'學貸')}學貸${dtc(a.personalDebtTypes,'房貸')}房貸<br>${dtc(a.personalDebtTypes,'車貸')}車貸${dtc(a.personalDebtTypes,'其他')}其他<br>用途，約${v(a.personalDebtAmount)}</td>
   <td class="lb xs">家中是否<br>負債？</td>
-  <td class="xs">□是□否，<br>□學貸□房貸<br>□車貸□其他<br>用途，約　　元</td>
+  <td class="xs">${hasFamilyDebt?'■是□否':'□是■否'}，<br>${dtc(a.familyDebtTypes,'學貸')}學貸${dtc(a.familyDebtTypes,'房貸')}房貸<br>${dtc(a.familyDebtTypes,'車貸')}車貸${dtc(a.familyDebtTypes,'其他')}其他<br>用途，約${v(a.familyDebtAmount)}</td>
   <td class="lb xs">個人是否<br>有刺青？</td>
-  <td class="xs">□是<br>□否</td>
-  <td colspan="2" class="xs">曾經加入過幫派？□是□否，<br>時間　　年　　月時，<br>名稱　　　　　　　，目前<br>是□仍有接觸。</td>
+  <td class="xs">${hasTattoo?'■是<br>□否':'□是<br>■否'}</td>
+  <td colspan="2" class="xs">曾經加入過幫派？${hasGang?'■是□否':'□是■否'}，<br>時間${v(a.gangPeriod)||'　　年　　月'}時，<br>名稱${v(a.gangName)||'　　　　　　　'}，目前<br>是${v(a.gangContact)==='仍有接觸'?'■':'□'}仍有接觸。</td>
 </tr>
 
 <tr>
@@ -4990,9 +5097,6 @@ table{width:100%;border-collapse:collapse}
     : (whLines[0] || '＿＿＿＿公司＿＿＿＿＿，　年　月～　年　月。');
   const jobLine1 = whLines[0] && (v(a.job)||v(a.company)) ? whLines[0] : (whLines[1] || '＿＿＿＿公司＿＿＿＿＿，　年　月～　年　月。');
   const jobLine2 = whLines[1] && (v(a.job)||v(a.company)) ? whLines[1] : (whLines[2] || '＿＿＿＿公司＿＿＿＿＿，　年　月～　年　月。');
-  const skillsText = v(a.skills);
-  const certsText  = v(a.certs);
-
   const page2 = `<div class="pg"><table class="ft">
 <colgroup>
   <col style="width:50px"><col style="width:78px">
@@ -5031,9 +5135,7 @@ table{width:100%;border-collapse:collapse}
         <td class="lb xs" style="text-align:center">電話</td>
         <td class="lb xs" style="text-align:center">朋友如何認識、常和朋友一起去的處所及活動</td>
       </tr>
-      <tr style="height:19px"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-      <tr style="height:19px"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-      <tr style="height:19px"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      ${frRows}
     </table>
   </td>
 </tr>
@@ -5053,42 +5155,42 @@ table{width:100%;border-collapse:collapse}
 </tr>
 <tr style="height:26px">
   <td colspan="5" class="xs">
-    1.美工　年　2.水電　年　3.木工　年　4.烹飪　年<br>
-    5.麵包　年　6.硬維　年　7.其他　年，：
+    1.美工　${tradeYear(a.tradeArt)}年　2.水電　${tradeYear(a.tradeElec)}年　3.木工　${tradeYear(a.tradeCarp)}年　4.烹飪　${tradeYear(a.tradeCook)}年<br>
+    5.麵包　${tradeYear(a.tradeBread)}年　6.硬維　${tradeYear(a.tradeHvac)}年　7.其他${v(a.tradeOtherName)}　${tradeYear(a.tradeOtherYears)}年
   </td>
   <td colspan="3" class="xs" style="vertical-align:top">入伍後是否有單獨跟心輔官約談<br>有□無□請簡述：</td>
 </tr>
 <tr style="height:24px">
-  <td colspan="8" class="xs">是否具備游泳專長或救生員證照□是□否、社團或比賽經驗（如游泳社、大專盃）請簡述：</td>
+  <td colspan="8" class="xs">是否具備游泳專長或救生員證照${v(a.swimming)==='是'?'■是□否':'□是■否'}、社團或比賽經驗（如游泳社、大專盃）請簡述：${v(a.clubExp)}</td>
 </tr>
 
 <!-- 民間專長 -->
 <tr>
   <td class="lb vt xs" rowspan="6">民<br>間<br>專<br>長</td>
   <td colspan="4" class="xs">
-    Word：□精通□普通□不會<br>
-    Excel：□精通□普通□不會<br>
-    Powerpoint：□精通□普通□不會<br>
-    繪圖軟體＿＿＿＿：□精通□普通□不會<br>
+    Word：${skillCheck(v(a.wordSkill))}<br>
+    Excel：${skillCheck(v(a.excelSkill))}<br>
+    Powerpoint：${skillCheck(v(a.pptSkill))}<br>
+    繪圖軟體${v(a.drawingSoftware)||'＿＿＿＿'}：${skillCheck(v(a.drawingSkill))}<br>
     英語程度：${v(a.english)||'＿＿＿＿'}${v(a.otherLang)?'　其他語言：'+v(a.otherLang):''}
   </td>
   <td colspan="3" class="xs">
-    是否玩線上遊戲：□是□否<br>
-    帳號：<br>
-    遊戲：
+    是否玩線上遊戲：${v(a.gaming)==='是'?'■是□否':'□是■否'}<br>
+    帳號：${v(a.gamingAccount)}<br>
+    遊戲：${v(a.gamingName)}
   </td>
 </tr>
 <tr style="height:20px">
-  <td colspan="4" class="xs">是否有參加過國際或國內比賽？□是□否　請簡述：</td>
-  <td colspan="3" class="xs">是否具備國際或國內檢定證照？□是□否　請簡述：</td>
+  <td colspan="4" class="xs">是否有參加過國際或國內比賽？${v(a.hasCompetition)==='是'?'■是□否':'□是■否'}　請簡述：${v(a.competitionDetail)}</td>
+  <td colspan="3" class="xs">是否具備國際或國內檢定證照？${v(a.hasCertification)==='是'?'■是□否':'□是■否'}　請簡述：${v(a.certificationDetail)}</td>
 </tr>
 <tr style="height:18px">
-  <td colspan="4" class="xs">1.${certsText ? certsText.split('\n')[0]||'＿＿＿＿＿＿＿＿＿＿＿＿＿＿' : '＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
-  <td colspan="3" class="xs">1.${skillsText ? skillsText.split('\n')[0]||'＿＿＿＿＿＿＿＿＿＿＿＿' : '＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+  <td colspan="4" class="xs">1.${v(a.competitionDetail)?v(a.competitionDetail).split('\n')[0]||'＿＿＿＿＿＿＿＿＿＿＿＿＿＿':'＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+  <td colspan="3" class="xs">1.${v(a.certificationDetail)?v(a.certificationDetail).split('\n')[0]||'＿＿＿＿＿＿＿＿＿＿＿＿':'＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
 </tr>
 <tr style="height:18px">
-  <td colspan="4" class="xs">2.${certsText && certsText.split('\n')[1] ? certsText.split('\n')[1] : '＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
-  <td colspan="3" class="xs">2.${skillsText && skillsText.split('\n')[1] ? skillsText.split('\n')[1] : '＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+  <td colspan="4" class="xs">2.${v(a.competitionDetail)&&v(a.competitionDetail).split('\n')[1]?v(a.competitionDetail).split('\n')[1]:'＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
+  <td colspan="3" class="xs">2.${v(a.certificationDetail)&&v(a.certificationDetail).split('\n')[1]?v(a.certificationDetail).split('\n')[1]:'＿＿＿＿＿＿＿＿＿＿＿＿'}</td>
 </tr>
 <tr style="height:14px">
   <td colspan="4" class="xs">（文藝類、科工類、設計類、技工類均可）</td>

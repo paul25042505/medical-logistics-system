@@ -83,12 +83,14 @@ function addFamilyMember(data = {}) {
   row.className = 'fm-row';
   row.dataset.id = id;
   row.innerHTML = `
-    <select class="fm-rel" title="關係">
-      <option value="">關係</option>
+    <select class="fm-rel" title="稱謂">
+      <option value="">稱謂</option>
       ${FM_RELATIONS.map(r => `<option${r === data.relation ? ' selected' : ''}>${r}</option>`).join('')}
     </select>
+    <input class="fm-name" type="text" placeholder="姓名" value="${data.name || ''}" title="姓名">
     <input class="fm-age" type="number" min="0" max="120" placeholder="年齡" value="${data.age || ''}" title="年齡">
     <input class="fm-job" type="text" placeholder="職業" value="${data.job || ''}" title="職業">
+    <input class="fm-phone" type="tel" placeholder="電話" value="${data.phone || ''}" title="電話">
     <button type="button" class="fm-del" title="移除">✕</button>
   `;
   row.querySelector('.fm-del').addEventListener('click', () => row.remove());
@@ -97,12 +99,37 @@ function addFamilyMember(data = {}) {
 
 document.getElementById('addFmBtn').addEventListener('click', () => addFamilyMember());
 
-// Pre-add 2 blank members as placeholder
+// Pre-add 3 blank members
 addFamilyMember({ relation: '父' });
 addFamilyMember({ relation: '母' });
+addFamilyMember({ relation: '配偶' });
+
+// ── Friends / close contacts ──────────────────────────
+let frCount = 0;
+
+function addFriend(data = {}) {
+  frCount++;
+  const id = frCount;
+  const row = document.createElement('div');
+  row.className = 'fr-row';
+  row.dataset.id = id;
+  row.innerHTML = `
+    <input class="fr-rel" type="text" placeholder="稱謂（女友/好友/同學…）" value="${data.relation || ''}" title="稱謂">
+    <input class="fr-name" type="text" placeholder="姓名" value="${data.name || ''}" title="姓名">
+    <input class="fr-age" type="number" min="0" max="120" placeholder="年齡" value="${data.age || ''}" title="年齡">
+    <input class="fr-job" type="text" placeholder="職業" value="${data.job || ''}" title="職業">
+    <input class="fr-phone" type="tel" placeholder="電話" value="${data.phone || ''}" title="電話">
+    <input class="fr-meet" type="text" placeholder="如何認識/常去處所" value="${data.meetInfo || ''}" title="如何認識/常去處所">
+    <button type="button" class="fm-del" title="移除">✕</button>
+  `;
+  row.querySelector('.fm-del').addEventListener('click', () => row.remove());
+  document.getElementById('fr-list').appendChild(row);
+}
+
+document.getElementById('addFrBtn').addEventListener('click', () => addFriend());
 
 // ── Multi-step navigation ─────────────────────────────
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 let currentStep = 1;
 
 function gotoStep(step) {
@@ -131,7 +158,7 @@ const REQUIRED = {
     { id: 'f-birthDate',msg: '請填寫出生日期' },
     { id: 'f-phone',    msg: '請填寫聯絡電話' },
   ],
-  5: [
+  6: [
     { id: 'f-motivation', msg: '請填寫您的動機' },
     { id: 'f-emgName',    msg: '請填寫緊急聯絡人' },
     { id: 'f-emgPhone',   msg: '請填寫緊急聯絡電話' },
@@ -163,24 +190,44 @@ document.getElementById('prevBtn').addEventListener('click', () => gotoStep(curr
 
 // ── Submit ────────────────────────────────────────────
 document.getElementById('submitBtn').addEventListener('click', async () => {
-  if (!validateStep(5)) { showToast('請填寫必填欄位'); return; }
+  if (!validateStep(6)) { showToast('請填寫必填欄位'); return; }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = '送出中…';
 
-  // Family members
+  // Family members (now includes name and phone)
   const familyMembers = [];
   document.querySelectorAll('#fm-list .fm-row').forEach(row => {
-    const rel = row.querySelector('.fm-rel').value;
-    const age = row.querySelector('.fm-age').value;
-    const job = row.querySelector('.fm-job').value;
-    if (rel || age || job) familyMembers.push({ relation: rel, age: age ? parseInt(age) : '', job });
+    const rel   = row.querySelector('.fm-rel').value;
+    const name  = row.querySelector('.fm-name').value;
+    const age   = row.querySelector('.fm-age').value;
+    const job   = row.querySelector('.fm-job').value;
+    const phone = row.querySelector('.fm-phone').value;
+    if (rel || name || age || job || phone) {
+      familyMembers.push({ relation: rel, name, age: age ? parseInt(age) : '', job, phone });
+    }
+  });
+
+  // Friends / close contacts
+  const friends = [];
+  document.querySelectorAll('#fr-list .fr-row').forEach(row => {
+    const relation = row.querySelector('.fr-rel').value;
+    const name     = row.querySelector('.fr-name').value;
+    const age      = row.querySelector('.fr-age').value;
+    const job      = row.querySelector('.fr-job').value;
+    const phone    = row.querySelector('.fr-phone').value;
+    const meetInfo = row.querySelector('.fr-meet').value;
+    if (relation || name || age || job || phone || meetInfo) {
+      friends.push({ relation, name, age: age ? parseInt(age) : '', job, phone, meetInfo });
+    }
   });
 
   // Checkboxes
-  const licenses = [...document.querySelectorAll('[name="license"]:checked')].map(c => c.value);
-  const hobbies  = [...document.querySelectorAll('[name="hobby"]:checked')].map(c => c.value);
+  const licenses          = [...document.querySelectorAll('[name="license"]:checked')].map(c => c.value);
+  const hobbies           = [...document.querySelectorAll('[name="hobby"]:checked')].map(c => c.value);
+  const personalDebtTypes = [...document.querySelectorAll('[name="personalDebtType"]:checked')].map(c => c.value);
+  const familyDebtTypes   = [...document.querySelectorAll('[name="familyDebtType"]:checked')].map(c => c.value);
 
   // Same-address
   const sameAddr = document.getElementById('f-sameAddr').checked;
@@ -190,8 +237,11 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     name:        gv('f-name'),
     gender:      gv('f-gender'),
     birthDate:   gv('f-birthDate'),
+    birthPlace:  gv('f-birthPlace'),
+    bloodType:   gv('f-bloodType'),
     idNumber:    gv('f-idNumber'),
     phone:       gv('f-phone'),
+    homePhone:   gv('f-homePhone'),
     lineId:      gv('f-lineId'),
     email:       gv('f-email'),
     marital:     gv('f-marital'),
@@ -217,27 +267,81 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     // 興趣專長
     licenses,
     hobbies,
-    hobbyOther:  gv('f-hobbyOther'),
-    skills:      gv('f-skills'),
-    english:     gv('f-english'),
-    otherLang:   gv('f-otherLang'),
-    certs:       gv('f-certs'),
+    hobbyOther:           gv('f-hobbyOther'),
+    skills:               gv('f-skills'),
+    english:              gv('f-english'),
+    otherLang:            gv('f-otherLang'),
+    certs:                gv('f-certs'),
+    socialAccounts:       gv('f-socialAccounts'),
+    vehicles:             gv('f-vehicles'),
+    religion:             gv('f-religion'),
+    swimming:             gv('f-swimming'),
+    clubExp:              gv('f-clubExp'),
+    tradeArt:             gv('f-trade-art'),
+    tradeElec:            gv('f-trade-elec'),
+    tradeCarp:            gv('f-trade-carp'),
+    tradeCook:            gv('f-trade-cook'),
+    tradeBread:           gv('f-trade-bread'),
+    tradeHvac:            gv('f-trade-hvac'),
+    tradeOtherYears:      gv('f-trade-other-years'),
+    tradeOtherName:       gv('f-trade-other-name'),
+    wordSkill:            gv('f-word-skill'),
+    excelSkill:           gv('f-excel-skill'),
+    pptSkill:             gv('f-ppt-skill'),
+    drawingSoftware:      gv('f-drawing-software'),
+    drawingSkill:         gv('f-drawing-skill'),
+    gaming:               gv('f-gaming'),
+    gamingAccount:        gv('f-gaming-account'),
+    gamingName:           gv('f-gaming-name'),
+    hasCompetition:       gv('f-has-competition'),
+    competitionDetail:    gv('f-competition-detail'),
+    hasCertification:     gv('f-has-certification'),
+    certificationDetail:  gv('f-certification-detail'),
     // 家庭
-    children:    gv('f-children'),
-    homeCity:    gv('f-homeCity'),
-    familyNote:  gv('f-familyNote'),
+    children:             gv('f-children'),
+    homeCity:             gv('f-homeCity'),
+    familyNote:           gv('f-familyNote'),
+    familyHarmony:        gv('f-family-harmony'),
+    parentsdivorced:      gv('f-parents-divorced'),
+    divorceReason:        gv('f-divorce-reason'),
+    familyIllness:        gv('f-family-illness'),
+    familyIllnessWho:     gv('f-family-illness-who'),
+    familyIllnessDisease: gv('f-family-illness-disease'),
+    familyEconomic:       gv('f-family-economic'),
+    parentDeceased:       gv('f-parent-deceased'),
+    parentDeceasedCause:  gv('f-parent-deceased-cause'),
+    siblingDeceased:      gv('f-sibling-deceased'),
     familyMembers,
+    friends,
+    // 個人背景
+    criminalRecord:       gv('f-criminal'),
+    criminalRecordDetail: gv('f-criminal-detail'),
+    relationshipStatus:   gv('f-relationship'),
+    hasPartner:           gv('f-has-partner'),
+    partnerHarmony:       gv('f-partner-harmony'),
+    moneyDispute:         gv('f-money-dispute'),
+    personalDebt:         gv('f-personal-debt'),
+    personalDebtTypes,
+    personalDebtAmount:   gv('f-personal-debt-amount'),
+    familyDebt:           gv('f-family-debt'),
+    familyDebtTypes,
+    familyDebtAmount:     gv('f-family-debt-amount'),
+    hasTattoo:            gv('f-tattoo'),
+    gangHistory:          gv('f-gang'),
+    gangName:             gv('f-gang-name'),
+    gangPeriod:           gv('f-gang-period'),
+    gangContact:          gv('f-gang-contact'),
     // 其他
-    motivation:  gv('f-motivation'),
-    strength:    gv('f-strength'),
-    availDate:   gv('f-availDate'),
-    relocate:    gv('f-relocate'),
-    health:      gv('f-health'),
-    healthNote:  gv('f-healthNote'),
-    emergencyName:  gv('f-emgName'),
-    emergencyRel:   gv('f-emgRel'),
-    emergencyPhone: gv('f-emgPhone'),
-    notes:       gv('f-notes'),
+    motivation:       gv('f-motivation'),
+    strength:         gv('f-strength'),
+    availDate:        gv('f-availDate'),
+    relocate:         gv('f-relocate'),
+    health:           gv('f-health'),
+    healthNote:       gv('f-healthNote'),
+    emergencyName:    gv('f-emgName'),
+    emergencyRel:     gv('f-emgRel'),
+    emergencyPhone:   gv('f-emgPhone'),
+    notes:            gv('f-notes'),
     // Meta
     status:      'pending',
     submittedAt: serverTimestamp(),

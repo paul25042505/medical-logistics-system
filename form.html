@@ -22,7 +22,7 @@
 
     /* Progress */
     .prog-wrap { background: var(--white); border-bottom: 1px solid var(--border); padding: 16px 20px; overflow-x: auto; }
-    .prog-steps { display: flex; align-items: center; gap: 0; min-width: 420px; max-width: 680px; margin: 0 auto; }
+    .prog-steps { display: flex; align-items: center; gap: 0; min-width: 500px; max-width: 760px; margin: 0 auto; }
     .prog-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
     .prog-step::before {
       content: ''; position: absolute; top: 14px; left: 50%; right: -50%;
@@ -78,12 +78,6 @@
 
     /* Family members table */
     .fm-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-    .fm-row {
-      display: grid; grid-template-columns: 1fr 1fr 1fr auto;
-      gap: 8px; align-items: center; background: var(--bg); border-radius: 8px; padding: 10px 12px;
-    }
-    @media (max-width: 480px) { .fm-row { grid-template-columns: 1fr 1fr; gap: 6px; } }
-    .fm-row select, .fm-row input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; width: 100%; }
     .fm-del { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 16px; padding: 4px 6px; border-radius: 4px; flex-shrink: 0; }
     .fm-del:hover { background: var(--red-bg); color: var(--red); }
     .btn-add-fm { background: none; border: 1px dashed var(--border); border-radius: 8px; padding: 9px 16px; font-size: 13px; cursor: pointer; color: var(--muted); width: 100%; transition: all 0.15s; }
@@ -116,6 +110,36 @@
     /* Toast */
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
     .toast.show { opacity: 1; }
+
+    /* Radio-like select groups */
+    .skill-row { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .skill-row label { font-size: 13px; font-weight: 500; }
+
+    /* Trade skill grid */
+    .trade-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+    @media (max-width: 480px) { .trade-grid { grid-template-columns: repeat(2, 1fr); } }
+    .trade-item { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .trade-item span { font-size: 12px; color: var(--muted); }
+    .trade-item input { width: 64px; text-align: center; padding: 7px 4px; border: 1px solid var(--border); border-radius: 7px; }
+
+    /* Updated fm-row for 5 fields + delete */
+    .fm-row {
+      display: grid;
+      grid-template-columns: 75px 1fr 55px 1fr 110px auto;
+      gap: 6px; align-items: center; background: var(--bg); border-radius: 8px; padding: 8px 10px;
+    }
+    @media (max-width: 560px) { .fm-row { grid-template-columns: 1fr 1fr; } }
+    .fm-row select, .fm-row input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; width: 100%; }
+
+    /* Friends row */
+    .fr-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .fr-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 55px 1fr 110px 1fr auto;
+      gap: 6px; align-items: center; background: var(--bg); border-radius: 8px; padding: 8px 10px;
+    }
+    @media (max-width: 560px) { .fr-row { grid-template-columns: 1fr 1fr; } }
+    .fr-row input, .fr-row select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; width: 100%; }
   </style>
 </head>
 <body>
@@ -133,7 +157,8 @@
     <div class="prog-step" data-step="2"><div class="prog-dot">2</div><div class="prog-label">學歷與工作</div></div>
     <div class="prog-step" data-step="3"><div class="prog-dot">3</div><div class="prog-label">興趣與專長</div></div>
     <div class="prog-step" data-step="4"><div class="prog-dot">4</div><div class="prog-label">家庭狀況</div></div>
-    <div class="prog-step" data-step="5"><div class="prog-dot">5</div><div class="prog-label">其他資訊</div></div>
+    <div class="prog-step" data-step="5"><div class="prog-dot">5</div><div class="prog-label">個人背景</div></div>
+    <div class="prog-step" data-step="6"><div class="prog-dot">6</div><div class="prog-label">其他資訊</div></div>
   </div>
 </div>
 
@@ -175,6 +200,17 @@
             <span class="ferr">請填寫出生日期</span>
           </div>
           <div class="fgroup">
+            <label>出生地</label>
+            <input type="text" id="f-birthPlace" placeholder="出生縣市/地點">
+          </div>
+          <div class="fgroup">
+            <label>血型</label>
+            <select id="f-bloodType">
+              <option value="">請選擇</option>
+              <option>A</option><option>B</option><option>O</option><option>AB</option>
+            </select>
+          </div>
+          <div class="fgroup">
             <label>身分證字號</label>
             <input type="text" id="f-idNumber" placeholder="A123456789" maxlength="10">
           </div>
@@ -182,6 +218,10 @@
             <label>聯絡電話 <span class="req">*</span></label>
             <input type="tel" id="f-phone" placeholder="09xxxxxxxx">
             <span class="ferr">請填寫聯絡電話</span>
+          </div>
+          <div class="fgroup">
+            <label>家中電話</label>
+            <input type="tel" id="f-homePhone" placeholder="0x-xxxxxxxx">
           </div>
           <div class="fgroup">
             <label>LINE ID</label>
@@ -380,6 +420,162 @@
             <textarea id="f-certs" rows="2" placeholder="EMT-1、急救員、丙級廚師、電腦檢定…每項一行"></textarea>
           </div>
         </div>
+
+        <div class="slabel">各種帳號</div>
+        <div class="fg">
+          <div class="fgroup fg-full">
+            <label>社群帳號</label>
+            <input type="text" id="f-socialAccounts" placeholder="Facebook、Instagram、Skype等">
+          </div>
+        </div>
+
+        <div class="slabel">個人名下汽/機車</div>
+        <div class="fg">
+          <div class="fgroup fg-full">
+            <label>車輛資訊</label>
+            <input type="text" id="f-vehicles" placeholder="廠牌型號、車牌號碼（如無填「無」）">
+          </div>
+        </div>
+
+        <div class="slabel">宗教信仰</div>
+        <div class="fg">
+          <div class="fgroup fg-full">
+            <label>宗教</label>
+            <input type="text" id="f-religion" placeholder="佛教、基督教、無…">
+          </div>
+        </div>
+
+        <div class="slabel">游泳與比賽</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>游泳能力</label>
+            <select id="f-swimming">
+              <option value="">請選擇</option>
+              <option>無游泳能力</option>
+              <option>普通</option>
+              <option>良好</option>
+              <option>具救生員證照</option>
+              <option>具游泳教練資格</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>社團或比賽經驗</label>
+            <textarea id="f-clubExp" rows="2" placeholder="社團或比賽經驗（游泳社、大專盃等，如無填「無」）"></textarea>
+          </div>
+        </div>
+
+        <div class="slabel">入伍前技工技能（年數）</div>
+        <div class="trade-grid">
+          <div class="trade-item">
+            <span>美工</span>
+            <input type="number" id="f-trade-art" min="0" max="50" placeholder="0">
+          </div>
+          <div class="trade-item">
+            <span>水電</span>
+            <input type="number" id="f-trade-elec" min="0" max="50" placeholder="0">
+          </div>
+          <div class="trade-item">
+            <span>木工</span>
+            <input type="number" id="f-trade-carp" min="0" max="50" placeholder="0">
+          </div>
+          <div class="trade-item">
+            <span>烹飪</span>
+            <input type="number" id="f-trade-cook" min="0" max="50" placeholder="0">
+          </div>
+          <div class="trade-item">
+            <span>麵包</span>
+            <input type="number" id="f-trade-bread" min="0" max="50" placeholder="0">
+          </div>
+          <div class="trade-item">
+            <span>硬維</span>
+            <input type="number" id="f-trade-hvac" min="0" max="50" placeholder="0">
+          </div>
+          <div class="trade-item">
+            <span>其他(年)</span>
+            <input type="number" id="f-trade-other-years" min="0" max="50" placeholder="0">
+          </div>
+          <div class="trade-item">
+            <span>其他技能名稱</span>
+            <input type="text" id="f-trade-other-name" placeholder="名稱" style="width:100%">
+          </div>
+        </div>
+
+        <div class="slabel">電腦技能</div>
+        <div class="skill-row">
+          <label>Word</label>
+          <select id="f-word-skill">
+            <option value="">請選擇</option>
+            <option>精通</option><option>普通</option><option>不會</option>
+          </select>
+        </div>
+        <div class="skill-row">
+          <label>Excel</label>
+          <select id="f-excel-skill">
+            <option value="">請選擇</option>
+            <option>精通</option><option>普通</option><option>不會</option>
+          </select>
+        </div>
+        <div class="skill-row">
+          <label>PowerPoint</label>
+          <select id="f-ppt-skill">
+            <option value="">請選擇</option>
+            <option>精通</option><option>普通</option><option>不會</option>
+          </select>
+        </div>
+        <div class="skill-row">
+          <label>繪圖軟體名稱</label>
+          <input type="text" id="f-drawing-software" placeholder="繪圖軟體名稱（如有）">
+        </div>
+        <div class="skill-row">
+          <label>繪圖軟體技能</label>
+          <select id="f-drawing-skill">
+            <option value="">請選擇</option>
+            <option>精通</option><option>普通</option><option>不會</option>
+          </select>
+        </div>
+
+        <div class="slabel">線上遊戲</div>
+        <div class="skill-row">
+          <label>是否玩線上遊戲</label>
+          <select id="f-gaming">
+            <option value="">請選擇</option>
+            <option>不玩</option><option>有在玩</option>
+          </select>
+        </div>
+        <div class="skill-row">
+          <label>遊戲帳號</label>
+          <input type="text" id="f-gaming-account" placeholder="遊戲帳號">
+        </div>
+        <div class="skill-row">
+          <label>遊戲名稱</label>
+          <input type="text" id="f-gaming-name" placeholder="遊戲名稱">
+        </div>
+
+        <div class="slabel">比賽與證照</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>曾參加過國際或國內比賽</label>
+            <select id="f-has-competition">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>比賽詳細說明</label>
+            <textarea id="f-competition-detail" rows="2" placeholder="比賽名稱、項目（文藝類、科工類等）"></textarea>
+          </div>
+          <div class="fgroup">
+            <label>具備國際或國內檢定證照</label>
+            <select id="f-has-certification">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>證照詳細說明</label>
+            <textarea id="f-certification-detail" rows="2" placeholder="語言類、職業甲乙丙級等"></textarea>
+          </div>
+        </div>
       </div>
 
       <!-- ── Step 4：家庭狀況 ── -->
@@ -414,14 +610,227 @@
           </div>
         </div>
 
+        <div class="slabel">家庭氣氛</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>家庭氣氛</label>
+            <select id="f-family-harmony">
+              <option value="">請選擇</option>
+              <option>和諧</option><option>普通</option><option>不和諧</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="slabel">父母狀況</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>父母是否離異</label>
+            <select id="f-parents-divorced">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>離異原因</label>
+            <input type="text" id="f-divorce-reason" placeholder="離異原因">
+          </div>
+          <div class="fgroup">
+            <label>父母是否有人已逝</label>
+            <select id="f-parent-deceased">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>原因（生病/意外/其他）</label>
+            <input type="text" id="f-parent-deceased-cause" placeholder="原因（生病/意外/其他）">
+          </div>
+        </div>
+
+        <div class="slabel">家庭健康與經濟</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>家中是否有重病/慢性病患者</label>
+            <select id="f-family-illness">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>誰</label>
+            <input type="text" id="f-family-illness-who" placeholder="誰">
+          </div>
+          <div class="fgroup">
+            <label>病因</label>
+            <input type="text" id="f-family-illness-disease" placeholder="病因">
+          </div>
+          <div class="fgroup">
+            <label>家中經濟狀況</label>
+            <select id="f-family-economic">
+              <option value="">請選擇</option>
+              <option>已申請低收入戶</option><option>貧困非低收入戶</option>
+              <option>普通</option><option>小康</option><option>富裕</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>兄弟姊妹是否有人已逝</label>
+            <select id="f-sibling-deceased">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+        </div>
+
         <div class="slabel">家庭成員</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:10px">請填寫同住或重要家庭成員（父母、配偶、兄弟姊妹等）</p>
         <div class="fm-list" id="fm-list"></div>
         <button type="button" class="btn-add-fm" id="addFmBtn">＋ 新增家庭成員</button>
+
+        <div class="slabel">女友/好友/常往來之朋友</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px">請填寫女友、好友或常往來之朋友</p>
+        <div class="fr-list" id="fr-list"></div>
+        <button type="button" class="btn-add-fm" id="addFrBtn">＋ 新增</button>
       </div>
 
-      <!-- ── Step 5：其他資訊 ── -->
+      <!-- ── Step 5：個人背景 ── -->
       <div class="fcard step-panel" data-step="5">
+        <div class="step-title">📝 個人背景</div>
+
+        <div class="slabel">前科保護管束</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>前科保護管束</label>
+            <select id="f-criminal">
+              <option value="">請選擇</option>
+              <option>無</option><option>有</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>詳細說明</label>
+            <textarea id="f-criminal-detail" rows="3" placeholder="原因、罰金、執行日期等"></textarea>
+          </div>
+        </div>
+
+        <div class="slabel">感情狀況</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>目前感情狀況</label>
+            <select id="f-relationship">
+              <option value="">請選擇</option>
+              <option>未婚未交往</option><option>未婚交往中</option><option>已婚</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>目前有無男女朋友</label>
+            <select id="f-has-partner">
+              <option value="">請選擇</option>
+              <option>無</option><option>有</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>目前感情和諧程度（如有交往）</label>
+            <select id="f-partner-harmony">
+              <option value="">請選擇</option>
+              <option>和睦</option><option>普通</option><option>不和</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>是否有金錢糾紛</label>
+            <select id="f-money-dispute">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="slabel">個人負債</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>個人是否負債</label>
+            <select id="f-personal-debt">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>負債類型（可複選）</label>
+            <div class="cg" id="f-personal-debt-type">
+              <label><input type="checkbox" name="personalDebtType" value="學貸"> 學貸</label>
+              <label><input type="checkbox" name="personalDebtType" value="房貸"> 房貸</label>
+              <label><input type="checkbox" name="personalDebtType" value="車貸"> 車貸</label>
+              <label><input type="checkbox" name="personalDebtType" value="其他"> 其他</label>
+            </div>
+          </div>
+          <div class="fgroup">
+            <label>負債金額</label>
+            <input type="text" id="f-personal-debt-amount" placeholder="約___元">
+          </div>
+        </div>
+
+        <div class="slabel">家中負債</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>家中是否負債</label>
+            <select id="f-family-debt">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup fg-full">
+            <label>負債類型（可複選）</label>
+            <div class="cg" id="f-family-debt-type">
+              <label><input type="checkbox" name="familyDebtType" value="學貸"> 學貸</label>
+              <label><input type="checkbox" name="familyDebtType" value="房貸"> 房貸</label>
+              <label><input type="checkbox" name="familyDebtType" value="車貸"> 車貸</label>
+              <label><input type="checkbox" name="familyDebtType" value="其他"> 其他</label>
+            </div>
+          </div>
+          <div class="fgroup">
+            <label>負債金額</label>
+            <input type="text" id="f-family-debt-amount" placeholder="約___元">
+          </div>
+        </div>
+
+        <div class="slabel">刺青</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>個人是否有刺青</label>
+            <select id="f-tattoo">
+              <option value="">請選擇</option>
+              <option>無</option><option>有</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="slabel">幫派</div>
+        <div class="fg">
+          <div class="fgroup">
+            <label>曾加入過幫派</label>
+            <select id="f-gang">
+              <option value="">請選擇</option>
+              <option>否</option><option>是</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>名稱（如有）</label>
+            <input type="text" id="f-gang-name" placeholder="名稱（如有）">
+          </div>
+          <div class="fgroup">
+            <label>時間</label>
+            <input type="text" id="f-gang-period" placeholder="時間">
+          </div>
+          <div class="fgroup">
+            <label>目前是否仍有接觸</label>
+            <select id="f-gang-contact">
+              <option value="">請選擇</option>
+              <option>否</option><option>仍有接觸</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Step 6：其他資訊 ── -->
+      <div class="fcard step-panel" data-step="6">
         <div class="step-title">📋 其他資訊</div>
         <div class="fg">
           <div class="fgroup fg-full">
@@ -498,7 +907,7 @@
     <!-- Nav buttons -->
     <div class="fcard fnav" style="padding:16px 28px">
       <button class="btn btn-secondary" id="prevBtn" style="display:none">← 上一步</button>
-      <span class="hint" id="stepHint">第 1 步 / 共 5 步</span>
+      <span class="hint" id="stepHint">第 1 步 / 共 6 步</span>
       <div style="display:flex;gap:10px">
         <button class="btn btn-primary" id="nextBtn">下一步 →</button>
         <button class="btn btn-primary btn-big" id="submitBtn" style="display:none">✔ 送出申請</button>
