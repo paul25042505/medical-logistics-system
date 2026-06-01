@@ -8184,7 +8184,6 @@ function makeCommsPartRow(name, condition, notes) {
       <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:13px">
         <input type="radio" name="cp${idx}" value="缺失" ${isBad?'checked':''} onchange="commsPartChange(this)"> 缺失
       </label>
-      <button type="button" class="part-del-btn" onclick="removeCommsPart(this)">✕</button>
     </div>
     <div class="part-deficiency-note" style="display:${isBad?'':'none'};padding-bottom:8px">
       <input type="text" placeholder="缺失說明（選填）" value="${notes.replace(/"/g,'&quot;')}"
@@ -8219,22 +8218,6 @@ window.commsPartChange = function(radio) {
   updateCommsDeficiencySection();
 };
 
-window.addCommsPart = function() {
-  const input = document.getElementById('cl-part-input');
-  const name = input?.value.trim();
-  if (!name) return;
-  const el = document.getElementById('cl-parts-list');
-  if (!el) return;
-  const exists = [...el.querySelectorAll('.comms-part-row')].some(r => r.dataset.part === name);
-  if (exists) { showToast('此零附件已存在'); return; }
-  el.insertAdjacentHTML('beforeend', makeCommsPartRow(name, '良好', ''));
-  if (input) input.value = '';
-};
-
-window.removeCommsPart = function(btn) {
-  btn.closest('.comms-part-row').remove();
-  updateCommsDeficiencySection();
-};
 
 function readCommsPartsList() {
   return [...document.querySelectorAll('#cl-parts-list .comms-part-row')].map(row => {
