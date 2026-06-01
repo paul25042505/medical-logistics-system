@@ -7507,16 +7507,35 @@ function switchCommsTab(tab) {
 }
 
 // ── 裝備清單 渲染 ─────────────────────────────────────
+function populateCommsEquipFilters() {
+  const units = [...new Set(commsEquipment.map(e => e.unit).filter(Boolean))].sort();
+  const uSel = document.getElementById('comms-unit-filter');
+  if (uSel) {
+    const cur = uSel.value;
+    uSel.innerHTML = '<option value="">全部單位</option>' + units.map(u => `<option value="${u}">${u}</option>`).join('');
+    uSel.value = cur;
+  }
+  const names = [...new Set(commsEquipment.map(e => e.name).filter(Boolean))].sort();
+  const nSel = document.getElementById('comms-name-filter');
+  if (nSel) {
+    const cur = nSel.value;
+    nSel.innerHTML = '<option value="">全部品名</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+    nSel.value = cur;
+  }
+}
+
 function renderCommsEquipList() {
-  const search = (document.getElementById('comms-search')?.value || '').toLowerCase();
+  populateCommsEquipFilters();
+  const search  = (document.getElementById('comms-search')?.value || '').toLowerCase();
   const statusF = document.getElementById('comms-status-filter')?.value || '';
+  const unitF   = document.getElementById('comms-unit-filter')?.value || '';
+  const nameF   = document.getElementById('comms-name-filter')?.value || '';
   let list = commsEquipment.filter(e => {
-    const matchSearch = !search ||
-      (e.serialNumber || '').toLowerCase().includes(search) ||
-      (e.name || '').toLowerCase().includes(search) ||
-      (e.unit || '').toLowerCase().includes(search);
+    const matchSearch = !search || (e.serialNumber || '').toLowerCase().includes(search);
     const matchStatus = !statusF || e.status === statusF;
-    return matchSearch && matchStatus;
+    const matchUnit   = !unitF   || e.unit === unitF;
+    const matchName   = !nameF   || e.name === nameF;
+    return matchSearch && matchStatus && matchUnit && matchName;
   });
 
   // 同品名排在一起，品名相同時依序號排序
@@ -8316,4 +8335,6 @@ document.getElementById('addCommsSchedBtn')?.addEventListener('click', () => ope
 
 document.getElementById('comms-search')?.addEventListener('input', renderCommsEquipList);
 document.getElementById('comms-status-filter')?.addEventListener('change', renderCommsEquipList);
+document.getElementById('comms-unit-filter')?.addEventListener('change', renderCommsEquipList);
+document.getElementById('comms-name-filter')?.addEventListener('change', renderCommsEquipList);
 document.getElementById('comms-log-equip-filter')?.addEventListener('change', renderCommsLogList);

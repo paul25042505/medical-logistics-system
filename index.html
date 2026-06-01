@@ -1158,8 +1158,16 @@
           <div class="comms-search-bar">
             <div class="comms-search-wrap">
               <span class="comms-search-icon">🔍</span>
-              <input type="text" id="comms-search" placeholder="搜尋序號、品名…">
+              <input type="text" id="comms-search" placeholder="搜尋序號…">
             </div>
+          </div>
+          <div class="comms-filter-pills">
+            <select id="comms-unit-filter" class="comms-status-pill">
+              <option value="">全部單位</option>
+            </select>
+            <select id="comms-name-filter" class="comms-status-pill">
+              <option value="">全部品名</option>
+            </select>
             <select id="comms-status-filter" class="comms-status-pill">
               <option value="">全部狀態</option>
               <option value="堪用">堪用</option>
@@ -2665,6 +2673,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260528i"></script>
+  <script type="module" src="script.js?v=20260528j"></script>
 </body>
 </html>
