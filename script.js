@@ -4819,6 +4819,11 @@ function printApplicationMilitaryForm(a) {
   };
   const cS = k => v(a.studyStatus).includes(k) ? '■' : '□';
 
+  // Checkbox helpers for health / marital / children
+  const isMarried  = ['已婚','結婚'].some(k => v(a.marital).includes(k));
+  const hasHealth  = v(a.health) && !['良好','健康','正常','無','沒有'].some(k => v(a.health).includes(k));
+  const hasKids    = v(a.children) && a.children !== '0' && a.children !== '無';
+
   const fmDataRow = (m) => `<tr style="height:19px">
     <td style="text-align:center;font-size:9pt">${v(m.relation)}</td>
     <td style="font-size:9pt">${v(m.name)}</td>
@@ -4934,8 +4939,8 @@ table{width:100%;border-collapse:collapse}
 
 <tr style="height:55px">
   <td class="lb sm">本身痼疾</td>
-  <td class="xs">□是□否<br><br>藥物過敏<br>＿＿＿＿＿</td>
-  <td colspan="2" class="xs">□未婚（寫右欄）<br>□已婚，目前感情狀況<br>□和睦　□普通　□不和<br>□無子女<br>□有子女，男　　女</td>
+  <td class="xs">${hasHealth?'■是□否':'□是■否'}${v(a.healthNote)?'<br>'+v(a.healthNote):''}<br><br>藥物過敏<br>＿＿＿＿＿</td>
+  <td colspan="2" class="xs">${isMarried?'□':'■'}未婚（寫右欄）<br>${isMarried?'■':'□'}已婚，目前感情狀況<br>□和睦　□普通　□不和<br>${hasKids?'□':'■'}無子女<br>${hasKids?'■':'□'}有子女，${hasKids?v(a.children)+'人':'男　　女'}</td>
   <td colspan="3" class="xs">□無男女朋友<br>□有男女朋友（請圈選）<br>目前感情狀況<br>□和睦　□普通　□不和<br>是否有金錢糾紛？□是□否</td>
 </tr>
 
@@ -4978,6 +4983,13 @@ table{width:100%;border-collapse:collapse}
 
   // ── Page 2 ──────────────────────────────────────────────
   const wh = v(a.workHistory);
+  const whLines = wh.split('\n').filter(Boolean);
+  // Build job lines: first line from current job+company if available
+  const jobLine0 = (v(a.job) || v(a.company))
+    ? `${v(a.job)}　${v(a.company)}，服務期間＿＿年＿月～＿年＿月。`
+    : (whLines[0] || '＿＿＿＿公司＿＿＿＿＿，　年　月～　年　月。');
+  const jobLine1 = whLines[0] && (v(a.job)||v(a.company)) ? whLines[0] : (whLines[1] || '＿＿＿＿公司＿＿＿＿＿，　年　月～　年　月。');
+  const jobLine2 = whLines[1] && (v(a.job)||v(a.company)) ? whLines[1] : (whLines[2] || '＿＿＿＿公司＿＿＿＿＿，　年　月～　年　月。');
   const skillsText = v(a.skills);
   const certsText  = v(a.certs);
 
@@ -5032,9 +5044,9 @@ table{width:100%;border-collapse:collapse}
 <table class="ft" style="margin-top:-1px">
 <tr style="height:26px">
   <td colspan="5" class="xs">入伍前職業：(公司行號及服務時間)□學生□無<br>
-    1.職業${wh ? '　'+wh.split('\n')[0] : '＿＿＿公司＿＿＿＿＿＿，　年　月～　年　月。'}<br>
-    2.職業${wh && wh.split('\n')[1] ? '　'+wh.split('\n')[1] : '＿＿＿公司＿＿＿＿＿＿，　年　月～　年　月。'}<br>
-    3.職業${wh && wh.split('\n')[2] ? '　'+wh.split('\n')[2] : '＿＿＿公司＿＿＿＿＿＿，　年　月～　年　月。'}
+    1.職業　${jobLine0}<br>
+    2.職業　${jobLine1}<br>
+    3.職業　${jobLine2}
   </td>
   <td colspan="3" class="xs" style="vertical-align:top">入伍前、後是否有看過精神科醫生<br>有□　無□<br>症狀：<br>醫院：</td>
 </tr>
@@ -5056,7 +5068,8 @@ table{width:100%;border-collapse:collapse}
     Word：□精通□普通□不會<br>
     Excel：□精通□普通□不會<br>
     Powerpoint：□精通□普通□不會<br>
-    繪圖軟體＿＿＿＿：□精通□普通□不會
+    繪圖軟體＿＿＿＿：□精通□普通□不會<br>
+    英語程度：${v(a.english)||'＿＿＿＿'}${v(a.otherLang)?'　其他語言：'+v(a.otherLang):''}
   </td>
   <td colspan="3" class="xs">
     是否玩線上遊戲：□是□否<br>
@@ -5081,11 +5094,43 @@ table{width:100%;border-collapse:collapse}
   <td colspan="3" class="xs">（語言類、職業甲乙丙級證照等均可）</td>
 </tr>
 
+<!-- 申請人補充資料 (fields from app not in standard form) -->
+<tr style="height:22px">
+  <td class="lb xs">性別</td>
+  <td class="xs">${v(a.gender)}</td>
+  <td class="lb xs">婚姻狀況</td>
+  <td class="xs">${v(a.marital)}</td>
+  <td class="lb xs">可報到日期</td>
+  <td class="xs">${v(a.availDate)}</td>
+  <td class="lb xs">接受派遣</td>
+  <td class="xs">${v(a.relocate)}</td>
+</tr>
+<tr style="height:22px">
+  <td class="lb xs">兵役狀況</td>
+  <td class="xs">${v(a.military)}</td>
+  <td class="lb xs">服役單位</td>
+  <td class="xs" colspan="2">${v(a.militaryUnit)}</td>
+  <td class="lb xs">健康狀況</td>
+  <td class="xs" colspan="2">${v(a.health)}${v(a.healthNote)?'　'+v(a.healthNote):''}</td>
+</tr>
+${v(a.militaryExp)?`<tr style="height:22px">
+  <td class="lb xs">服役經歷</td>
+  <td class="xs" colspan="7" style="white-space:pre-wrap">${v(a.militaryExp)}</td>
+</tr>`:''}
+<tr style="height:22px">
+  <td class="lb xs">緊急聯絡人</td>
+  <td class="xs">${v(a.emergencyName)}</td>
+  <td class="lb xs">關係</td>
+  <td class="xs">${v(a.emergencyRel)}</td>
+  <td class="lb xs">緊急電話</td>
+  <td class="xs" colspan="3">${v(a.emergencyPhone)}</td>
+</tr>
+
 <!-- 自傳 / 反映事項 -->
 <tr style="height:70px">
   <td colspan="5" style="vertical-align:top">
     <div class="lb xs" style="margin-bottom:3px">自傳及到部心得</div>
-    <div class="xs" style="white-space:pre-wrap">${v(a.motivation)}${a.strength ? '\n' + v(a.strength) : ''}</div>
+    <div class="xs" style="white-space:pre-wrap">${v(a.motivation)}${a.strength ? '\n\n個人優勢：\n' + v(a.strength) : ''}</div>
   </td>
   <td colspan="3" style="vertical-align:top">
     <div class="lb xs" style="margin-bottom:3px">反映事項</div>
