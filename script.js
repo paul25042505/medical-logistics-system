@@ -7527,34 +7527,65 @@ function renderCommsEquipList() {
   if (empty) empty.style.display = 'none';
 
   const statusColor = { '堪用': '#16a34a', '維修中': '#d97706', '報廢': '#dc2626' };
-  el.innerHTML = list.map(e => {
-    const lastLog = [...commsMaintLog].filter(l => l.equipmentId === e.id)
-      .sort((a,b) => (b.logDate||'').localeCompare(a.logDate||''))[0];
-    const nextSched = [...commsMaintSched].filter(s => s.equipmentId === e.id && s.status === '待保養')
-      .sort((a,b) => (a.scheduledDate||'').localeCompare(b.scheduledDate||''))[0];
-    return `
-    <div style="background:var(--white);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="font-weight:700;font-size:15px">${e.name || '—'}</span>
-            <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${statusColor[e.status]||'#6b7280'}22;color:${statusColor[e.status]||'#6b7280'}">${e.status || '堪用'}</span>
-          </div>
-          <div style="font-size:13px;color:var(--text-muted);font-family:monospace">序號：${e.serialNumber || '—'}</div>
-          ${e.unit  ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${e.unit}</div>` : ''}
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="btn-icon" onclick="openCommsEquipModal('${e.id}')">✏️</button>
-          <button class="btn-icon" onclick="openCommsSchedModal(null,'${e.id}')">📅</button>
-          <button class="btn-icon" onclick="openCommsLogModal(null,'${e.id}')">📋</button>
+  const todayDay = new Date().getDate();
+  const dayOpts = Array.from({length:31}, (_,i) => i+1)
+    .map(d => `<option value="${d}"${d===todayDay?' selected':''}>${d}日</option>`).join('');
+
+  el.innerHTML = list.map(e => `
+    <div class="ceq-row">
+      <div class="ceq-top">
+        <span class="ceq-name">${e.name || '—'}</span>
+        <span class="ceq-serial">#${e.serialNumber || '—'}</span>
+        <span class="ceq-badge" style="background:${statusColor[e.status]||'#6b7280'}22;color:${statusColor[e.status]||'#6b7280'}">${e.status || '堪用'}</span>
+        <button class="ceq-edit" onclick="openCommsEquipModal('${e.id}')" title="編輯裝備資料">✏️</button>
+      </div>
+      <div class="ceq-bottom">
+        <span class="ceq-unit">${e.unit || ''}</span>
+        <div class="ceq-quick">
+          <select class="ceq-day-sel" id="qs-day-${e.id}">${dayOpts}</select>
+          <select class="ceq-type-sel" id="qs-type-${e.id}">
+            <option value="定期">定期</option>
+            <option value="不定期">不定期</option>
+          </select>
+          <select class="ceq-cat-sel" id="qs-cat-${e.id}">
+            <option value="Q">Q</option>
+            <option value="M">M</option>
+          </select>
+          <button class="ceq-add-btn" onclick="commsQuickSched('${e.id}')">＋ 排程</button>
         </div>
       </div>
-      ${nextSched ? `<div style="margin-top:8px;font-size:12px;padding:5px 10px;background:#eff6ff;border-radius:8px;color:#1d4ed8">📅 下次進廠：${nextSched.scheduledDate}　${nextSched.maintenanceLevel}　${nextSched.maintenanceType}</div>` : ''}
-      ${lastLog  ? `<div style="margin-top:4px;font-size:12px;padding:5px 10px;background:#f0fdf4;border-radius:8px;color:#15803d">📋 上次保養：${lastLog.logDate}　${lastLog.maintenanceLevel}　結果：${lastLog.overallResult || '—'}</div>` : ''}
-      ${e.notes  ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">備註：${e.notes}</div>` : ''}
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
+
+window.commsQuickSched = async function(equipId) {
+  const day  = parseInt(document.getElementById(`qs-day-${equipId}`)?.value  || new Date().getDate(), 10);
+  const type = document.getElementById(`qs-type-${equipId}`)?.value || '定期';
+  const cat  = document.getElementById(`qs-cat-${equipId}`)?.value  || 'Q';
+  const equip = commsEquipment.find(e => e.id === equipId);
+  if (!equip) return;
+
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+  const btn = document.querySelector(`#qs-day-${equipId}`)?.closest('.ceq-bottom')?.querySelector('.ceq-add-btn');
+  if (btn) btn.disabled = true;
+  try {
+    await addDoc(COL_COMMS_SCHED, {
+      equipmentId:      equipId,
+      serialNumber:     equip.serialNumber || '',
+      scheduledDate:    dateStr,
+      maintenanceLevel: '一級保養（使用級）',
+      maintenanceType:  type,
+      maintenanceCategory: cat,
+      status:           '待保養',
+      notes:            '',
+      updatedAt:        serverTimestamp(),
+      createdAt:        serverTimestamp(),
+    });
+    showToast(`✓ ${equip.serialNumber} 已排程 ${dateStr}`);
+  } catch(e) { showToast('新增失敗：' + e.message); }
+  finally { if (btn) btn.disabled = false; }
+};
 
 // ── 進廠排程 渲染 ─────────────────────────────────────
 function renderCommsSchedList() {
@@ -7577,27 +7608,34 @@ function renderCommsSchedList() {
     const equip = commsEquipment.find(e => e.id === s.equipmentId);
     const isOverdue = s.status === '待保養' && s.scheduledDate < today;
     return `
-    <div style="background:var(--white);border-radius:12px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);${isOverdue ? 'border-left:3px solid #dc2626' : ''}">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <div style="background:var(--white);border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);${isOverdue ? 'border-left:3px solid #dc2626' : ''}">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-weight:700">${equip?.name || '—'}</span>
             <span style="font-size:12px;color:var(--muted);font-family:monospace">#${equip?.serialNumber || s.serialNumber || '—'}</span>
-            <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:12px;background:${statusColor[s.status]||'#6b7280'}22;color:${statusColor[s.status]||'#6b7280'}">${s.status}</span>
+            <span style="font-size:12px;font-weight:600;padding:1px 8px;border-radius:10px;background:${statusColor[s.status]||'#6b7280'}22;color:${statusColor[s.status]||'#6b7280'}">${s.status}</span>
             ${isOverdue ? '<span style="font-size:11px;color:#dc2626;font-weight:700">已逾期</span>' : ''}
           </div>
-          <div style="font-size:13px;margin-top:4px">
+          <div style="font-size:13px;color:var(--muted);margin-top:3px">
             📅 ${s.scheduledDate || '—'}
-            　<span style="color:var(--primary);font-weight:600">${s.maintenanceLevel || ''}</span>
             　${s.maintenanceType || ''}${s.maintenanceCategory ? `　<span style="font-size:12px;font-weight:700;padding:1px 7px;border-radius:8px;background:#e0e7ff;color:#3730a3">${s.maintenanceCategory}</span>` : ''}
           </div>
           ${s.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">備註：${s.notes}</div>` : ''}
         </div>
-        <button class="btn-icon" onclick="openCommsSchedModal('${s.id}')">✏️</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          ${s.status === '待保養' ? `<button class="sched-to-log-btn" onclick="commsGoToLog('${s.equipmentId}','${s.id}')">📋 開始保養</button>` : ''}
+          <button class="btn-icon" onclick="openCommsSchedModal('${s.id}')">✏️</button>
+        </div>
       </div>
     </div>`;
   }).join('');
 }
+
+window.commsGoToLog = function(equipId, schedId) {
+  switchCommsTab('logs');
+  openCommsLogModal(null, equipId);
+};
 
 // ── 保養紀錄 渲染 ─────────────────────────────────────
 function renderCommsLogList() {
@@ -7998,7 +8036,6 @@ window.openCommsSchedModal = function(id = null, preEquipId = null) {
   populateCommsEquipSelects();
   document.getElementById('cs-equip-sel').value   = s?.equipmentId   || preEquipId || '';
   document.getElementById('cs-date').value         = s?.scheduledDate  || '';
-  document.getElementById('cs-level').value        = s?.maintenanceLevel    || '一級保養（使用級）';
   document.getElementById('cs-type').value         = s?.maintenanceType     || '定期';
   document.getElementById('cs-category').value     = s?.maintenanceCategory || 'Q';
   document.getElementById('cs-status').value       = s?.status              || '待保養';
@@ -8030,7 +8067,7 @@ document.getElementById('commsSchedSaveBtn')?.addEventListener('click', async ()
     equipmentId:      equipId,
     serialNumber:     equip?.serialNumber || '',
     scheduledDate:    date,
-    maintenanceLevel:    document.getElementById('cs-level').value,
+    maintenanceLevel:    '一級保養（使用級）',
     maintenanceType:     document.getElementById('cs-type').value,
     maintenanceCategory: document.getElementById('cs-category').value,
     status:              document.getElementById('cs-status').value,

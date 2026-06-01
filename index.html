@@ -1164,9 +1164,12 @@
 
         <!-- 裝備清單 -->
         <div id="comms-pane-list">
-          <div class="filter-bar" style="margin-bottom:14px">
-            <input type="text" id="comms-search" placeholder="搜尋序號、型號、廠牌…" style="flex:2">
-            <select id="comms-status-filter">
+          <div class="comms-search-bar">
+            <div class="comms-search-wrap">
+              <span class="comms-search-icon">🔍</span>
+              <input type="text" id="comms-search" placeholder="搜尋序號、品名…">
+            </div>
+            <select id="comms-status-filter" class="comms-status-pill">
               <option value="">全部狀態</option>
               <option value="堪用">堪用</option>
               <option value="維修中">維修中</option>
@@ -2542,14 +2545,6 @@
             <input type="date" id="cs-date">
           </div>
           <div class="form-group">
-            <label>保養等級</label>
-            <select id="cs-level">
-              <option value="一級保養（使用級）">一級保養（使用級）</option>
-              <option value="二級保養（單位級）">二級保養（單位級）</option>
-              <option value="三級保養（野戰修護）">三級保養（野戰修護）</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label>保養類型</label>
             <select id="cs-type">
               <option value="定期">定期</option>
@@ -2685,6 +2680,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260528b"></script>
+  <script type="module" src="script.js?v=20260528c"></script>
 </body>
 </html>
