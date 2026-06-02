@@ -5599,6 +5599,16 @@ function getMedSupplyStatus(s) {
 }
 
 document.getElementById('addMedSupplyBtn')?.addEventListener('click', () => openMedSupplyModal(null));
+
+// 每日清點頁的「新增品項」按鈕：開啟相同 modal 並帶入已選醫務所
+document.getElementById('di-add-supply-btn')?.addEventListener('click', () => {
+  openMedSupplyModal(null);
+  const diPharmacyId = document.getElementById('di-pharmacy')?.value;
+  if (diPharmacyId) {
+    const msPharmacy = document.getElementById('ms-pharmacy');
+    if (msPharmacy) msPharmacy.value = diPharmacyId;
+  }
+});
 document.getElementById('medSupplyModalClose')?.addEventListener('click',  closeMedSupplyModal);
 document.getElementById('medSupplyCancelBtn')?.addEventListener('click',   closeMedSupplyModal);
 document.getElementById('medSupplyModalOverlay')?.addEventListener('click', e => {

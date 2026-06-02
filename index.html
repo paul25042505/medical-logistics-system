@@ -541,10 +541,11 @@
 
         <div id="di-empty" class="empty-state" style="display:none">
           <div class="icon">💊</div>
-          <p>尚無藥材資料，請由「藥材清點」頁面先建立藥材目錄</p>
+          <p>尚無藥材資料，請點選下方「＋ 新增品項」建立藥材目錄</p>
         </div>
 
-        <div style="margin-top:24px;display:flex;justify-content:flex-end">
+        <div style="margin-top:24px;display:flex;gap:12px;justify-content:space-between;align-items:center">
+          <button type="button" class="btn btn-secondary" id="di-add-supply-btn">＋ 新增品項</button>
           <button type="button" class="btn btn-primary" id="di-submit-btn">✅ 確認清點並簽名</button>
         </div>
       </section>
@@ -2673,6 +2674,6 @@
   <!-- Toast 通知容器 -->
   <div id="app-toast"></div>
 
-  <script type="module" src="script.js?v=20260602a"></script>
+  <script type="module" src="script.js?v=20260602b"></script>
 </body>
 </html>
