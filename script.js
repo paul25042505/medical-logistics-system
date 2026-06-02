@@ -5362,7 +5362,7 @@ function renderMedicalSupplies() {
   const status = document.getElementById('medSupplyStatusFilter')?.value  || '';
 
   // 先按醫務所篩選，再按 sortOrder 排序
-  let list = filterByUnitScope(medSupplies)
+  let list = medSupplies
     .filter(s => !currentMedPharmacyId || s.pharmacyId === currentMedPharmacyId)
     .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || (a.name||'').localeCompare(b.name||'', 'zh-TW'));
   const pharmaList = list.filter(s => !s.hidden); // 醫務所範圍內的完整清單（供 stats 使用，不含隱藏）
@@ -5803,14 +5803,14 @@ function renderMedicalEquipment() {
   const typeId = document.getElementById('medEquipTypeFilter')?.value || '';
   const status = document.getElementById('medEquipStatusFilter')?.value  || '';
 
-  let list = filterByUnitScope(medEquipments);
+  let list = [...medEquipments];
   if (q)      list = list.filter(e => (e.typeName||'').toLowerCase().includes(q) || (e.code||'').toLowerCase().includes(q));
   if (typeId) list = list.filter(e => e.typeId === typeId);
   if (status) list = list.filter(e => (e.status || 'normal') === status);
 
   const statsEl = document.getElementById('medEquipStats');
   if (statsEl) {
-    const all         = filterByUnitScope(medEquipments);
+    const all         = medEquipments;
     const total       = all.length;
     const maintenance = all.filter(e => e.status === 'maintenance').length;
     const scrapped    = all.filter(e => e.status === 'scrapped').length;
@@ -6150,7 +6150,7 @@ function renderDailyInventory() {
 
   // 按所選醫務所篩選藥品，並依 sortOrder 排序（與藥材清點頁一致），排除隱藏品項
   const selectedPharmaId = document.getElementById('di-pharmacy')?.value || '';
-  const list = filterByUnitScope(medSupplies)
+  const list = medSupplies
     .filter(s => (!selectedPharmaId || s.pharmacyId === selectedPharmaId) && !s.hidden)
     .sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999) || (a.name||'').localeCompare(b.name||'', 'zh-TW'));
   if (!list.length) {
