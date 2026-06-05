@@ -133,13 +133,14 @@
     #print-area { display:none; }
     @media print {
       body > *:not(#print-area) { display:none !important; }
+      @page { size: A4 landscape; margin: 8mm; }
       #print-area {
         display:block !important;
         font-family:"標楷體", serif;
-        font-size:11pt;
-        padding:10mm;
+        font-size:9pt;
+        width:100%;
       }
-      #print-area table { width:100%; border-collapse:collapse; }
+      #print-area table { width:100%; border-collapse:collapse; table-layout:fixed; }
       #print-area td { border:1px solid black; padding:4px 6px; text-align:center; vertical-align:middle; }
       #print-area .title-cell { font-size:16pt; text-align:justify; text-align-last:justify; padding:6px 10px; font-weight:bold; }
     }
@@ -779,12 +780,12 @@ function buildTable(d, code) {
   return `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
 <title>衛生營個人基本資料 #${code}</title>
 <style>
-  body { font-family:"標楷體",serif; font-size:11pt; padding:10mm; }
-  table { width:100%; border-collapse:collapse; }
-  td { border:1px solid black; padding:4px 6px; text-align:center; vertical-align:middle; }
-  .title { font-size:16pt; text-align:justify; text-align-last:justify; padding:6px 10px; font-weight:bold; }
+  body { font-family:"標楷體",serif; font-size:9pt; padding:6mm; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  td { border:1px solid black; padding:3px 5px; text-align:center; vertical-align:middle; word-break:break-all; }
+  .title { font-size:14pt; text-align:justify; text-align-last:justify; padding:5px 8px; font-weight:bold; }
   .lbl { font-weight:bold; background:#f5f5f5; white-space:nowrap; }
-  @media print { body { padding:5mm; } }
+  @media print { @page { size:A4 landscape; margin:8mm; } body { padding:0; } }
 </style></head><body>
 <table>
   <tr><td colspan="10" class="title">陸軍第五地區支援指揮部衛生營個人基本資料</td></tr>
