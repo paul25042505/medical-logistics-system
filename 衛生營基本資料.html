@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>陸軍第五地區支援指揮部衛生營個人基本資料</title>
+    <style>
+        /* ===== 通用 ===== */
+        * { box-sizing: border-box; }
+        body { font-family: "標楷體", serif; background: #f0f2f5; margin: 0; padding: 20px; }
+
+        /* ===== 填寫介面 ===== */
+        #form-page { max-width: 900px; margin: 0 auto; }
+        .form-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .form-card h2 {
+            font-size: 16px;
+            color: #333;
+            border-left: 4px solid #4a90d9;
+            padding-left: 10px;
+            margin: 0 0 16px 0;
+        }
+        .form-grid { display: grid; gap: 12px; }
+        .col-2 { grid-template-columns: 1fr 1fr; }
+        .col-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .col-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+        .col-1 { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 13px; color: #555; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-family: "標楷體", serif;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #4a90d9;
+        }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+
+        /* 動態列表 */
+        .dynamic-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .dynamic-table th {
+            background: #eaf1fb;
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: center;
+        }
+        .dynamic-table td {
+            border: 1px solid #ccc;
+            padding: 4px;
+        }
+        .dynamic-table td input {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-family: "標楷體", serif;
+            font-size: 13px;
+            padding: 2px 4px;
+        }
+
+        /* 標題 */
+        .page-title {
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #1a2f5a;
+        }
+
+        /* 按鈕區 */
+        .btn-bar {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px 0 40px;
+        }
+        .btn {
+            padding: 10px 28px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-family: "標楷體", serif;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: #4a90d9; color: #fff; }
+        .btn-primary:hover { background: #357abd; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-success:hover { background: #1e7e34; }
+
+        /* ===== 列印頁面 ===== */
+        #print-page { display: none; }
+
+        #print-page table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: "標楷體", serif;
+            font-size: 12px;
+        }
+        #print-page td {
+            border: 1px solid black;
+            padding: 4px 6px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        #print-page .title-cell {
+            font-size: 18px;
+            text-align: justify;
+            text-align-last: justify;
+            padding: 6px 10px;
+            font-weight: bold;
+        }
+        #print-page .label-cell {
+            background: #f5f5f5;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        #print-page .data-cell { text-align: left; }
+        #print-page .photo-cell {
+            text-align: center;
+            vertical-align: middle;
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* 列印按鈕列 */
+        #print-toolbar {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: #1a2f5a;
+            color: #fff;
+            padding: 10px 20px;
+            z-index: 9999;
+            align-items: center;
+            gap: 12px;
+        }
+        #print-toolbar span { flex: 1; font-size: 16px; }
+
+        @media print {
+            #print-toolbar { display: none !important; }
+            #form-page { display: none !important; }
+            #print-page { display: block !important; }
+            body { background: #fff; padding: 0; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- ===== 填寫介面 ===== -->
+<div id="form-page">
+    <div class="page-title">陸軍第五地區支援指揮部衛生營個人基本資料</div>
+
+    <!-- 基本資料 -->
+    <div class="form-card">
+        <h2>基本資料</h2>
+        <div class="form-grid col-4">
+            <div class="form-group"><label>姓名</label><input type="text" id="f_姓名"></div>
+            <div class="form-group"><label>身分證字號</label><input type="text" id="f_身分證字號"></div>
+            <div class="form-group"><label>出生地</label><input type="text" id="f_出生地"></div>
+            <div class="form-group"><label>生日</label><input type="date" id="f_生日"></div>
+        </div>
+        <div class="form-grid col-4" style="margin-top:12px">
+            <div class="form-group"><label>梯次</label><input type="text" id="f_梯次"></div>
+            <div class="form-group"><label>入伍日期</label><input type="date" id="f_入伍日期"></div>
+            <div class="form-group"><label>到部日期</label><input type="date" id="f_到部日期"></div>
+            <div class="form-group"><label>退伍日期</label><input type="date" id="f_退伍日期"></div>
+        </div>
+    </div>
+
+    <!-- 身體資料 -->
+    <div class="form-card">
+        <h2>身體資料</h2>
+        <div class="form-grid col-4">
+            <div class="form-group"><label>身高（cm）</label><input type="number" id="f_身高" oninput="calcBMI()"></div>
+            <div class="form-group"><label>體重（kg）</label><input type="number" id="f_體重" oninput="calcBMI()"></div>
+            <div class="form-group"><label>BMI</label><input type="text" id="f_BMI" readonly></div>
+            <div class="form-group"><label>血型</label>
+                <select id="f_血型">
+                    <option value="">請選擇</option>
+                    <option>A型</option><option>B型</option><option>AB型</option><option>O型</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-grid col-3" style="margin-top:12px">
+            <div class="form-group"><label>是否有抽菸習慣</label>
+                <select id="f_抽菸"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+            <div class="form-group"><label>是否有嚼檳榔習慣</label>
+                <select id="f_檳榔"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+            <div class="form-group"><label>是否有飲酒習慣</label>
+                <select id="f_飲酒"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+        </div>
+        <div class="form-grid col-3" style="margin-top:12px">
+            <div class="form-group"><label>上肢肌群</label><input type="text" id="f_上肢肌群" placeholder="例：正常"></div>
+            <div class="form-group"><label>腹部核心肌群</label><input type="text" id="f_腹部核心肌群"></div>
+            <div class="form-group"><label>下肢肌群</label><input type="text" id="f_下肢肌群"></div>
+        </div>
+    </div>
+
+    <!-- 學歷與地址 -->
+    <div class="form-card">
+        <h2>學歷與地址</h2>
+        <div class="form-grid col-1">
+            <div class="form-group"><label>民間學歷</label><input type="text" id="f_民間學歷"></div>
+            <div class="form-group"><label>戶籍地址</label><input type="text" id="f_戶籍地址"></div>
+            <div class="form-group"><label>通訊地址</label><input type="text" id="f_通訊地址"></div>
+        </div>
+    </div>
+
+    <!-- 聯絡資料 -->
+    <div class="form-card">
+        <h2>聯絡資料</h2>
+        <div class="form-grid col-3">
+            <div class="form-group"><label>家中電話</label><input type="text" id="f_家中電話"></div>
+            <div class="form-group"><label>行動電話</label><input type="text" id="f_行動電話"></div>
+            <div class="form-group"><label>各種帳號</label><input type="text" id="f_各種帳號" placeholder="LINE/FB/IG等"></div>
+        </div>
+        <div class="form-grid col-3" style="margin-top:12px">
+            <div class="form-group"><label>緊急聯絡人姓名</label><input type="text" id="f_緊急聯絡人姓名"></div>
+            <div class="form-group"><label>緊急聯絡人關係</label><input type="text" id="f_緊急聯絡人關係"></div>
+            <div class="form-group"><label>緊急聯絡人電話</label><input type="text" id="f_緊急聯絡人電話"></div>
+        </div>
+        <div class="form-grid col-1" style="margin-top:12px">
+            <div class="form-group"><label>休閒時興趣、喜愛去處</label><input type="text" id="f_興趣"></div>
+        </div>
+    </div>
+
+    <!-- 其他資料 -->
+    <div class="form-card">
+        <h2>其他資料</h2>
+        <div class="form-grid col-3">
+            <div class="form-group"><label>名下汽、機車廠牌型號、車牌</label><input type="text" id="f_車牌"></div>
+            <div class="form-group"><label>宗教信仰</label><input type="text" id="f_宗教信仰"></div>
+            <div class="form-group"><label>駕照</label><input type="text" id="f_駕照" placeholder="例：普通小型車"></div>
+        </div>
+        <div class="form-grid col-3" style="margin-top:12px">
+            <div class="form-group"><label>服役前職業</label><input type="text" id="f_服役前職業"></div>
+            <div class="form-group"><label>服役前工作地點</label><input type="text" id="f_服役前工作地點"></div>
+            <div class="form-group"><label>工作年資</label><input type="text" id="f_工作年資"></div>
+        </div>
+        <div class="form-grid col-2" style="margin-top:12px">
+            <div class="form-group"><label>前科保護管束</label><input type="text" id="f_前科保護管束"></div>
+            <div class="form-group"><label>罰則執行日期</label><input type="text" id="f_罰則執行日期"></div>
+        </div>
+        <div class="form-grid col-2" style="margin-top:12px">
+            <div class="form-group"><label>本身痼疾</label><input type="text" id="f_本身痼疾"></div>
+            <div class="form-group"><label>家族病史</label><input type="text" id="f_家族病史"></div>
+        </div>
+        <div class="form-grid col-1" style="margin-top:12px">
+            <div class="form-group"><label>交友狀況</label><input type="text" id="f_交友狀況"></div>
+        </div>
+        <div class="form-grid col-3" style="margin-top:12px">
+            <div class="form-group"><label>家中氣氛是否和諧</label>
+                <select id="f_家中氣氛"><option value="">請選擇</option><option>是</option><option>否</option></select>
+            </div>
+            <div class="form-group"><label>父母是否離異</label>
+                <select id="f_父母離異"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+            <div class="form-group"><label>家中經濟狀況</label>
+                <select id="f_家中經濟"><option value="">請選擇</option><option>良好</option><option>普通</option><option>困難</option></select>
+            </div>
+        </div>
+        <div class="form-grid col-3" style="margin-top:12px">
+            <div class="form-group"><label>個人是否負債</label>
+                <select id="f_個人負債"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+            <div class="form-group"><label>家中是否負債</label>
+                <select id="f_家中負債"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+            <div class="form-group"><label>個人是否有刺青</label>
+                <select id="f_刺青"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 家庭狀況 -->
+    <div class="form-card">
+        <h2>家庭狀況</h2>
+        <table class="dynamic-table">
+            <thead>
+                <tr>
+                    <th>現況</th><th>稱謂</th><th>姓名</th><th>出生年</th>
+                    <th>職業</th><th>公司名稱</th><th>連絡電話</th><th>同住狀況</th><th>備註</th>
+                </tr>
+            </thead>
+            <tbody id="family-body">
+                <tr><td><input type="text" class="fam_現況"></td><td><input type="text" class="fam_稱謂"></td><td><input type="text" class="fam_姓名"></td><td><input type="text" class="fam_出生年"></td><td><input type="text" class="fam_職業"></td><td><input type="text" class="fam_公司名稱"></td><td><input type="text" class="fam_連絡電話"></td><td><input type="text" class="fam_同住"></td><td><input type="text" class="fam_備註"></td></tr>
+                <tr><td><input type="text" class="fam_現況"></td><td><input type="text" class="fam_稱謂"></td><td><input type="text" class="fam_姓名"></td><td><input type="text" class="fam_出生年"></td><td><input type="text" class="fam_職業"></td><td><input type="text" class="fam_公司名稱"></td><td><input type="text" class="fam_連絡電話"></td><td><input type="text" class="fam_同住"></td><td><input type="text" class="fam_備註"></td></tr>
+                <tr><td><input type="text" class="fam_現況"></td><td><input type="text" class="fam_稱謂"></td><td><input type="text" class="fam_姓名"></td><td><input type="text" class="fam_出生年"></td><td><input type="text" class="fam_職業"></td><td><input type="text" class="fam_公司名稱"></td><td><input type="text" class="fam_連絡電話"></td><td><input type="text" class="fam_同住"></td><td><input type="text" class="fam_備註"></td></tr>
+                <tr><td><input type="text" class="fam_現況"></td><td><input type="text" class="fam_稱謂"></td><td><input type="text" class="fam_姓名"></td><td><input type="text" class="fam_出生年"></td><td><input type="text" class="fam_職業"></td><td><input type="text" class="fam_公司名稱"></td><td><input type="text" class="fam_連絡電話"></td><td><input type="text" class="fam_同住"></td><td><input type="text" class="fam_備註"></td></tr>
+                <tr><td><input type="text" class="fam_現況"></td><td><input type="text" class="fam_稱謂"></td><td><input type="text" class="fam_姓名"></td><td><input type="text" class="fam_出生年"></td><td><input type="text" class="fam_職業"></td><td><input type="text" class="fam_公司名稱"></td><td><input type="text" class="fam_連絡電話"></td><td><input type="text" class="fam_同住"></td><td><input type="text" class="fam_備註"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 交友狀況 -->
+    <div class="form-card">
+        <h2>女友、好友、同學、同袍等交友狀況</h2>
+        <table class="dynamic-table">
+            <thead>
+                <tr>
+                    <th>稱謂</th><th>姓名</th><th>出生年</th><th>職業</th>
+                    <th>公司名稱</th><th>連絡電話</th><th>朋友如何認識、常和朋友一起去的處所及活動</th>
+                </tr>
+            </thead>
+            <tbody id="friend-body">
+                <tr><td><input type="text" class="fr_稱謂"></td><td><input type="text" class="fr_姓名"></td><td><input type="text" class="fr_出生年"></td><td><input type="text" class="fr_職業"></td><td><input type="text" class="fr_公司名稱"></td><td><input type="text" class="fr_連絡電話"></td><td><input type="text" class="fr_認識" style="width:100%"></td></tr>
+                <tr><td><input type="text" class="fr_稱謂"></td><td><input type="text" class="fr_姓名"></td><td><input type="text" class="fr_出生年"></td><td><input type="text" class="fr_職業"></td><td><input type="text" class="fr_公司名稱"></td><td><input type="text" class="fr_連絡電話"></td><td><input type="text" class="fr_認識" style="width:100%"></td></tr>
+                <tr><td><input type="text" class="fr_稱謂"></td><td><input type="text" class="fr_姓名"></td><td><input type="text" class="fr_出生年"></td><td><input type="text" class="fr_職業"></td><td><input type="text" class="fr_公司名稱"></td><td><input type="text" class="fr_連絡電話"></td><td><input type="text" class="fr_認識" style="width:100%"></td></tr>
+                <tr><td><input type="text" class="fr_稱謂"></td><td><input type="text" class="fr_姓名"></td><td><input type="text" class="fr_出生年"></td><td><input type="text" class="fr_職業"></td><td><input type="text" class="fr_公司名稱"></td><td><input type="text" class="fr_連絡電話"></td><td><input type="text" class="fr_認識" style="width:100%"></td></tr>
+                <tr><td><input type="text" class="fr_稱謂"></td><td><input type="text" class="fr_姓名"></td><td><input type="text" class="fr_出生年"></td><td><input type="text" class="fr_職業"></td><td><input type="text" class="fr_公司名稱"></td><td><input type="text" class="fr_連絡電話"></td><td><input type="text" class="fr_認識" style="width:100%"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 心理健康 -->
+    <div class="form-card">
+        <h2>心理健康狀況</h2>
+        <div class="form-grid col-2">
+            <div class="form-group"><label>是否曾出現自傷或自殺意念？</label>
+                <select id="f_自傷意念"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+            <div class="form-group"><label>是否曾有自傷行為或自殺行為？</label>
+                <select id="f_自傷行為"><option value="">請選擇</option><option>否</option><option>是</option></select>
+            </div>
+            <div class="form-group"><label>入伍前後是否有看過精神科醫師</label>
+                <select id="f_精神科"><option value="">請選擇</option><option>否</option><option>是，入伍前</option><option>是，入伍後</option><option>是，前後皆有</option></select>
+            </div>
+            <div class="form-group"><label>入伍前後是否有單獨跟輔導長(心輔官)約談</label>
+                <select id="f_輔導長"><option value="">請選擇</option><option>否</option><option>是，入伍前</option><option>是，入伍後</option><option>是，前後皆有</option></select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 民間專長 -->
+    <div class="form-card">
+        <h2>民間專長</h2>
+        <div class="form-grid col-1">
+            <div class="form-group"><label>電腦文書能力</label><input type="text" id="f_電腦文書" placeholder="例：Word、Excel、PowerPoint"></div>
+            <div class="form-group"><label>是否有參加過國際或國內比賽</label><input type="text" id="f_比賽"></div>
+            <div class="form-group"><label>是否具備國際或國內檢定證照</label><input type="text" id="f_證照"></div>
+        </div>
+    </div>
+
+    <!-- 自傳與反映 -->
+    <div class="form-card">
+        <h2>自傳及反映事項</h2>
+        <div class="form-grid col-2">
+            <div class="form-group"><label>自傳及到部心得</label><textarea id="f_自傳" rows="5"></textarea></div>
+            <div class="form-group"><label>反映事項</label><textarea id="f_反映事項" rows="5"></textarea></div>
+        </div>
+    </div>
+
+    <!-- 按鈕 -->
+    <div class="btn-bar">
+        <button class="btn btn-primary" onclick="previewPrint()">📋 預覽 / 當事人列印</button>
+        <button class="btn btn-success" onclick="officerPrint()">🖨️ 承辦人列印</button>
+        <button class="btn btn-secondary" onclick="clearForm()">🗑️ 清除重填</button>
+    </div>
+</div>
+
+<!-- ===== 列印工具列 ===== -->
+<div id="print-toolbar">
+    <span>預覽列印</span>
+    <button class="btn btn-primary" onclick="window.print()" style="padding:6px 20px;font-size:14px;">🖨️ 列印</button>
+    <button class="btn btn-secondary" onclick="backToForm()" style="padding:6px 20px;font-size:14px;">← 返回填寫</button>
+</div>
+
+<!-- ===== 列印頁面 ===== -->
+<div id="print-page">
+    <table border="1">
+        <tr>
+            <td colspan="10" class="title-cell">陸軍第五地區支援指揮部衛生營個人基本資料</td>
+        </tr>
+        <tr>
+            <td class="label-cell">姓名</td>
+            <td class="data-cell" id="p_姓名"></td>
+            <td class="label-cell">身分證字號</td>
+            <td class="data-cell" id="p_身分證字號"></td>
+            <td class="label-cell">出生地</td>
+            <td class="data-cell" id="p_出生地"></td>
+            <td class="label-cell">生日</td>
+            <td class="data-cell" id="p_生日"></td>
+            <td colspan="2" rowspan="2" class="photo-cell">照片</td>
+        </tr>
+        <tr>
+            <td class="label-cell">梯次</td>
+            <td class="data-cell" id="p_梯次"></td>
+            <td class="label-cell">入伍日期</td>
+            <td class="data-cell" id="p_入伍日期"></td>
+            <td class="label-cell">到部日期</td>
+            <td class="data-cell" id="p_到部日期"></td>
+            <td class="label-cell">退伍日期</td>
+            <td class="data-cell" id="p_退伍日期"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">身高</td>
+            <td class="data-cell" id="p_身高"></td>
+            <td class="label-cell">體重</td>
+            <td class="data-cell" id="p_體重"></td>
+            <td class="label-cell">BMI</td>
+            <td class="data-cell" id="p_BMI"></td>
+            <td class="label-cell">血型</td>
+            <td colspan="3" class="data-cell" id="p_血型"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">是否有抽菸習慣</td>
+            <td colspan="2" class="data-cell" id="p_抽菸"></td>
+            <td class="label-cell">是否有嚼檳榔習慣</td>
+            <td colspan="2" class="data-cell" id="p_檳榔"></td>
+            <td class="label-cell">是否有飲酒習慣</td>
+            <td colspan="3" class="data-cell" id="p_飲酒"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">上肢肌群</td>
+            <td colspan="2" class="data-cell" id="p_上肢肌群"></td>
+            <td class="label-cell">腹部核心肌群</td>
+            <td colspan="2" class="data-cell" id="p_腹部核心肌群"></td>
+            <td class="label-cell">下肢肌群</td>
+            <td colspan="3" class="data-cell" id="p_下肢肌群"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">民間學歷</td>
+            <td colspan="9" class="data-cell" id="p_民間學歷"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">戶籍地址</td>
+            <td colspan="9" class="data-cell" id="p_戶籍地址"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">通訊地址</td>
+            <td colspan="9" class="data-cell" id="p_通訊地址"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">家中電話</td>
+            <td class="data-cell" id="p_家中電話"></td>
+            <td class="label-cell">行動電話</td>
+            <td class="data-cell" id="p_行動電話"></td>
+            <td class="label-cell">緊急聯絡人姓名</td>
+            <td class="data-cell" id="p_緊急聯絡人姓名"></td>
+            <td class="label-cell">緊急聯絡人關係</td>
+            <td class="data-cell" id="p_緊急聯絡人關係"></td>
+            <td class="label-cell">緊急聯絡人電話</td>
+            <td class="data-cell" id="p_緊急聯絡人電話"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">各種帳號</td>
+            <td colspan="4" class="data-cell" id="p_各種帳號"></td>
+            <td class="label-cell">休閒時興趣、喜愛去處</td>
+            <td colspan="4" class="data-cell" id="p_興趣"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">名下所屬汽、機車廠牌型號、車牌</td>
+            <td colspan="2" class="data-cell" id="p_車牌"></td>
+            <td class="label-cell">宗教信仰</td>
+            <td colspan="2" class="data-cell" id="p_宗教信仰"></td>
+            <td class="label-cell">駕照</td>
+            <td colspan="3" class="data-cell" id="p_駕照"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">服役前職業</td>
+            <td colspan="3" class="data-cell" id="p_服役前職業"></td>
+            <td class="label-cell">服役前工作地點</td>
+            <td colspan="2" class="data-cell" id="p_服役前工作地點"></td>
+            <td class="label-cell">工作年資</td>
+            <td colspan="2" class="data-cell" id="p_工作年資"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">前科保護管束</td>
+            <td colspan="4" class="data-cell" id="p_前科保護管束"></td>
+            <td class="label-cell">罰則執行日期</td>
+            <td colspan="4" class="data-cell" id="p_罰則執行日期"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">本身痼疾</td>
+            <td colspan="4" class="data-cell" id="p_本身痼疾"></td>
+            <td class="label-cell">家族病史</td>
+            <td colspan="4" class="data-cell" id="p_家族病史"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">交友狀況</td>
+            <td colspan="9" class="data-cell" id="p_交友狀況"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">家中氣氛是否和諧</td>
+            <td colspan="3" class="data-cell" id="p_家中氣氛"></td>
+            <td class="label-cell">父母是否離異</td>
+            <td colspan="2" class="data-cell" id="p_父母離異"></td>
+            <td class="label-cell">家中經濟狀況</td>
+            <td colspan="3" class="data-cell" id="p_家中經濟"></td>
+        </tr>
+        <tr>
+            <td class="label-cell">個人是否負債</td>
+            <td colspan="3" class="data-cell" id="p_個人負債"></td>
+            <td class="label-cell">家中是否負債</td>
+            <td colspan="2" class="data-cell" id="p_家中負債"></td>
+            <td class="label-cell">個人是否有刺青</td>
+            <td colspan="2" class="data-cell" id="p_刺青"></td>
+        </tr>
+        <!-- 家庭狀況 -->
+        <tr>
+            <td class="label-cell" rowspan="6">家庭狀況</td>
+            <td class="label-cell">現況</td><td class="label-cell">稱謂</td><td class="label-cell">姓名</td>
+            <td class="label-cell">出生年</td><td class="label-cell">職業</td><td class="label-cell">公司名稱</td>
+            <td class="label-cell">連絡電話</td><td class="label-cell">同住狀況</td><td class="label-cell">備註</td>
+        </tr>
+        <tr id="p_fam_0"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr id="p_fam_1"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr id="p_fam_2"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr id="p_fam_3"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr id="p_fam_4"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <!-- 交友 -->
+        <tr>
+            <td class="label-cell" rowspan="6">女友、好友、同學、同袍等交友狀況</td>
+            <td class="label-cell">稱謂</td><td class="label-cell">姓名</td><td class="label-cell">出生年</td>
+            <td class="label-cell">職業</td><td class="label-cell">公司名稱</td><td class="label-cell">連絡電話</td>
+            <td colspan="3" class="label-cell">朋友如何認識、常和朋友一起去的處所及活動</td>
+        </tr>
+        <tr id="p_fr_0"><td></td><td></td><td></td><td></td><td></td><td></td><td colspan="3"></td></tr>
+        <tr id="p_fr_1"><td></td><td></td><td></td><td></td><td></td><td></td><td colspan="3"></td></tr>
+        <tr id="p_fr_2"><td></td><td></td><td></td><td></td><td></td><td></td><td colspan="3"></td></tr>
+        <tr id="p_fr_3"><td></td><td></td><td></td><td></td><td></td><td></td><td colspan="3"></td></tr>
+        <tr id="p_fr_4"><td></td><td></td><td></td><td></td><td></td><td></td><td colspan="3"></td></tr>
+        <!-- 心理健康 -->
+        <tr>
+            <td class="label-cell">是否曾出現自傷或自殺意念？</td>
+            <td class="data-cell" id="p_自傷意念"></td>
+            <td class="label-cell">是否曾有自傷行為或自殺行為？</td>
+            <td class="data-cell" id="p_自傷行為"></td>
+            <td class="label-cell">入伍前後是否有看過精神科醫師</td>
+            <td colspan="2" class="data-cell" id="p_精神科"></td>
+            <td class="label-cell">入伍前後是否有單獨跟輔導長(心輔官)約談</td>
+            <td colspan="2" class="data-cell" id="p_輔導長"></td>
+        </tr>
+        <!-- 民間專長 -->
+        <tr>
+            <td class="label-cell" rowspan="3">民間專長</td>
+            <td colspan="9" class="data-cell" id="p_電腦文書"></td>
+        </tr>
+        <tr>
+            <td colspan="4" class="label-cell">是否有參加過國際或國內比賽</td>
+            <td colspan="5" class="label-cell">是否具備國際或國內檢定證照</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="data-cell" id="p_比賽"></td>
+            <td colspan="5" class="data-cell" id="p_證照"></td>
+        </tr>
+        <!-- 自傳 -->
+        <tr>
+            <td class="label-cell">自傳及到部心得</td>
+            <td colspan="4" class="data-cell" id="p_自傳" style="vertical-align:top;white-space:pre-wrap;"></td>
+            <td class="label-cell">反映事項</td>
+            <td colspan="5" class="data-cell" id="p_反映事項" style="vertical-align:top;white-space:pre-wrap;"></td>
+        </tr>
+    </table>
+</div>
+
+<script>
+    function calcBMI() {
+        const h = parseFloat(document.getElementById('f_身高').value) / 100;
+        const w = parseFloat(document.getElementById('f_體重').value);
+        if (h > 0 && w > 0) {
+            document.getElementById('f_BMI').value = (w / (h * h)).toFixed(1);
+        }
+    }
+
+    const fields = [
+        '姓名','身分證字號','出生地','生日','梯次','入伍日期','到部日期','退伍日期',
+        '身高','體重','BMI','血型','抽菸','檳榔','飲酒',
+        '上肢肌群','腹部核心肌群','下肢肌群',
+        '民間學歷','戶籍地址','通訊地址',
+        '家中電話','行動電話','緊急聯絡人姓名','緊急聯絡人關係','緊急聯絡人電話',
+        '各種帳號','興趣','車牌','宗教信仰','駕照',
+        '服役前職業','服役前工作地點','工作年資',
+        '前科保護管束','罰則執行日期','本身痼疾','家族病史','交友狀況',
+        '家中氣氛','父母離異','家中經濟','個人負債','家中負債','刺青',
+        '自傷意念','自傷行為','精神科','輔導長',
+        '電腦文書','比賽','證照','自傳','反映事項'
+    ];
+
+    function fillPrintPage() {
+        fields.forEach(key => {
+            const input = document.getElementById('f_' + key);
+            const output = document.getElementById('p_' + key);
+            if (input && output) output.textContent = input.value || '';
+        });
+
+        // 家庭狀況
+        const famRows = document.querySelectorAll('#family-body tr');
+        const famCols = ['現況','稱謂','姓名','出生年','職業','公司名稱','連絡電話','同住','備註'];
+        famRows.forEach((row, i) => {
+            const pRow = document.getElementById('p_fam_' + i);
+            if (pRow) {
+                const tds = pRow.querySelectorAll('td');
+                famCols.forEach((c, j) => {
+                    const inp = row.querySelector('.fam_' + c);
+                    if (inp && tds[j]) tds[j].textContent = inp.value || '';
+                });
+            }
+        });
+
+        // 交友狀況
+        const frRows = document.querySelectorAll('#friend-body tr');
+        const frCols = ['稱謂','姓名','出生年','職業','公司名稱','連絡電話','認識'];
+        frRows.forEach((row, i) => {
+            const pRow = document.getElementById('p_fr_' + i);
+            if (pRow) {
+                const tds = pRow.querySelectorAll('td');
+                frCols.forEach((c, j) => {
+                    const inp = row.querySelector('.fr_' + c);
+                    if (inp && tds[j]) tds[j].textContent = inp.value || '';
+                });
+            }
+        });
+    }
+
+    function previewPrint() {
+        fillPrintPage();
+        document.getElementById('form-page').style.display = 'none';
+        document.getElementById('print-page').style.display = 'block';
+        document.getElementById('print-toolbar').style.display = 'flex';
+    }
+
+    function officerPrint() {
+        fillPrintPage();
+        document.getElementById('form-page').style.display = 'none';
+        document.getElementById('print-page').style.display = 'block';
+        document.getElementById('print-toolbar').style.display = 'flex';
+        setTimeout(() => window.print(), 300);
+    }
+
+    function backToForm() {
+        document.getElementById('form-page').style.display = 'block';
+        document.getElementById('print-page').style.display = 'none';
+        document.getElementById('print-toolbar').style.display = 'none';
+    }
+
+    function clearForm() {
+        if (confirm('確定要清除所有填寫資料嗎？')) {
+            document.querySelectorAll('#form-page input, #form-page select, #form-page textarea')
+                .forEach(el => el.value = '');
+        }
+    }
+</script>
+
+</body>
+</html>
