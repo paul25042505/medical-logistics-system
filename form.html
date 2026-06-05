@@ -46,12 +46,13 @@
     .fg-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
     @media(max-width:540px){ .fg-3,.fg-4 { grid-template-columns:1fr; } }
 
-    .fgroup { display:flex; flex-direction:column; gap:5px; }
+    .fgroup { display:flex; flex-direction:column; gap:5px; min-width:0; }
     .fgroup label { font-size:13px; font-weight:500; }
     .req { color:var(--red); }
     .fgroup input, .fgroup select, .fgroup textarea {
       padding:9px 12px; border:1px solid var(--border); border-radius:8px;
       font-size:14px; font-family:inherit; outline:none; background:#fff; transition:border-color 0.2s;
+      width:100%; min-width:0;
     }
     .fgroup input:focus, .fgroup select:focus, .fgroup textarea:focus { border-color:var(--accent); }
     .fgroup textarea { resize:vertical; }
