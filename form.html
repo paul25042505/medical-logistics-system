@@ -60,16 +60,43 @@
 
     .slabel { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin:22px 0 12px; padding-bottom:5px; border-bottom:1px solid var(--border); }
 
-    /* Dynamic rows */
-    .dyn-list { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
-    .dyn-row { display:grid; gap:6px; align-items:center; background:var(--bg); border-radius:8px; padding:8px 10px; }
-    .dyn-row input, .dyn-row select { padding:7px 10px; border:1px solid var(--border); border-radius:7px; font-size:13px; width:100%; }
-    .dyn-row-fam { grid-template-columns: 70px 80px 1fr 55px 1fr 110px 90px 1fr auto; }
-    .dyn-row-fr  { grid-template-columns: 70px 1fr 55px 1fr 110px 110px 1fr auto; }
-    @media(max-width:600px){ .dyn-row-fam,.dyn-row-fr { grid-template-columns:1fr 1fr; } }
-    .btn-del { background:none; border:none; cursor:pointer; color:var(--muted); font-size:16px; padding:4px 6px; border-radius:4px; flex-shrink:0; }
-    .btn-del:hover { background:var(--red-bg); color:var(--red); }
-    .btn-add { background:none; border:1px dashed var(--border); border-radius:8px; padding:9px 16px; font-size:13px; cursor:pointer; color:var(--muted); width:100%; transition:all 0.15s; }
+    /* App-style member cards */
+    .member-list { display:flex; flex-direction:column; gap:12px; margin-bottom:12px; }
+    .member-card {
+      background:var(--white); border:1px solid var(--border); border-radius:12px;
+      padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); position:relative;
+    }
+    .member-card-header {
+      display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+    }
+    .member-card-title { font-size:13px; font-weight:700; color:var(--navy); }
+    .member-card-num {
+      width:24px; height:24px; background:var(--accent); color:#fff;
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:700; flex-shrink:0;
+    }
+    .member-card-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media(max-width:480px){ .member-card-grid { grid-template-columns:1fr; } }
+    .member-card-grid .span2 { grid-column:1/-1; }
+    .mc-field { display:flex; flex-direction:column; gap:4px; }
+    .mc-field label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; }
+    .mc-field input, .mc-field select {
+      padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+      font-size:14px; font-family:inherit; outline:none; background:#fafbfc;
+      transition:border-color 0.2s; width:100%;
+    }
+    .mc-field input:focus, .mc-field select:focus { border-color:var(--accent); background:#fff; }
+    .btn-del {
+      background:none; border:1px solid var(--border); cursor:pointer; color:var(--muted);
+      font-size:13px; padding:5px 10px; border-radius:6px; transition:all 0.15s;
+    }
+    .btn-del:hover { background:var(--red-bg); color:var(--red); border-color:var(--red); }
+    .btn-add {
+      display:flex; align-items:center; justify-content:center; gap:6px;
+      background:var(--white); border:2px dashed var(--border); border-radius:12px;
+      padding:14px; font-size:14px; cursor:pointer; color:var(--muted); width:100%;
+      transition:all 0.15s; font-weight:500;
+    }
     .btn-add:hover { border-color:var(--accent); color:var(--accent); background:#eff6ff; }
 
     .fnav { display:flex; justify-content:space-between; align-items:center; gap:10px; }
@@ -400,48 +427,14 @@
       <!-- ── Step 5：家庭與交友 ── -->
       <div class="fcard step-panel" data-step="5">
         <div class="step-title">👨‍👩‍👧 家庭狀況</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">請填寫父母、配偶、兄弟姊妹等重要家庭成員</p>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:700px">
-            <thead>
-              <tr style="background:#eaf1fb">
-                <th style="border:1px solid var(--border);padding:7px;white-space:nowrap">現況</th>
-                <th style="border:1px solid var(--border);padding:7px;white-space:nowrap">稱謂</th>
-                <th style="border:1px solid var(--border);padding:7px">姓名</th>
-                <th style="border:1px solid var(--border);padding:7px">出生年</th>
-                <th style="border:1px solid var(--border);padding:7px">職業</th>
-                <th style="border:1px solid var(--border);padding:7px">公司名稱</th>
-                <th style="border:1px solid var(--border);padding:7px">連絡電話</th>
-                <th style="border:1px solid var(--border);padding:7px">同住狀況</th>
-                <th style="border:1px solid var(--border);padding:7px">備註</th>
-                <th style="border:1px solid var(--border);padding:7px"></th>
-              </tr>
-            </thead>
-            <tbody id="fam-body"></tbody>
-          </table>
-        </div>
-        <button type="button" class="btn-add" id="addFamBtn" style="margin-top:8px">＋ 新增家庭成員</button>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">請填寫父母、配偶、兄弟姊妹等重要家庭成員</p>
+        <div class="member-list" id="fam-body"></div>
+        <button type="button" class="btn-add" id="addFamBtn">＋ 新增家庭成員</button>
 
-        <div class="step-title" style="margin-top:28px">👥 交友狀況</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">請填寫女友、好友、同學、同袍等</p>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:700px">
-            <thead>
-              <tr style="background:#eaf1fb">
-                <th style="border:1px solid var(--border);padding:7px">稱謂</th>
-                <th style="border:1px solid var(--border);padding:7px">姓名</th>
-                <th style="border:1px solid var(--border);padding:7px">出生年</th>
-                <th style="border:1px solid var(--border);padding:7px">職業</th>
-                <th style="border:1px solid var(--border);padding:7px">公司名稱</th>
-                <th style="border:1px solid var(--border);padding:7px">連絡電話</th>
-                <th style="border:1px solid var(--border);padding:7px">朋友如何認識、常和朋友一起去的處所及活動</th>
-                <th style="border:1px solid var(--border);padding:7px"></th>
-              </tr>
-            </thead>
-            <tbody id="fr-body"></tbody>
-          </table>
-        </div>
-        <button type="button" class="btn-add" id="addFrBtn" style="margin-top:8px">＋ 新增</button>
+        <div class="step-title" style="margin-top:32px">👥 交友狀況</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">請填寫女友、好友、同學、同袍等</p>
+        <div class="member-list" id="fr-body"></div>
+        <button type="button" class="btn-add" id="addFrBtn">＋ 新增</button>
       </div>
 
       <!-- ── Step 6：心理、專長、自傳 ── -->
@@ -538,40 +531,127 @@ window.calcBMI = function() {
   document.getElementById('f-bmi').value = (h > 0 && w > 0) ? (w/(h*h)).toFixed(1) : '';
 };
 
-// ── 家庭成員 ──
+// ── 家庭成員卡片 ──
 function famRow(i) {
-  return `<tr>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-status" placeholder="在世/亡故" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-rel" placeholder="父/母/配偶…" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-name" placeholder="姓名" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-birth" placeholder="民國年" style="width:70px;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-job" placeholder="職業" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-company" placeholder="公司名稱" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-tel" placeholder="電話" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-live" placeholder="同住/分住" style="width:80px;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fam-note" placeholder="備註" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px;text-align:center"><button type="button" class="btn-del" onclick="this.closest('tr').remove()">✕</button></td>
-  </tr>`;
-}
-function frRow(i) {
-  return `<tr>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fr-rel" placeholder="女友/好友…" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fr-name" placeholder="姓名" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fr-birth" placeholder="民國年" style="width:70px;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fr-job" placeholder="職業" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fr-company" placeholder="公司名稱" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fr-tel" placeholder="電話" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px"><input type="text" class="fr-meet" placeholder="認識方式、常去處所" style="width:100%;border:none;outline:none;font-size:13px;padding:2px"></td>
-    <td style="border:1px solid var(--border);padding:4px;text-align:center"><button type="button" class="btn-del" onclick="this.closest('tr').remove()">✕</button></td>
-  </tr>`;
+  const n = i + 1;
+  return `<div class="member-card">
+    <div class="member-card-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="member-card-num">${n}</div>
+        <span class="member-card-title">家庭成員</span>
+      </div>
+      <button type="button" class="btn-del" onclick="this.closest('.member-card').remove()">🗑 刪除</button>
+    </div>
+    <div class="member-card-grid">
+      <div class="mc-field">
+        <label>現況</label>
+        <select class="fam-status">
+          <option value="">請選擇</option>
+          <option>在世</option><option>亡故</option>
+        </select>
+      </div>
+      <div class="mc-field">
+        <label>稱謂</label>
+        <select class="fam-rel">
+          <option value="">請選擇</option>
+          <option>父</option><option>母</option><option>配偶</option>
+          <option>兄</option><option>弟</option><option>姊</option><option>妹</option>
+          <option>祖父</option><option>祖母</option><option>子</option><option>女</option><option>其他</option>
+        </select>
+      </div>
+      <div class="mc-field">
+        <label>姓名</label>
+        <input type="text" class="fam-name" placeholder="請輸入姓名">
+      </div>
+      <div class="mc-field">
+        <label>出生年（民國）</label>
+        <input type="text" class="fam-birth" placeholder="例：60年">
+      </div>
+      <div class="mc-field">
+        <label>職業</label>
+        <input type="text" class="fam-job" placeholder="例：退休、教師">
+      </div>
+      <div class="mc-field">
+        <label>公司／單位名稱</label>
+        <input type="text" class="fam-company" placeholder="公司或學校名稱">
+      </div>
+      <div class="mc-field">
+        <label>連絡電話</label>
+        <input type="tel" class="fam-tel" placeholder="09xxxxxxxx">
+      </div>
+      <div class="mc-field">
+        <label>同住狀況</label>
+        <select class="fam-live">
+          <option value="">請選擇</option>
+          <option>同住</option><option>分住</option>
+        </select>
+      </div>
+      <div class="mc-field span2">
+        <label>備註</label>
+        <input type="text" class="fam-note" placeholder="其他說明（選填）">
+      </div>
+    </div>
+  </div>`;
 }
 
-// 預設5行
+// ── 交友狀況卡片 ──
+function frRow(i) {
+  const n = i + 1;
+  return `<div class="member-card">
+    <div class="member-card-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="member-card-num" style="background:#7c3aed">${n}</div>
+        <span class="member-card-title">交友對象</span>
+      </div>
+      <button type="button" class="btn-del" onclick="this.closest('.member-card').remove()">🗑 刪除</button>
+    </div>
+    <div class="member-card-grid">
+      <div class="mc-field">
+        <label>稱謂／關係</label>
+        <select class="fr-rel">
+          <option value="">請選擇</option>
+          <option>女友</option><option>男友</option><option>好友</option>
+          <option>同學</option><option>同袍</option><option>同事</option><option>其他</option>
+        </select>
+      </div>
+      <div class="mc-field">
+        <label>姓名</label>
+        <input type="text" class="fr-name" placeholder="請輸入姓名">
+      </div>
+      <div class="mc-field">
+        <label>出生年（民國）</label>
+        <input type="text" class="fr-birth" placeholder="例：90年">
+      </div>
+      <div class="mc-field">
+        <label>職業</label>
+        <input type="text" class="fr-job" placeholder="例：學生、業務">
+      </div>
+      <div class="mc-field">
+        <label>公司／單位名稱</label>
+        <input type="text" class="fr-company" placeholder="公司或學校名稱">
+      </div>
+      <div class="mc-field">
+        <label>連絡電話</label>
+        <input type="tel" class="fr-tel" placeholder="09xxxxxxxx">
+      </div>
+      <div class="mc-field span2">
+        <label>朋友如何認識、常和朋友一起去的處所及活動</label>
+        <input type="text" class="fr-meet" placeholder="例：高中同學、常去籃球場打球">
+      </div>
+    </div>
+  </div>`;
+}
+
+// 預設5張卡片
 const famBody = document.getElementById('fam-body');
 const frBody  = document.getElementById('fr-body');
 for(let i=0;i<5;i++) { famBody.insertAdjacentHTML('beforeend', famRow(i)); frBody.insertAdjacentHTML('beforeend', frRow(i)); }
-document.getElementById('addFamBtn').addEventListener('click', () => famBody.insertAdjacentHTML('beforeend', famRow(famBody.children.length)));
-document.getElementById('addFrBtn').addEventListener('click',  () => frBody.insertAdjacentHTML('beforeend', frRow(frBody.children.length)));
+document.getElementById('addFamBtn').addEventListener('click', () => {
+  famBody.insertAdjacentHTML('beforeend', famRow(famBody.querySelectorAll('.member-card').length));
+});
+document.getElementById('addFrBtn').addEventListener('click', () => {
+  frBody.insertAdjacentHTML('beforeend', frRow(frBody.querySelectorAll('.member-card').length));
+});
 
 // ── Steps ──
 const TOTAL = 6;
@@ -619,7 +699,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = '送出中…';
 
-  const famMembers = [...document.querySelectorAll('#fam-body tr')].map(r => ({
+  const famMembers = [...document.querySelectorAll('#fam-body .member-card')].map(r => ({
     status: r.querySelector('.fam-status')?.value||'',
     rel: r.querySelector('.fam-rel')?.value||'',
     name: r.querySelector('.fam-name')?.value||'',
@@ -630,7 +710,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     live: r.querySelector('.fam-live')?.value||'',
     note: r.querySelector('.fam-note')?.value||'',
   }));
-  const friends = [...document.querySelectorAll('#fr-body tr')].map(r => ({
+  const friends = [...document.querySelectorAll('#fr-body .member-card')].map(r => ({
     rel: r.querySelector('.fr-rel')?.value||'',
     name: r.querySelector('.fr-name')?.value||'',
     birth: r.querySelector('.fr-birth')?.value||'',
