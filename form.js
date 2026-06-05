@@ -354,6 +354,10 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     document.getElementById('success-screen').style.display = 'block';
     document.getElementById('success-code').textContent = '# ' + code;
     document.querySelector('.prog-wrap').style.display = 'none';
+
+    // 儲存資料供列印/下載使用
+    window._submittedData = data;
+    window._submittedCode = code;
   } catch (e) {
     console.error(e);
     showToast('送出失敗，請稍後再試');
@@ -371,6 +375,124 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
+
+// ── 列印 / 下載 ────────────────────────────────────────
+function buildPrintHTML(data, code) {
+  const d = data || {};
+  const row = (label, value) => `<tr><td style="background:#f5f5f5;font-weight:bold;padding:5px 10px;border:1px solid #333;white-space:nowrap">${label}</td><td style="padding:5px 10px;border:1px solid #333">${value || '—'}</td></tr>`;
+  const section = (title) => `<tr><td colspan="2" style="background:#1a2f5a;color:#fff;font-weight:bold;padding:6px 10px;font-size:14pt">${title}</td></tr>`;
+
+  const fmRows = (d.familyMembers||[]).map(m =>
+    `<tr>${['relation','name','age','job','phone'].map(k=>`<td style="border:1px solid #333;padding:4px 8px">${m[k]||''}</td>`).join('')}</tr>`
+  ).join('');
+  const frRows = (d.friends||[]).map(f =>
+    `<tr>${['relation','name','age','job','phone','meetInfo'].map(k=>`<td style="border:1px solid #333;padding:4px 8px">${f[k]||''}</td>`).join('')}</tr>`
+  ).join('');
+
+  return `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">
+<title>衛生營入職申請表 #${code}</title>
+<style>
+  body { font-family:"標楷體",serif; font-size:12pt; margin:20px; }
+  table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+  h1 { text-align:center; font-size:18pt; margin-bottom:4px; }
+  .code { text-align:center; color:#2563eb; font-size:14pt; margin-bottom:16px; letter-spacing:2px; }
+  @media print { body { margin:10px; } }
+</style></head><body>
+<h1>陸軍第五地區支援指揮部衛生營入職申請表</h1>
+<div class="code">申請編號：# ${code}</div>
+<table>
+  ${section('基本資料')}
+  ${row('姓名', d.name)} ${row('性別', d.gender)} ${row('出生日期', d.birthDate)} ${row('出生地', d.birthPlace)}
+  ${row('血型', d.bloodType)} ${row('身分證字號', d.idNumber)} ${row('婚姻狀況', d.marital)}
+  ${row('行動電話', d.phone)} ${row('家中電話', d.homePhone)} ${row('LINE ID', d.lineId)} ${row('電子信箱', d.email)}
+  ${row('戶籍地址', [d.addrCity, d.addrDistrict, d.addrDetail].filter(Boolean).join(' '))}
+  ${row('通訊地址', [d.curAddrCity, d.curAddrDistrict, d.curAddrDetail].filter(Boolean).join(' '))}
+  ${section('學歷與工作')}
+  ${row('最高學歷', d.education)} ${row('學校', d.school)} ${row('科系', d.department)} ${row('在學狀態', d.studyStatus)}
+  ${row('職業', d.job)} ${row('工作單位', d.company)} ${row('工作性質', d.jobType)} ${row('月薪範圍', d.salary)}
+  ${row('工作經歷', d.workHistory)} ${row('兵役狀況', d.military)} ${row('服役單位', d.militaryUnit)} ${row('服役經驗', d.militaryExp)}
+  ${section('興趣與專長')}
+  ${row('駕照', (d.licenses||[]).join('、'))} ${row('興趣', (d.hobbies||[]).join('、') + (d.hobbyOther ? '、'+d.hobbyOther : ''))}
+  ${row('專業技能', d.skills)} ${row('英語能力', d.english)} ${row('其他語言', d.otherLang)} ${row('持有證照', d.certs)}
+  ${row('社群帳號', d.socialAccounts)} ${row('車輛', d.vehicles)} ${row('宗教信仰', d.religion)} ${row('游泳能力', d.swimming)}
+  ${row('社團/比賽經驗', d.clubExp)}
+  ${row('電腦技能', `Word:${d.wordSkill||'—'} / Excel:${d.excelSkill||'—'} / PPT:${d.pptSkill||'—'} / 繪圖(${d.drawingSoftware||'—'}):${d.drawingSkill||'—'}`)}
+  ${row('線上遊戲', d.gaming)} ${row('遊戲帳號/名稱', [d.gamingAccount, d.gamingName].filter(Boolean).join(' / '))}
+  ${row('曾參加比賽', d.hasCompetition)} ${row('比賽說明', d.competitionDetail)}
+  ${row('持有檢定證照', d.hasCertification)} ${row('證照說明', d.certificationDetail)}
+  ${section('家庭狀況')}
+  ${row('子女數', d.children)} ${row('家庭主要居住地', d.homeCity)} ${row('家庭氣氛', d.familyHarmony)}
+  ${row('父母是否離異', d.parentsdivorced)} ${row('離異原因', d.divorceReason)}
+  ${row('父母是否已逝', d.parentDeceased)} ${row('原因', d.parentDeceasedCause)}
+  ${row('兄弟姊妹已逝', d.siblingDeceased)}
+  ${row('家中重病者', d.familyIllness === '是' ? `${d.familyIllnessWho || ''} / ${d.familyIllnessDisease || ''}` : d.familyIllness)}
+  ${row('家中經濟狀況', d.familyEconomic)} ${row('家庭備註', d.familyNote)}
+</table>
+<table>
+  <tr style="background:#eaf1fb">
+    <th style="border:1px solid #333;padding:5px">稱謂</th><th style="border:1px solid #333;padding:5px">姓名</th>
+    <th style="border:1px solid #333;padding:5px">年齡</th><th style="border:1px solid #333;padding:5px">職業</th>
+    <th style="border:1px solid #333;padding:5px">聯絡電話</th>
+  </tr>
+  ${fmRows || '<tr><td colspan="5" style="text-align:center;border:1px solid #333;padding:5px">（無）</td></tr>'}
+</table>
+<table>
+  ${section('個人背景')}
+  ${row('前科保護管束', d.criminalRecord)} ${row('詳細說明', d.criminalRecordDetail)}
+  ${row('感情狀況', d.relationshipStatus)} ${row('是否有男女朋友', d.hasPartner)}
+  ${row('感情和諧程度', d.partnerHarmony)} ${row('是否有金錢糾紛', d.moneyDispute)}
+  ${row('個人負債', d.personalDebt)} ${row('負債類型', (d.personalDebtTypes||[]).join('、'))} ${row('負債金額', d.personalDebtAmount)}
+  ${row('家中負債', d.familyDebt)} ${row('家中負債類型', (d.familyDebtTypes||[]).join('、'))} ${row('家中負債金額', d.familyDebtAmount)}
+  ${row('刺青', d.hasTattoo)} ${row('幫派', d.gangHistory)}
+  ${section('交友狀況')}
+</table>
+<table>
+  <tr style="background:#eaf1fb">
+    <th style="border:1px solid #333;padding:5px">稱謂</th><th style="border:1px solid #333;padding:5px">姓名</th>
+    <th style="border:1px solid #333;padding:5px">年齡</th><th style="border:1px solid #333;padding:5px">職業</th>
+    <th style="border:1px solid #333;padding:5px">電話</th><th style="border:1px solid #333;padding:5px">認識方式</th>
+  </tr>
+  ${frRows || '<tr><td colspan="6" style="text-align:center;border:1px solid #333;padding:5px">（無）</td></tr>'}
+</table>
+<table>
+  ${section('其他資訊')}
+  ${row('加入動機', d.motivation)} ${row('個人優勢', d.strength)}
+  ${row('預計報到日', d.availDate)} ${row('接受外縣市派遣', d.relocate)}
+  ${row('健康狀況', d.health)} ${row('慢性病/過敏', d.healthNote)}
+  ${row('緊急聯絡人', d.emergencyName)} ${row('關係', d.emergencyRel)} ${row('緊急電話', d.emergencyPhone)}
+  ${row('其他備註', d.notes)}
+</table>
+</body></html>`;
+}
+
+window.printForm = function() {
+  const html = buildPrintHTML(window._submittedData, window._submittedCode || '——');
+  const area = document.getElementById('print-area');
+  area.innerHTML = html;
+  area.style.display = 'block';
+  document.body.querySelectorAll(':scope > *:not(#print-area)').forEach(el => el.dataset.hiddenForPrint = el.style.display);
+  document.body.querySelectorAll(':scope > *:not(#print-area)').forEach(el => el.style.display = 'none');
+  area.style.display = 'block';
+  window.print();
+  setTimeout(() => {
+    document.body.querySelectorAll(':scope > *:not(#print-area)').forEach(el => {
+      el.style.display = el.dataset.hiddenForPrint ?? '';
+    });
+    area.style.display = 'none';
+    area.innerHTML = '';
+  }, 500);
+};
+
+window.downloadForm = function() {
+  const html = buildPrintHTML(window._submittedData, window._submittedCode || '——');
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `衛生營申請表_${window._submittedCode || 'download'}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 // Init
 gotoStep(1);

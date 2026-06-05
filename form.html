@@ -106,6 +106,16 @@
     .success-title { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
     .success-msg { font-size: 14px; color: var(--muted); line-height: 1.7; }
     .success-code { display: inline-block; background: var(--bg); border-radius: 8px; padding: 10px 20px; font-size: 16px; font-weight: 700; color: var(--accent); margin: 16px 0; letter-spacing: 2px; }
+    .success-actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+    .btn-print { background: var(--accent); color: #fff; padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+    .btn-print:hover { background: var(--accent-hover); }
+    .btn-download { background: var(--green); color: #fff; padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+    .btn-download:hover { background: #15803d; }
+    @media print {
+      body > *:not(#print-area) { display: none !important; }
+      #print-area { display: block !important; font-family: "標楷體", serif; font-size: 12pt; padding: 20px; }
+    }
+    #print-area { display: none; }
 
     /* Toast */
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
@@ -171,7 +181,14 @@
     <div class="success-msg">感謝您填寫申請資料，我們已收到您的表單。<br>請記下以下編號，以便後續查詢。</div>
     <div class="success-code" id="success-code"></div>
     <p class="success-msg">承辦人員將於收到後與您聯繫，<br>報到當天請攜帶相關證件。</p>
+    <div class="success-actions">
+      <button class="btn-print" onclick="printForm()">🖨️ 列印申請表</button>
+      <button class="btn-download" onclick="downloadForm()">⬇️ 下載 HTML</button>
+    </div>
   </div>
+
+  <!-- 列印區域 -->
+  <div id="print-area"></div>
 
   <!-- ══ Form ══ -->
   <div id="form-wrap">
